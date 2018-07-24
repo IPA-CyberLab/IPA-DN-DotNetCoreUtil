@@ -10,10 +10,10 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            Kernel.SelfKill();
             WriteLine(Kernel.InternalCheckIsWow64());
             WriteLine(Kernel.GetOsPlatform().ToString());
             WriteLine(System.Environment.OSVersion.VersionString);
+            WriteLine("hostname: " + Kernel.GetEnvStr("HOSTNAME"));
         }
     }
 }
