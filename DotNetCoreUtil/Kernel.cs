@@ -35,25 +35,35 @@ namespace IPA.DN.CoreUtil
             [Out] out bool wow64Process
         );
 
+        public static PlatformID GetOsPlatform()
+        {
+            return Environment.OSVersion.Platform;
+        }
+
         public static bool InternalCheckIsWow64()
         {
-            if ((Environment.OSVersion.Version.Major == 5 && Environment.OSVersion.Version.Minor >= 1) ||
-                Environment.OSVersion.Version.Major >= 6)
+            if (GetOsPlatform() == PlatformID.Win32NT)
             {
-                using (Process p = Process.GetCurrentProcess())
+                if ((Environment.OSVersion.Version.Major == 5 && Environment.OSVersion.Version.Minor >= 1) ||
+                    Environment.OSVersion.Version.Major >= 6)
                 {
-                    bool retVal;
-                    if (!IsWow64Process(p.Handle, out retVal))
+                    using (Process p = Process.GetCurrentProcess())
                     {
-                        return false;
+                        bool retVal;
+                        if (!IsWow64Process(p.Handle, out retVal))
+                        {
+                            return false;
+                        }
+                        return retVal;
                     }
-                    return retVal;
+                }
+                else
+                {
+                    return false;
                 }
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
         // スリープ

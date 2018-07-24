@@ -10,12 +10,8 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            BigInteger a = new BigInteger(12345678);
-
-            for (int i = 0;i < 6;i++)
-            a = a * a;
-
-            WriteLine(a.ToHexString());
+            WriteLine(Kernel.InternalCheckIsWow64());
+            WriteLine(Kernel.GetOsPlatform().ToString());
         }
     }
 }
