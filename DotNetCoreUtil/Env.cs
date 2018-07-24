@@ -49,6 +49,7 @@ namespace IPA.DN.CoreUtil
             SystemDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.System));
             WindowsDir = IO.RemoteLastEnMark(Path.GetDirectoryName(SystemDir));
             TempDir = IO.RemoteLastEnMark(Path.GetTempPath());
+            Console.WriteLine("Path.GetTempPath() = {0}", Path.GetTempPath());
             WinTempDir = IO.RemoteLastEnMark(Path.Combine(WindowsDir, "Temp"));
             IO.MakeDir(WinTempDir);
             if (WindowsDir.Length >= 2 && WindowsDir[1] == ':')
