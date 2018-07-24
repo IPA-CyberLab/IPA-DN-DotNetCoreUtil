@@ -331,7 +331,7 @@ namespace IPA.DN.CoreUtil
             {
                 try
                 {
-                    b = Buf.ReadFromFile(HamcoreDirName + Env.PathDelimiter + filename);
+                    b = Buf.ReadFromFile(HamcoreDirName + Env.PathSeparator + filename);
 
                     return b;
                 }
@@ -1510,7 +1510,7 @@ namespace IPA.DN.CoreUtil
         // 相対的ファイル名を計算する
         public static string GetRelativeFileName(string fileName, string baseDirName)
         {
-            baseDirName = RemoveLastEnMark(baseDirName).Trim() + Env.PathDelimiter;
+            baseDirName = RemoveLastEnMark(baseDirName).Trim() + Env.PathSeparator;
             fileName = fileName.Trim();
 
             if (fileName.Length <= baseDirName.Length)
@@ -1785,7 +1785,7 @@ namespace IPA.DN.CoreUtil
         // パスの変換
         public static string ConvertPath(string path)
         {
-            if (Env.PathDelimiter == "\\")
+            if (Env.PathSeparator == "\\")
             {
                 return path.Replace('/', '\\');
             }

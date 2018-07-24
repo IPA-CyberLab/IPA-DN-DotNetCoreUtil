@@ -28,6 +28,12 @@ namespace IPA.DN.CoreUtil
 
         static Env()
         {
+            PathSeparator = "" + Path.DirectorySeparatorChar;
+            if (Str.IsEmptyStr(PathSeparator))
+            {
+                PathSeparator = "/";
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT) PathSeparator = "\\";
+            }
             ExeFileName = IO.RemoveLastEnMark(getMyExeFileName());
             if (Str.IsEmptyStr(ExeFileName) == false)
             {
@@ -49,6 +55,14 @@ namespace IPA.DN.CoreUtil
             SystemDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.System));
             WindowsDir = IO.RemoveLastEnMark(Path.GetDirectoryName(SystemDir));
             TempDir = IO.RemoveLastEnMark(Path.GetTempPath());
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT && PathSeparator == "/")
+            {
+                // UNIX Temp Dir
+                if (Str.IsEmptyStr(HomeDir) == false)
+                {
+                    TempDir = Path.Combine(HomeDir, ".dotnet_tmp");
+                }
+            }
             WinTempDir = IO.RemoveLastEnMark(Path.Combine(WindowsDir, "Temp"));
             IO.MakeDir(WinTempDir);
             if (WindowsDir.Length >= 2 && WindowsDir[1] == ':')
@@ -79,8 +93,7 @@ namespace IPA.DN.CoreUtil
             MachineName = Environment.MachineName;
             CommandLine = initCommandLine(Environment.CommandLine);
             OsInfo = Environment.OSVersion;
-            IsNt = (OsInfo.Platform == PlatformID.Win32NT);
-            Is9x = !(IsNt);
+            IsWindows = (OsInfo.Platform == PlatformID.Win32NT);
             IsLittleEndian = BitConverter.IsLittleEndian;
             ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id;
             IsAdmin = checkIsAdmin();
@@ -149,14 +162,14 @@ namespace IPA.DN.CoreUtil
         public static string CommandLine { get; }
         public static StrToken CommandLineList { get; }
         public static OperatingSystem OsInfo { get; }
-        public static bool IsNt { get; }
-        public static bool Is9x { get; }
+        public static bool IsWindows { get; }
+        public static bool IsUnix => !IsWindows;
         public static bool IsLittleEndian { get; }
         public static bool IsBigEndian => !IsLittleEndian;
         public static bool IsAdmin { get; }
         public static int ProcessId { get; }
         public static string MyTempDir { get; }
-        public static string PathDelimiter { get; }
+        public static string PathSeparator { get; }
         static IO lockFile;
 
 

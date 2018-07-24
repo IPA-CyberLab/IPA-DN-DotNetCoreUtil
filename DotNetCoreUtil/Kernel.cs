@@ -72,6 +72,13 @@ namespace IPA.DN.CoreUtil
             ThreadObj.Sleep(millisec);
         }
 
+        // デバッグのため停止
+        public static void SuspendForDebug()
+        {
+            Console.WriteLine("SuspendForDebug() called.");
+            SleepThread(ThreadObj.Infinite);
+        }
+
         // 環境変数文字列の取得
         public static string GetEnvStr(string name)
         {

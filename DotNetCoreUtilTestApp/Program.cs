@@ -15,6 +15,8 @@ namespace DotNetCoreUtilTestApp
             WriteLine(System.Environment.OSVersion.VersionString);
             WriteLine("home: " + Env.HomeDir);
             WriteLine("path char: " + System.IO.Path.DirectorySeparatorChar);
+
+            Kernel.SuspendForDebug();
         }
     }
 }
