@@ -1,5 +1,8 @@
 ﻿using System;
-using DotNetCoreUtil;
+using IPA.DN.CoreUtil;
+using IPA.DN.CoreUtil.BigInt;
+
+using static System.Console;
 
 namespace DotNetCoreUtilTestApp
 {
@@ -7,9 +10,12 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            BigInteger a = new BigInteger(12345678);
 
-            Class1.Test();
+            for (int i = 0;i < 6;i++)
+            a = a * a;
+
+            WriteLine(a.ToHexString());
         }
     }
 }
