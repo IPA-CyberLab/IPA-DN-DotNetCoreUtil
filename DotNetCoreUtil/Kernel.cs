@@ -76,7 +76,7 @@ namespace IPA.DN.CoreUtil
         public static string GetEnvStr(string name)
         {
             string ret = Environment.GetEnvironmentVariable(name);
-
+            
             if (ret == null)
             {
                 ret = "";
