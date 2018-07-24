@@ -28,29 +28,28 @@ namespace IPA.DN.CoreUtil
 
         static Env()
         {
-            ExeFileName = IO.RemoteLastEnMark(getMyExeFileName());
+            ExeFileName = IO.RemoveLastEnMark(getMyExeFileName());
             if (Str.IsEmptyStr(ExeFileName) == false)
             {
-                ExeFileDir = IO.RemoteLastEnMark(Path.GetDirectoryName(ExeFileName));
+                ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
             }
             else
             {
                 ExeFileDir = "";
             }
-            HomeDir = IO.RemoteLastEnMark(Kernel.GetEnvStr("HOME"));
+            HomeDir = IO.RemoveLastEnMark(Kernel.GetEnvStr("HOME"));
             if (Str.IsEmptyStr(HomeDir))
             {
-                HomeDir = IO.RemoteLastEnMark(Kernel.GetEnvStr("HOMEDRIVE") + Kernel.GetEnvStr("HOMEPATH"));
+                HomeDir = IO.RemoveLastEnMark(Kernel.GetEnvStr("HOMEDRIVE") + Kernel.GetEnvStr("HOMEPATH"));
             }
             if (Str.IsEmptyStr(HomeDir))
             {
                 HomeDir = CurrentDir;
             }
-            SystemDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.System));
-            WindowsDir = IO.RemoteLastEnMark(Path.GetDirectoryName(SystemDir));
-            TempDir = IO.RemoteLastEnMark(Path.GetTempPath());
-            Console.WriteLine("Path.GetTempPath() = {0}", Path.GetTempPath());
-            WinTempDir = IO.RemoteLastEnMark(Path.Combine(WindowsDir, "Temp"));
+            SystemDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.System));
+            WindowsDir = IO.RemoveLastEnMark(Path.GetDirectoryName(SystemDir));
+            TempDir = IO.RemoveLastEnMark(Path.GetTempPath());
+            WinTempDir = IO.RemoveLastEnMark(Path.Combine(WindowsDir, "Temp"));
             IO.MakeDir(WinTempDir);
             if (WindowsDir.Length >= 2 && WindowsDir[1] == ':')
             {
@@ -60,14 +59,14 @@ namespace IPA.DN.CoreUtil
             {
                 WindowsDrive = "C:";
             }
-            ProgramFilesDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
-            PersonalStartMenuDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu));
-            PersonalProgramsDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
-            PersonalStartupDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.Startup));
-            PersonalAppDataDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
-            PersonalDesktopDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
-            MyDocumentsDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-            LocalAppDataDir = IO.RemoteLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            ProgramFilesDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
+            PersonalStartMenuDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu));
+            PersonalProgramsDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
+            PersonalStartupDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.Startup));
+            PersonalAppDataDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            PersonalDesktopDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
+            MyDocumentsDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
+            LocalAppDataDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
             UserName = Environment.UserName;
             try
             {
@@ -157,7 +156,7 @@ namespace IPA.DN.CoreUtil
         public static bool IsAdmin { get; }
         public static int ProcessId { get; }
         public static string MyTempDir { get; }
-        public static string PathChar { get; }
+        public static string PathDelimiter { get; }
         static IO lockFile;
 
 
@@ -294,7 +293,7 @@ namespace IPA.DN.CoreUtil
         {
             get
             {
-                return IO.RemoteLastEnMark(Environment.CurrentDirectory);
+                return IO.RemoveLastEnMark(Environment.CurrentDirectory);
             }
         }
         static public string NewLine

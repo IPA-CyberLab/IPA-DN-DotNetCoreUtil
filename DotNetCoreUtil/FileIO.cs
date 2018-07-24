@@ -93,7 +93,7 @@ namespace IPA.DN.CoreUtil
 
         public void AddDir(string dirName)
         {
-            dirName = IO.RemoteLastEnMark(dirName);
+            dirName = IO.RemoveLastEnMark(dirName);
 
             DirEntry[] ee = IO.EnumDirEx(dirName);
 
@@ -331,7 +331,7 @@ namespace IPA.DN.CoreUtil
             {
                 try
                 {
-                    b = Buf.ReadFromFile(HamcoreDirName + "\\" + filename);
+                    b = Buf.ReadFromFile(HamcoreDirName + Env.PathDelimiter + filename);
 
                     return b;
                 }
@@ -1510,7 +1510,7 @@ namespace IPA.DN.CoreUtil
         // 相対的ファイル名を計算する
         public static string GetRelativeFileName(string fileName, string baseDirName)
         {
-            baseDirName = RemoteLastEnMark(baseDirName).Trim() + "\\";
+            baseDirName = RemoveLastEnMark(baseDirName).Trim() + Env.PathDelimiter;
             fileName = fileName.Trim();
 
             if (fileName.Length <= baseDirName.Length)
@@ -1527,13 +1527,18 @@ namespace IPA.DN.CoreUtil
         }
 
         // パスの正規化
-        public static string RemoteLastEnMark(string path)
+        public static string RemoteLastEnMark(string path) => RemoveLastEnMark(path); // older typo
+        public static string RemoveLastEnMark(string path)
         {
             if (path == null)
             {
                 path = "";
             }
-            if (path.EndsWith("\\"))
+            if (path.EndsWith("/"))
+            {
+                path = path.Substring(0, path.Length - 1);
+            }
+            if (path.EndsWith(@"\"))
             {
                 path = path.Substring(0, path.Length - 1);
             }
@@ -1671,7 +1676,7 @@ namespace IPA.DN.CoreUtil
             tmp = ConvertPath(src).Trim();
 
             // 先頭が "./" や "../" で始まっている場合はカレントディレクトリに置換する
-            if (tmp.StartsWith(".\\") || tmp.StartsWith("..\\") || tmp.StartsWith(".") || tmp.StartsWith(".."))
+            if (tmp.StartsWith(".\\") || tmp.StartsWith("..\\") || tmp.StartsWith("./") || tmp.StartsWith("../") || tmp.StartsWith(".") || tmp.StartsWith(".."))
             {
                 if (tmp.StartsWith(".."))
                 {
@@ -1780,7 +1785,14 @@ namespace IPA.DN.CoreUtil
         // パスの変換
         public static string ConvertPath(string path)
         {
-            return path.Replace('/', '\\');
+            if (Env.PathDelimiter == "\\")
+            {
+                return path.Replace('/', '\\');
+            }
+            else
+            {
+                return path.Replace('\\', '/');
+            }
         }
 
         // パスの結合

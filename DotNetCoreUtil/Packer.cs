@@ -44,7 +44,7 @@ namespace IPA.DN.CoreUtil
 
                 if (Str.IsEmptyStr(appendPrefixDirName) == false)
                 {
-                    relativePath = IO.RemoteLastEnMark(appendPrefixDirName) + "\\" + relativePath;
+                    relativePath = IO.RemoveLastEnMark(appendPrefixDirName) + "\\" + relativePath;
                 }
 
                 relativeFileList.Add(relativePath);
