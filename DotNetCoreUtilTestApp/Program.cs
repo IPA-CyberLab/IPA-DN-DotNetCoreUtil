@@ -13,7 +13,7 @@ namespace DotNetCoreUtilTestApp
             WriteLine(Kernel.InternalCheckIsWow64());
             WriteLine(Kernel.GetOsPlatform().ToString());
             WriteLine(System.Environment.OSVersion.VersionString);
-            WriteLine("home: " + Kernel.GetEnvStr("HOME"));
+            WriteLine("home: " + Env.HomeDir);
         }
     }
 }
