@@ -16,7 +16,11 @@ namespace DotNetCoreUtilTestApp
             WriteLine("home: " + Env.HomeDir);
             WriteLine("path char: " + System.IO.Path.DirectorySeparatorChar);
 
-            Kernel.SuspendForDebug();
+            var ret = Debug.GetVarsFromClass(typeof(Env));
+
+            Console.WriteLine(ret.ToString());
+
+            Util.DoNothing();
         }
     }
 }

@@ -172,6 +172,9 @@ namespace IPA.DN.CoreUtil
         public static string PathSeparator { get; }
         static IO lockFile;
 
+        static string test_prop { get; } = "ahobaka";
+        public static string TestStr = "Nekosan";
+
 
         public static bool Is64BitProcess => (IntPtr.Size == 8);
         public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
