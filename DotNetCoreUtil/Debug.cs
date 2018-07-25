@@ -30,52 +30,68 @@ namespace IPA.DN.CoreUtil
 {
     public static class Debug
     {
-        public static DebugVars GetVarsFromClass(Type t, object obj = null)
+        static int num = 0;
+        public static DebugVars GetVarsFromClass(Type t, object obj = null, ImmutableHashSet<object> duplicate_check = null)
         {
+            if (num++ >= 100) Debugger.Break();
+
+            if (duplicate_check == null) duplicate_check = ImmutableHashSet<object>.Empty;
+
             DebugVars ret = new DebugVars();
 
-            MemberInfo[] proplist = t.GetProperties();
+            var members_list = GetAllMembersFromType(t);
 
-            foreach (PropertyInfo p in proplist)
+            foreach (MemberInfo info in members_list)
             {
-                object data = GetValueOfFieldOrProperty(p, obj);
+                bool ok = false;
+                if (info.MemberType == MemberTypes.Field)
+                {
+                    FieldInfo fi = info as FieldInfo;
 
-                if (IsPrimitiveType(p.PropertyType))
-                {
-                    ret.Vars.Add(p.Name, (p, data));
-                }
-                else
-                {
-                    if (p.GetValue(obj) == null)
+                    ok = true;
+
+                    if (fi.IsInitOnly)
                     {
-                        ret.Vars.Add(p.Name, (p, null));
+                        ok = false;
+                    }
+                }
+                else if (info.MemberType == MemberTypes.Property)
+                {
+                    PropertyInfo pi = info as PropertyInfo;
+
+                    ok = true;
+                }
+
+                if (ok)
+                {
+                    //if (info.Name == "lockFile") Debugger.Break();
+
+                    object data = GetValueOfFieldOrProperty(info, obj);
+                    Type data_type = data?.GetType() ?? null;
+
+                    if (IsPrimitiveType(data_type))
+                    {
+                        ret.Vars.Add((info, data));
                     }
                     else
                     {
-                        ret.Childlen.Add(p.Name, GetVarsFromClass(data.GetType(), data));
-                    }
-                }
-            }
-
-            MemberInfo[] fieldlist = t.GetFields();
-
-            foreach (FieldInfo f in fieldlist)
-            {
-                if (IsPrimitiveType(f.FieldType))
-                {
-                    if (IsPrimitiveType(f.FieldType))
-                    {
-                        ret.Vars.Add(f.Name, (f, f.GetValue(obj)));
-                    }
-                    else
-                    {
-                        if (f.GetValue(obj) == null)
+                        if (data == null)
                         {
-                            ret.Vars.Add(f.Name, (f, null));
+                            ret.Vars.Add((info, null));
                         }
                         else
                         {
-                            ret.Childlen.Add(f.Name, GetVarsFromClass(f.GetValue(obj).GetType(), f.GetValue(obj)));
+                            if (data is ICollection)
+                            {
+                                Console.WriteLine("---");
+                            }
+                            else
+                            {
+                                if (duplicate_check.Contains(data) == false)
+                                {
+                                    ret.Childlen.Add(GetVarsFromClass(data_type, data, duplicate_check.Add(data)));
+                                }
+                            }
                         }
                     }
                 }
@@ -86,12 +102,33 @@ namespace IPA.DN.CoreUtil
             return ret;
         }
 
+        public static MemberInfo[] GetAllMembersFromType(Type t)
+        {
+            HashSet<MemberInfo> a = new HashSet<MemberInfo>();
+
+            a.UnionWith(t.GetMembers(BindingFlags.Static | BindingFlags.Public));
+            a.UnionWith(t.GetMembers(BindingFlags.Static | BindingFlags.NonPublic));
+            a.UnionWith(t.GetMembers(BindingFlags.Instance | BindingFlags.Public));
+            //a.UnionWith(t.GetMembers(BindingFlags.Instance | BindingFlags.NonPublic));
+
+            MemberInfo[] ret = new MemberInfo[a.Count];
+            a.CopyTo(ret);
+            return ret;
+        }
+
         public static object GetValueOfFieldOrProperty(MemberInfo m, object obj)
         {
             switch (m)
             {
                 case PropertyInfo p:
-                    return p.GetValue(obj);
+                    try
+                    {
+                        return p.GetValue(obj);
+                    }
+                    catch
+                    {
+                        return null;
+                    }
 
                 case FieldInfo f:
                     return f.GetValue(obj);
@@ -102,6 +139,9 @@ namespace IPA.DN.CoreUtil
 
         public static bool IsPrimitiveType(Type t)
         {
+            if (t == null) return true;
+            if (t.IsSubclassOf(typeof(System.Type))) return true;
+            if (t.IsEnum) return true;
             if (t.IsPrimitive) return true;
             if (t == typeof(string)) return true;
             if (t == typeof(DateTime)) return true;
@@ -121,29 +161,29 @@ namespace IPA.DN.CoreUtil
     {
         public string BaseName = "";
 
-        public SortedList<string, ValueTuple<MemberInfo, object>> Vars = new SortedList<string, (MemberInfo, object)>();
-        public SortedList<string, DebugVars> Childlen = new SortedList<string, DebugVars>();
+        public List<ValueTuple<MemberInfo, object>> Vars = new List<(MemberInfo, object)>();
+        public List<DebugVars> Childlen = new List<DebugVars>();
 
         public void WriteToString(StringWriter w, ImmutableList<string> parents)
         {
-            foreach (string name in this.Childlen.Keys)
+            foreach (DebugVars var in Childlen)
             {
-                DebugVars var = this.Childlen[name];
-
-                var.WriteToString(w, parents.Add(name));
+                var.WriteToString(w, parents.Add(var.BaseName));
             }
 
-            foreach (string name in this.Vars.Keys)
+            foreach (var data in Vars)
             {
-                var data = this.Vars[name];
                 MemberInfo p = data.Item1;
                 object o = data.Item2;
                 string print_str = "null";
                 string closure = "'";
-                if (o?.GetType().IsPrimitive ?? true) closure = "";
-                if (o != null) print_str = $"{closure}{o.ToString()}{closure}";
+                if ((o?.GetType().IsPrimitive ?? true) || (o?.GetType().IsEnum ?? false)) closure = "";
+                if (o != null)
+                {
+                    print_str = $"{closure}{o.ToString()}{closure}";
+                }
 
-                w.WriteLine($"{Str.CombineStringArray(ImmutableListToArray<string>(parents), ".")}.{name} = {print_str}");
+                w.WriteLine($"{Str.CombineStringArray(ImmutableListToArray<string>(parents), ".")}.{p.Name} = {print_str}");
             }
         }
 

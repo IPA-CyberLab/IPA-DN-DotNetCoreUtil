@@ -64,11 +64,14 @@ namespace IPA.DN.CoreUtil
 
         static string test_prop { get; } = "ahobaka";
         public static string TestStr = "Nekosan";
+        static string TestStr2 = "nnn";
 
 
         public static bool Is64BitProcess => (IntPtr.Size == 8);
         public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
         public static bool IsWow64 => Kernel.InternalCheckIsWow64();
+
+        public static int[] IntTest = { 1, 2, 3 };
 
 
         // 初期化
