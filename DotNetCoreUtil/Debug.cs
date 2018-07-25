@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.Text;
 using System.Configuration;
 using System.Collections;
@@ -37,9 +38,11 @@ namespace IPA.DN.CoreUtil
 
             foreach (PropertyInfo p in proplist)
             {
+                object data = GetValueOfFieldOrProperty(p, obj);
+
                 if (IsPrimitiveType(p.PropertyType))
                 {
-                    ret.Vars.Add(p.Name, (p, p.GetValue(obj)));
+                    ret.Vars.Add(p.Name, (p, data));
                 }
                 else
                 {
@@ -49,7 +52,7 @@ namespace IPA.DN.CoreUtil
                     }
                     else
                     {
-                        ret.Childlen.Add(p.Name, GetVarsFromClass(p.GetValue(obj).GetType(), p.GetValue(obj)));
+                        ret.Childlen.Add(p.Name, GetVarsFromClass(data.GetType(), data));
                     }
                 }
             }
@@ -78,7 +81,23 @@ namespace IPA.DN.CoreUtil
                 }
             }
 
+            ret.BaseName = t.Name;
+
             return ret;
+        }
+
+        public static object GetValueOfFieldOrProperty(MemberInfo m, object obj)
+        {
+            switch (m)
+            {
+                case PropertyInfo p:
+                    return p.GetValue(obj);
+
+                case FieldInfo f:
+                    return f.GetValue(obj);
+            }
+
+            return null;
         }
 
         public static bool IsPrimitiveType(Type t)
@@ -92,6 +111,10 @@ namespace IPA.DN.CoreUtil
 
             return false;
         }
+
+        public static void Suspend() => Kernel.SuspendForDebug();
+
+        public static void Break() => Debugger.Break();
     }
 
     public class DebugVars
@@ -101,9 +124,14 @@ namespace IPA.DN.CoreUtil
         public SortedList<string, ValueTuple<MemberInfo, object>> Vars = new SortedList<string, (MemberInfo, object)>();
         public SortedList<string, DebugVars> Childlen = new SortedList<string, DebugVars>();
 
-        public void WriteToString(StringWriter w, int depth, ImmutableList<string> parents)
+        public void WriteToString(StringWriter w, ImmutableList<string> parents)
         {
-            string padding = Str.MakeCharArray(' ', depth);
+            foreach (string name in this.Childlen.Keys)
+            {
+                DebugVars var = this.Childlen[name];
+
+                var.WriteToString(w, parents.Add(name));
+            }
 
             foreach (string name in this.Vars.Keys)
             {
@@ -111,9 +139,11 @@ namespace IPA.DN.CoreUtil
                 MemberInfo p = data.Item1;
                 object o = data.Item2;
                 string print_str = "null";
-                if (o != null) print_str = $"'{o.ToString()}'";
+                string closure = "'";
+                if (o?.GetType().IsPrimitive ?? true) closure = "";
+                if (o != null) print_str = $"{closure}{o.ToString()}{closure}";
 
-                w.WriteLine($"{padding}{Str.CombineStringArray(ImmutableListToArray<string>(parents), ".")}.{name} = {print_str}");
+                w.WriteLine($"{Str.CombineStringArray(ImmutableListToArray<string>(parents), ".")}.{name} = {print_str}");
             }
         }
 
@@ -129,7 +159,7 @@ namespace IPA.DN.CoreUtil
             ImmutableList<string> parents = ImmutableList.Create<string>(this.BaseName);
             StringWriter w = new StringWriter();
 
-            WriteToString(w, 0, parents);
+            WriteToString(w, parents);
 
             return w.ToString();
         }

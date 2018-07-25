@@ -26,6 +26,52 @@ namespace IPA.DN.CoreUtil
     {
         static object lockObj = new object();
 
+        // 初期化の必要のあるプロパティ値
+        static public Version FrameworkVersion { get; }
+        public static bool IsNET4OrGreater => (FrameworkVersion.Major >= 4);
+        static public string HomeDir { get; }
+        static public string ExeFileName { get; }
+        static public string ExeFileDir { get; }
+        static public string WindowsDir { get; }
+        static public string SystemDir { get; }
+        static public string TempDir { get; }
+        static public string WinTempDir { get; }
+        static public string WindowsDrive { get; }
+        static public string ProgramFilesDir { get; }
+        static public string PersonalStartMenuDir { get; }
+        static public string PersonalProgramsDir { get; }
+        static public string PersonalStartupDir { get; }
+        static public string PersonalAppDataDir { get; }
+        static public string PersonalDesktopDir { get; }
+        static public string MyDocumentsDir { get; }
+        static public string LocalAppDataDir { get; }
+        static public string UserName { get; }
+        static public string UserNameEx { get; }
+        static public string MachineName { get; }
+        public static string CommandLine { get; }
+        public static StrToken CommandLineList { get; }
+        public static OperatingSystem OsInfo { get; }
+        public static bool IsWindows { get; }
+        public static bool IsUnix => !IsWindows;
+        public static bool IsLittleEndian { get; }
+        public static bool IsBigEndian => !IsLittleEndian;
+        public static bool IsAdmin { get; }
+        public static int ProcessId { get; }
+        public static string MyTempDir { get; }
+        public static string PathSeparator { get; }
+        public static string StartupCurrentDir { get; }
+        static IO lockFile;
+
+        static string test_prop { get; } = "ahobaka";
+        public static string TestStr = "Nekosan";
+
+
+        public static bool Is64BitProcess => (IntPtr.Size == 8);
+        public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
+        public static bool IsWow64 => Kernel.InternalCheckIsWow64();
+
+
+        // 初期化
         static Env()
         {
             PathSeparator = "" + Path.DirectorySeparatorChar;
@@ -60,7 +106,7 @@ namespace IPA.DN.CoreUtil
                 // UNIX Temp Dir
                 if (Str.IsEmptyStr(HomeDir) == false)
                 {
-                    TempDir = Path.Combine(HomeDir, ".dotnet_tmp");
+                    TempDir = Path.Combine(HomeDir, ".dntmp");
                 }
             }
             WinTempDir = IO.RemoveLastEnMark(Path.Combine(WindowsDir, "Temp"));
@@ -81,6 +127,7 @@ namespace IPA.DN.CoreUtil
             PersonalDesktopDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
             MyDocumentsDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
             LocalAppDataDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            StartupCurrentDir = CurrentDir;
             UserName = Environment.UserName;
             try
             {
@@ -137,48 +184,6 @@ namespace IPA.DN.CoreUtil
             FrameworkVersion = Environment.Version;
         }
 
-        // 初期化の必要のあるプロパティ値
-        static public Version FrameworkVersion { get; }
-        public static bool IsNET4OrGreater => (FrameworkVersion.Major >= 4);
-        static public string HomeDir { get; }
-        static public string ExeFileName { get; }
-        static public string ExeFileDir { get; }
-        static public string WindowsDir { get; }
-        static public string SystemDir { get; }
-        static public string TempDir { get; }
-        static public string WinTempDir { get; }
-        static public string WindowsDrive { get; }
-        static public string ProgramFilesDir { get; }
-        static public string PersonalStartMenuDir { get; }
-        static public string PersonalProgramsDir { get; }
-        static public string PersonalStartupDir { get; }
-        static public string PersonalAppDataDir { get; }
-        static public string PersonalDesktopDir { get; }
-        static public string MyDocumentsDir { get; }
-        static public string LocalAppDataDir { get; }
-        static public string UserName { get; }
-        static public string UserNameEx { get; }
-        static public string MachineName { get; }
-        public static string CommandLine { get; }
-        public static StrToken CommandLineList { get; }
-        public static OperatingSystem OsInfo { get; }
-        public static bool IsWindows { get; }
-        public static bool IsUnix => !IsWindows;
-        public static bool IsLittleEndian { get; }
-        public static bool IsBigEndian => !IsLittleEndian;
-        public static bool IsAdmin { get; }
-        public static int ProcessId { get; }
-        public static string MyTempDir { get; }
-        public static string PathSeparator { get; }
-        static IO lockFile;
-
-        static string test_prop { get; } = "ahobaka";
-        public static string TestStr = "Nekosan";
-
-
-        public static bool Is64BitProcess => (IntPtr.Size == 8);
-        public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
-        public static bool IsWow64 => Kernel.InternalCheckIsWow64();
 
         static void deleteUnusedTempDir()
         {
@@ -305,19 +310,7 @@ namespace IPA.DN.CoreUtil
         }
 
         // 初期化の必要のないプロパティ値
-        static public string CurrentDir
-        {
-            get
-            {
-                return IO.RemoveLastEnMark(Environment.CurrentDirectory);
-            }
-        }
-        static public string NewLine
-        {
-            get
-            {
-                return Environment.NewLine;
-            }
-        }
+        static public string CurrentDir => IO.RemoveLastEnMark(Environment.CurrentDirectory);
+        static public string NewLine => Environment.NewLine;
     }
 }
