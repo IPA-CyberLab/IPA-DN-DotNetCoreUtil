@@ -20,7 +20,7 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            //Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             basic_test();
             Console.WriteLine();
@@ -31,7 +31,7 @@ namespace DotNetCoreUtilTestApp
         static void io_test()
         {
             IO f = IO.FileCreate("@test.txt");
-            f.Write(Str.Utf8Encoding.GetBytes("This is a test.\n"));
+            f.Write(Str.Utf8Encoding.GetBytes("This is a test. こんにちは。\n"));
             f.Close();
         }
 
