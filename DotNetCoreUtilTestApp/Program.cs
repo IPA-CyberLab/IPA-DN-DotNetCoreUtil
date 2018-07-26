@@ -25,6 +25,7 @@ namespace DotNetCoreUtilTestApp
 
             //Console.WriteLine(Debug.GetVarsFromClass(typeof(Env)));
             Debug.PrintObjectInnerString(typeof(Env));
+            //Debug.PrintObjectInnerString(typeof(System.Runtime.InteropServices.RuntimeInformation));
 
             Util.DoNothing();
         }

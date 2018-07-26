@@ -19,6 +19,7 @@ using System.Net.NetworkInformation;
 using System.Net.Mail;
 using System.Net.Mime;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace IPA.DN.CoreUtil
 {
@@ -53,6 +54,8 @@ namespace IPA.DN.CoreUtil
         public static OperatingSystem OsInfo { get; }
         public static bool IsWindows { get; }
         public static bool IsUnix => !IsWindows;
+        public static bool IsMac { get; }
+        public static bool IsLinux { get; }
         public static bool IsLittleEndian { get; }
         public static bool IsBigEndian => !IsLittleEndian;
         public static bool IsAdmin { get; }
@@ -67,13 +70,17 @@ namespace IPA.DN.CoreUtil
         public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
         public static bool IsWow64 => Kernel.InternalCheckIsWow64();
 
+        public static Architecture CpuInfo { get; } = RuntimeInformation.ProcessArchitecture;
+        public static string FrameworkInfoString = RuntimeInformation.FrameworkDescription.Trim();
+        public static string OsInfoString = RuntimeInformation.OSDescription.Trim();
+
         public static int[] IntTest = { 1, 2, 3 };
 
 
         // 初期化
         static Env()
         {
-            PathSeparator = "" + Path.DirectorySeparatorChar;
+               PathSeparator = "" + Path.DirectorySeparatorChar;
             if (Str.IsEmptyStr(PathSeparator))
             {
                 PathSeparator = "/";
@@ -143,6 +150,18 @@ namespace IPA.DN.CoreUtil
             IsLittleEndian = BitConverter.IsLittleEndian;
             ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id;
             IsAdmin = checkIsAdmin();
+
+            if (IsUnix)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    IsLinux = true;
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    IsMac = true;
+                }
+            }
 
             // 自分用の temp ディレクトリの初期化
             try
