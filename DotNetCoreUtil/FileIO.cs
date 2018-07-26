@@ -1510,10 +1510,11 @@ namespace IPA.DN.CoreUtil
         // 相対的ファイル名を計算する
         public static string GetRelativeFileName(string fileName, string baseDirName)
         {
-            baseDirName = RemoveLastEnMark(baseDirName).Trim() + Env.PathSeparator;
+            baseDirName = baseDirName.Trim();
             fileName = fileName.Trim();
 
             baseDirName = IO.NormalizePath(baseDirName);
+            baseDirName = RemoveLastEnMark(baseDirName).Trim() + Env.PathSeparator;
             fileName = IO.NormalizePath(fileName);
 
             if (fileName.Length <= baseDirName.Length)
