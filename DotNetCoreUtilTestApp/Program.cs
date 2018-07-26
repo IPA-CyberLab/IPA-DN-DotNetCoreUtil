@@ -6,6 +6,10 @@ using System.Collections.Immutable;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
+using System.Threading;
+using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+
 using System.Text;
 using System.IO;
 
@@ -25,8 +29,28 @@ namespace DotNetCoreUtilTestApp
             basic_test();
             Console.WriteLine();
 
-            io_test();
+            mutex_test();
             Console.WriteLine();
+        }
+
+        static void mutex_test()
+        {
+            bool f = false;
+            Mutex m = new Mutex(false, "180726", out f);
+            Con.WriteLine($"mutex new = {f}");
+            Con.WriteLine("Wait for acquire mutex...");
+            m.WaitOne();
+            Con.WriteLine("Wait finished.");
+            try
+            {
+                Con.WriteLine("Sleeping...");
+                ThreadObj.Sleep(8000);
+            }
+            finally
+            {
+                m.ReleaseMutex();
+                Con.WriteLine("Released.");
+            }
         }
 
         static void basic_test()
