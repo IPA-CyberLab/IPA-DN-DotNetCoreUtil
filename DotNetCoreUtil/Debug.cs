@@ -33,7 +33,6 @@ namespace IPA.DN.CoreUtil
         static int num = 0;
         public static DebugVars GetVarsFromClass(Type t, string name = null, object obj = null, ImmutableHashSet<object> duplicate_check = null)
         {
-            if (name == "s_ioCallback") Debugger.Break();
             if (duplicate_check == null) duplicate_check = ImmutableHashSet<object>.Empty;
 
             if (Str.IsEmptyStr(name)) name = t.Name;
