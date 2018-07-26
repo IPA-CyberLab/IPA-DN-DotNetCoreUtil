@@ -152,6 +152,9 @@ namespace IPA.DN.CoreUtil
             if (IsUnix)
             {
                 // ダミーディレクトリ
+                SystemDir = "/bin";
+                WindowsDir = "/bin";
+                WindowsDrive = "/";
                 ProgramFilesDir = "/bin";
                 PersonalStartMenuDir = Path.Combine(HomeDir, "dummy/starmenu");
                 PersonalProgramsDir = Path.Combine(HomeDir, "dummy/starmenu/programs");
