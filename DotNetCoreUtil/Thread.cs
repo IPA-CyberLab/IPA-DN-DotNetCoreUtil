@@ -18,6 +18,7 @@ using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Net.Mail;
 using System.Net.Mime;
+using System.Runtime.InteropServices;
 
 #pragma warning disable 0618
 
@@ -25,6 +26,17 @@ namespace IPA.DN.CoreUtil
 {
     internal class MutantUnix : Mutant
     {
+        internal enum LockOperations : int
+        {
+            LOCK_SH = 1,    /* shared lock */
+            LOCK_EX = 2,    /* exclusive lock */
+            LOCK_NB = 4,    /* don't block when locking*/
+            LOCK_UN = 8,    /* unlock */
+        }
+
+        [DllImport("System.Native", EntryPoint = "SystemNative_FLock", SetLastError = true)]
+        internal static extern int FLock(IntPtr fd, LockOperations operation);
+
         string filename;
         int locked_count = 0;
         FileStream fs;
@@ -41,6 +53,7 @@ namespace IPA.DN.CoreUtil
             {
                 IO.MakeDirIfNotExists(Env.UnixMutantDir);
                 FileStream f = File.Open(filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+                FLock(f.Handle, LockOperations.LOCK_EX);
 
                 this.fs = f;
 
@@ -109,7 +122,7 @@ namespace IPA.DN.CoreUtil
         public static string GenerateInternalName(string name)
         {
             name = name.Trim().ToUpperInvariant();
-            return "mutant_" + Str.ByteToStr(Str.HashStr(name)).ToLowerInvariant();
+            return "dnmutant_" + Str.ByteToStr(Str.HashStr(name)).ToLowerInvariant();
         }
 
         public abstract void Lock();
