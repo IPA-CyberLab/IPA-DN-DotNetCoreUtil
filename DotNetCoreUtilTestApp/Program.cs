@@ -27,7 +27,7 @@ namespace DotNetCoreUtilTestApp
             Debug.PrintObjectInnerString(typeof(Env));
 
             DirEntry[] e = IO.EnumDir(@"/root/");
-            Debug.PrintObjectInnerString(e);
+            foreach (DirEntry ee in e) Console.WriteLine(ee.FullPath);
 
             Util.DoNothing();
         }
