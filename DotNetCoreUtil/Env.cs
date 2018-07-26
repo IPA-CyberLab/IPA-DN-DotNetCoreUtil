@@ -249,7 +249,7 @@ namespace IPA.DN.CoreUtil
 
             // ロックファイルの作成
             string lockFileName = Path.Combine(Env.MyTempDir, "LockFile.dat");
-            lockFile = IO.FileCreate(lockFileName);
+            lockFile = IO.FileCreate(lockFileName, Env.IsUnix);
 
 
         }

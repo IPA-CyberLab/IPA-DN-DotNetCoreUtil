@@ -1414,31 +1414,14 @@ namespace IPA.DN.CoreUtil
             }
         }
 
-        static IO fileCreateInner(string name)
-        {
-            IO o = new IO();
-
-            string name2 = ConvertPath(name);
-
-            lock (o.lockObj)
-            {
-                o.p = File.Open(name2, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
-                o.name = name2;
-                o.writeMode = true;
-            }
-
-            return o;
-        }
-
         // ファイルを作成する
-        public static IO FileCreate(string name)
+        public static IO FileCreate(string name, bool no_share = false)
         {
             name = InnerFilePath(name);
 
-            return fileCreateInner(name);
+            return fileCreateInner(name, no_share);
         }
-
-        static IO fileOpenInner(string name, bool writeMode, bool readLock)
+        static IO fileCreateInner(string name, bool no_share)
         {
             IO o = new IO();
 
@@ -1446,11 +1429,9 @@ namespace IPA.DN.CoreUtil
 
             lock (o.lockObj)
             {
-                o.p = File.Open(name2, FileMode.Open, (writeMode ? FileAccess.ReadWrite : FileAccess.Read),
-                    (readLock ? FileShare.None : FileShare.Read));
-
+                o.p = File.Open(name2, FileMode.Create, FileAccess.ReadWrite, no_share ? FileShare.None : FileShare.Read);
                 o.name = name2;
-                o.writeMode = writeMode;
+                o.writeMode = true;
             }
 
             return o;
@@ -1490,6 +1471,23 @@ namespace IPA.DN.CoreUtil
             {
                 return fileOpenInner(name, writeMode, readLock);
             }
+        }
+        static IO fileOpenInner(string name, bool writeMode, bool readLock)
+        {
+            IO o = new IO();
+
+            string name2 = ConvertPath(name);
+
+            lock (o.lockObj)
+            {
+                o.p = File.Open(name2, FileMode.Open, (writeMode ? FileAccess.ReadWrite : FileAccess.Read),
+                    (readLock ? FileShare.None : FileShare.Read));
+
+                o.name = name2;
+                o.writeMode = writeMode;
+            }
+
+            return o;
         }
 
         // ファイルを開くか作成する
