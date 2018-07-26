@@ -32,6 +32,7 @@ namespace IPA.DN.CoreUtil
         static public Version FrameworkVersion { get; }
         public static bool IsNET4OrGreater => (FrameworkVersion.Major >= 4);
         static public string HomeDir { get; }
+        static public string UnixGlobalMutexDir { get; }
         static public string ExeFileName { get; }
         static public string ExeFileDir { get; }
         static public string WindowsDir { get; }
@@ -141,9 +142,22 @@ namespace IPA.DN.CoreUtil
             {
                 HomeDir = IO.RemoveLastEnMark(Kernel.GetEnvStr("HOMEDRIVE") + Kernel.GetEnvStr("HOMEPATH"));
             }
-            if (Str.IsEmptyStr(HomeDir))
+            if (Str.IsEmptyStr(HomeDir) == false)
             {
-                HomeDir = CurrentDir;
+                UnixGlobalMutexDir = Path.Combine(HomeDir, ".dnmutex");
+            }
+            else
+            {
+                HomeDir = ExeFileDir;
+                if (IsUnix)
+                {
+                    UnixGlobalMutexDir = Path.Combine("/tmp", ".dnmutex");
+                }
+            }
+            if (IsWindows) UnixGlobalMutexDir = "";
+            if (Str.IsEmptyStr(UnixGlobalMutexDir) == false)
+            {
+                IO.MakeDirIfNotExists(UnixGlobalMutexDir);
             }
             if (IsWindows)
             {
@@ -245,6 +259,11 @@ namespace IPA.DN.CoreUtil
                 {
                     throw new SystemException();
                 }
+            }
+
+            if (IsWindows)
+            {
+                UnixGlobalMutexDir = Env.MyTempDir;
             }
 
             // ロックファイルの作成
