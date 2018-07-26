@@ -30,7 +30,38 @@ namespace IPA.DN.CoreUtil
 {
     public static class Debug
     {
-        static int num = 0;
+        public static string GetObjectInnerString(object obj, string instance_base_name)
+        {
+            return GetObjectInnerString(obj.GetType(), obj, instance_base_name);
+        }
+        public static string GetObjectInnerString(Type t)
+        {
+            return GetObjectInnerString(t, null, null);
+        }
+        public static string GetObjectInnerString(Type t, object obj, string instance_base_name)
+        {
+            DebugVars v = GetVarsFromClass(t, instance_base_name, obj);
+
+            return v.ToString();
+        }
+
+        public static void PrintObjectInnerString(object obj, string instance_base_name)
+        {
+            PrintObjectInnerString(obj.GetType(), obj, instance_base_name);
+        }
+        public static void PrintObjectInnerString(Type t)
+        {
+            PrintObjectInnerString(t, null, null);
+        }
+        public static void PrintObjectInnerString(Type t, object obj, string instance_base_name)
+        {
+            DebugVars v = GetVarsFromClass(t, instance_base_name, obj);
+
+            string str = v.ToString();
+
+            Console.WriteLine(str);
+        }
+
         public static DebugVars GetVarsFromClass(Type t, string name = null, object obj = null, ImmutableHashSet<object> duplicate_check = null)
         {
             if (duplicate_check == null) duplicate_check = ImmutableHashSet<object>.Empty;
@@ -39,7 +70,7 @@ namespace IPA.DN.CoreUtil
 
             DebugVars ret = new DebugVars();
 
-            var members_list = GetAllMembersFromType(t);
+            var members_list = GetAllMembersFromType(t, obj != null, obj == null);
 
             foreach (MemberInfo info in members_list)
             {
@@ -124,14 +155,21 @@ namespace IPA.DN.CoreUtil
             return ret;
         }
 
-        public static MemberInfo[] GetAllMembersFromType(Type t)
+        public static MemberInfo[] GetAllMembersFromType(Type t, bool hide_static, bool hide_instance)
         {
             HashSet<MemberInfo> a = new HashSet<MemberInfo>();
 
-            a.UnionWith(t.GetMembers(BindingFlags.Static | BindingFlags.Public));
-            a.UnionWith(t.GetMembers(BindingFlags.Static | BindingFlags.NonPublic));
-            a.UnionWith(t.GetMembers(BindingFlags.Instance | BindingFlags.Public));
-            //a.UnionWith(t.GetMembers(BindingFlags.Instance | BindingFlags.NonPublic));
+            if (hide_static == false)
+            {
+                a.UnionWith(t.GetMembers(BindingFlags.Static | BindingFlags.Public));
+                a.UnionWith(t.GetMembers(BindingFlags.Static | BindingFlags.NonPublic));
+            }
+
+            if (hide_instance == false)
+            {
+                a.UnionWith(t.GetMembers(BindingFlags.Instance | BindingFlags.Public));
+                a.UnionWith(t.GetMembers(BindingFlags.Instance | BindingFlags.NonPublic));
+            }
 
             MemberInfo[] ret = new MemberInfo[a.Count];
             a.CopyTo(ret);

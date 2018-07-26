@@ -62,10 +62,6 @@ namespace IPA.DN.CoreUtil
         public static string StartupCurrentDir { get; }
         static IO lockFile;
 
-        static string test_prop { get; } = "ahobaka";
-        public static string TestStr = "Nekosan";
-        static string TestStr2 = "nnn";
-
 
         public static bool Is64BitProcess => (IntPtr.Size == 8);
         public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
