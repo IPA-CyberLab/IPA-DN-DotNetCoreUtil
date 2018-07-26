@@ -31,7 +31,7 @@ namespace DotNetCoreUtilTestApp
         static void io_test()
         {
             IO f = IO.FileCreate("@test.txt");
-            f.Write(Str.Utf8Encoding.GetBytes("This is a test. こんにちは。\n"));
+            f.Write(Str.ShiftJisEncoding.GetBytes("This is a test. こんにちは。\n"));
             f.Close();
         }
 
