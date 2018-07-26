@@ -65,7 +65,6 @@ namespace IPA.DN.CoreUtil
         public static string StartupCurrentDir { get; }
         static IO lockFile;
 
-
         public static bool Is64BitProcess => (IntPtr.Size == 8);
         public static bool Is64BitWindows => (Is64BitProcess || Kernel.InternalCheckIsWow64());
         public static bool IsWow64 => Kernel.InternalCheckIsWow64();
@@ -74,13 +73,29 @@ namespace IPA.DN.CoreUtil
         public static string FrameworkInfoString = RuntimeInformation.FrameworkDescription.Trim();
         public static string OsInfoString = RuntimeInformation.OSDescription.Trim();
 
-        public static int[] IntTest = { 1, 2, 3 };
-
 
         // 初期化
         static Env()
         {
-               PathSeparator = "" + Path.DirectorySeparatorChar;
+            IsWindows = (OsInfo.Platform == PlatformID.Win32NT);
+            if (IsUnix)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    IsLinux = true;
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    IsMac = true;
+                }
+
+                // ディレクトリをダミーで入れておく
+                SystemDir = "/bin";
+                WindowsDir = "/bin";
+                WindowsDrive = "/";
+            }
+
+            PathSeparator = "" + Path.DirectorySeparatorChar;
             if (Str.IsEmptyStr(PathSeparator))
             {
                 PathSeparator = "/";
@@ -133,6 +148,17 @@ namespace IPA.DN.CoreUtil
             PersonalDesktopDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
             MyDocumentsDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
             LocalAppDataDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            if (IsUnix)
+            {
+                // ダミーディレクトリ
+                ProgramFilesDir = "/bin";
+                PersonalStartMenuDir = Path.Combine(HomeDir, "dummy/starmenu");
+                PersonalProgramsDir = Path.Combine(HomeDir, "dummy/starmenu/programs");
+                PersonalStartupDir = Path.Combine(HomeDir, "dummy/starmenu/startup");
+                LocalAppDataDir = PersonalAppDataDir = Path.Combine(HomeDir, ".dnappdata");
+                PersonalDesktopDir = Path.Combine(HomeDir, "dummy/desktop");
+                MyDocumentsDir = HomeDir;
+            }
             StartupCurrentDir = CurrentDir;
             UserName = Environment.UserName;
             try
@@ -146,22 +172,9 @@ namespace IPA.DN.CoreUtil
             MachineName = Environment.MachineName;
             CommandLine = initCommandLine(Environment.CommandLine);
             OsInfo = Environment.OSVersion;
-            IsWindows = (OsInfo.Platform == PlatformID.Win32NT);
             IsLittleEndian = BitConverter.IsLittleEndian;
             ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id;
             IsAdmin = checkIsAdmin();
-
-            if (IsUnix)
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    IsLinux = true;
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    IsMac = true;
-                }
-            }
 
             // 自分用の temp ディレクトリの初期化
             try
