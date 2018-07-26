@@ -89,11 +89,6 @@ namespace IPA.DN.CoreUtil
                 {
                     IsMac = true;
                 }
-
-                // ディレクトリをダミーで入れておく
-                SystemDir = "/bin";
-                WindowsDir = "/bin";
-                WindowsDrive = "/";
             }
 
             PathSeparator = "" + Path.DirectorySeparatorChar;
@@ -120,26 +115,38 @@ namespace IPA.DN.CoreUtil
             {
                 HomeDir = CurrentDir;
             }
-            SystemDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.System));
-            WindowsDir = IO.RemoveLastEnMark(Path.GetDirectoryName(SystemDir));
-            TempDir = IO.RemoveLastEnMark(Path.GetTempPath());
-            if (Environment.OSVersion.Platform != PlatformID.Win32NT && PathSeparator == "/")
+            if (IsWindows)
             {
-                // UNIX Temp Dir
+                // Windows
+                SystemDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.System));
+                WindowsDir = IO.RemoveLastEnMark(Path.GetDirectoryName(SystemDir));
+                TempDir = IO.RemoveLastEnMark(Path.GetTempPath());
+                WinTempDir = IO.RemoveLastEnMark(Path.Combine(WindowsDir, "Temp"));
+                IO.MakeDir(WinTempDir);
+                if (WindowsDir.Length >= 2 && WindowsDir[1] == ':')
+                {
+                    WindowsDir = WindowsDir.Substring(0, 2).ToUpper();
+                }
+                else
+                {
+                    WindowsDrive = "C:";
+                }
+            }
+            else
+            {
+                // UNIX
+                SystemDir = "/bin";
+                WindowsDir = "/bin";
+                WindowsDrive = "/";
                 if (Str.IsEmptyStr(HomeDir) == false)
                 {
                     TempDir = Path.Combine(HomeDir, ".dntmp");
                 }
-            }
-            WinTempDir = IO.RemoveLastEnMark(Path.Combine(WindowsDir, "Temp"));
-            IO.MakeDir(WinTempDir);
-            if (WindowsDir.Length >= 2 && WindowsDir[1] == ':')
-            {
-                WindowsDir = WindowsDir.Substring(0, 2).ToUpper();
-            }
-            else
-            {
-                WindowsDrive = "C:";
+                else
+                {
+                    TempDir = "/tmp";
+                }
+                WinTempDir = TempDir;
             }
             ProgramFilesDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
             PersonalStartMenuDir = IO.RemoveLastEnMark(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu));
