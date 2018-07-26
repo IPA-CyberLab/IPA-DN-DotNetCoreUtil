@@ -35,22 +35,15 @@ namespace DotNetCoreUtilTestApp
 
         static void mutex_test()
         {
-            bool f = false;
-            Mutex m = new Mutex(false, "180726", out f);
-            Con.WriteLine($"mutex new = {f}");
-            Con.WriteLine("Wait for acquire mutex...");
-            m.WaitOne();
-            Con.WriteLine("Wait finished.");
-            try
-            {
-                Con.WriteLine("Sleeping...");
-                ThreadObj.Sleep(8000);
-            }
-            finally
-            {
-                m.ReleaseMutex();
-                Con.WriteLine("Released.");
-            }
+            Mutant m = Mutant.Create("test1");
+            Con.WriteLine("before acquire");
+            m.Lock();
+            Con.WriteLine("acquired.");
+            Con.WriteLine("sleeping.");
+            Thread.Sleep(5000);
+            Con.WriteLine("before release");
+            m.Unlock();
+            Con.WriteLine("released");
         }
 
         static void basic_test()

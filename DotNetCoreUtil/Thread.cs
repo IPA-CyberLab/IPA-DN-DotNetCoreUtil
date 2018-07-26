@@ -23,6 +23,111 @@ using System.Net.Mime;
 
 namespace IPA.DN.CoreUtil
 {
+    internal class MutantUnix : Mutant
+    {
+        string filename;
+        int locked_count = 0;
+        FileStream fs;
+
+        public MutantUnix(string name)
+        {
+            filename = Path.Combine(Env.UnixMutantDir, Mutant.GenerateInternalName(name) + ".lock");
+            IO.MakeDirIfNotExists(Env.UnixMutantDir);
+        }
+
+        public override void Lock()
+        {
+            if (locked_count == 0)
+            {
+                IO.MakeDirIfNotExists(Env.UnixMutantDir);
+                FileStream f = File.Open(filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+
+                this.fs = f;
+
+                locked_count++;
+            }
+        }
+
+        public override void Unlock()
+        {
+            if (locked_count <= 0) throw new ApplicationException("locked_count <= 0");
+            if (locked_count == 1)
+            {
+                this.fs.Close();
+
+                this.fs = null;
+            }
+            locked_count--;
+        }
+    }
+
+    internal class MutantWin32 : Mutant
+    {
+        Mutex mutex;
+        int locked_count = 0;
+
+        public MutantWin32(string name)
+        {
+            bool f;
+            mutex = new Mutex(false, Mutant.GenerateInternalName(name), out f);
+        }
+
+        public override void Lock()
+        {
+            if (locked_count == 0)
+            {
+                int num_retry = 0;
+                LABEL_RETRY:
+
+                try
+                {
+                    mutex.WaitOne();
+                }
+                catch (AbandonedMutexException)
+                {
+                    if (num_retry >= 100) throw;
+                    num_retry++;
+                    goto LABEL_RETRY;
+                }
+            }
+            locked_count++;
+        }
+
+        public override void Unlock()
+        {
+            if (locked_count <= 0) throw new ApplicationException("locked_count <= 0");
+            if (locked_count == 1)
+            {
+                mutex.ReleaseMutex();
+            }
+            locked_count--;
+        }
+    }
+
+    public abstract class Mutant
+    {
+        public static string GenerateInternalName(string name)
+        {
+            name = name.Trim().ToUpperInvariant();
+            return "mutant_" + Str.ByteToStr(Str.HashStr(name)).ToLowerInvariant();
+        }
+
+        public abstract void Lock();
+        public abstract void Unlock();
+
+        public static Mutant Create(string name)
+        {
+            if (Env.IsWindows)
+            {
+                return new MutantWin32(name);
+            }
+            else
+            {
+                return new MutantUnix(name);
+            }
+        }
+    }
+
     class SemaphoneArrayItem
     {
         public Semaphore Semaphone;

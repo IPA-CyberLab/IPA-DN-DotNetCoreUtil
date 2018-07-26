@@ -32,7 +32,7 @@ namespace IPA.DN.CoreUtil
         static public Version FrameworkVersion { get; }
         public static bool IsNET4OrGreater => (FrameworkVersion.Major >= 4);
         static public string HomeDir { get; }
-        static public string UnixGlobalMutexDir { get; }
+        static public string UnixMutantDir { get; }
         static public string ExeFileName { get; }
         static public string ExeFileDir { get; }
         static public string WindowsDir { get; }
@@ -144,20 +144,20 @@ namespace IPA.DN.CoreUtil
             }
             if (Str.IsEmptyStr(HomeDir) == false)
             {
-                UnixGlobalMutexDir = Path.Combine(HomeDir, ".dnmutex");
+                UnixMutantDir = Path.Combine(HomeDir, ".dnmutant");
             }
             else
             {
                 HomeDir = ExeFileDir;
                 if (IsUnix)
                 {
-                    UnixGlobalMutexDir = Path.Combine("/tmp", ".dnmutex");
+                    UnixMutantDir = Path.Combine("/tmp", ".dnmutant");
                 }
             }
-            if (IsWindows) UnixGlobalMutexDir = "";
-            if (Str.IsEmptyStr(UnixGlobalMutexDir) == false)
+            if (IsWindows) UnixMutantDir = "";
+            if (Str.IsEmptyStr(UnixMutantDir) == false)
             {
-                IO.MakeDirIfNotExists(UnixGlobalMutexDir);
+                IO.MakeDirIfNotExists(UnixMutantDir);
             }
             if (IsWindows)
             {
@@ -263,7 +263,7 @@ namespace IPA.DN.CoreUtil
 
             if (IsWindows)
             {
-                UnixGlobalMutexDir = Env.MyTempDir;
+                UnixMutantDir = Env.MyTempDir;
             }
 
             // ロックファイルの作成
