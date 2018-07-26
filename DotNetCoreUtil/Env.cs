@@ -77,6 +77,7 @@ namespace IPA.DN.CoreUtil
         // 初期化
         static Env()
         {
+            OsInfo = Environment.OSVersion;
             IsWindows = (OsInfo.Platform == PlatformID.Win32NT);
             if (IsUnix)
             {
@@ -171,7 +172,6 @@ namespace IPA.DN.CoreUtil
             }
             MachineName = Environment.MachineName;
             CommandLine = initCommandLine(Environment.CommandLine);
-            OsInfo = Environment.OSVersion;
             IsLittleEndian = BitConverter.IsLittleEndian;
             ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id;
             IsAdmin = checkIsAdmin();
