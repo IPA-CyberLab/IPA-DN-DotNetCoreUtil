@@ -1513,6 +1513,9 @@ namespace IPA.DN.CoreUtil
             baseDirName = RemoveLastEnMark(baseDirName).Trim() + Env.PathSeparator;
             fileName = fileName.Trim();
 
+            baseDirName = IO.NormalizePath(baseDirName);
+            fileName = IO.NormalizePath(fileName);
+
             if (fileName.Length <= baseDirName.Length)
             {
                 throw new ArgumentException("fileName, baseDirName");

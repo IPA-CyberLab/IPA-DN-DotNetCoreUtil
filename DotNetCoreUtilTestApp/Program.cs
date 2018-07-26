@@ -33,6 +33,9 @@ namespace DotNetCoreUtilTestApp
             IO f = IO.FileCreate("@test.txt");
             f.Write(Str.ShiftJisEncoding.GetBytes("This is a test. こんにちは。\n"));
             f.Close();
+
+            string tmp = IO.GetRelativeFileName("/tmp/abc/def.txt", "/tmp/");
+            Console.WriteLine(tmp);
         }
 
         static void basic_test()

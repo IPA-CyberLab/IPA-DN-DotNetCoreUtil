@@ -80,6 +80,7 @@ namespace IPA.DN.CoreUtil
         // 初期化
         static Env()
         {
+            FrameworkVersion = Environment.Version;
             if (FrameworkInfoString.StartsWith(".NET Core", StringComparison.InvariantCultureIgnoreCase))
             {
                 IsDotNetCore = true;
@@ -251,7 +252,6 @@ namespace IPA.DN.CoreUtil
             lockFile = IO.FileCreate(lockFileName);
 
 
-            FrameworkVersion = Environment.Version;
         }
 
 
