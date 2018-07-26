@@ -193,6 +193,9 @@ namespace IPA.DN.CoreUtil
 
         public void WriteToString(StringWriter w, ImmutableList<string> parents)
         {
+            this.Vars.Sort((a, b) => string.Compare(a.Item1.Name, b.Item1.Name));
+            this.Childlen.Sort((a, b) => string.Compare(a.BaseName, b.BaseName));
+
             foreach (DebugVars var in Childlen)
             {
                 var.WriteToString(w, parents.Add(var.BaseName));
