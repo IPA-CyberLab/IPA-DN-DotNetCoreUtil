@@ -5,6 +5,7 @@ using System.Data.Sql;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
@@ -63,6 +64,8 @@ namespace IPA.DN.CoreUtil
         public static string MyTempDir { get; }
         public static string PathSeparator { get; }
         public static string StartupCurrentDir { get; }
+        public static bool IsDotNetCore { get; }
+
         static IO lockFile;
 
         public static bool Is64BitProcess => (IntPtr.Size == 8);
@@ -77,6 +80,10 @@ namespace IPA.DN.CoreUtil
         // 初期化
         static Env()
         {
+            if (FrameworkInfoString.StartsWith(".NET Core", StringComparison.InvariantCultureIgnoreCase))
+            {
+                IsDotNetCore = true;
+            }
             OsInfo = Environment.OSVersion;
             IsWindows = (OsInfo.Platform == PlatformID.Win32NT);
             if (IsUnix)
@@ -100,11 +107,23 @@ namespace IPA.DN.CoreUtil
             ExeFileName = IO.RemoveLastEnMark(getMyExeFileName());
             if (Str.IsEmptyStr(ExeFileName) == false)
             {
-                ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
+                if (IsDotNetCore == false)
+                {
+                    ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
+                }
+                else
+                {
+                    // .NET Core の場合、アプリケーションの root ディレクトリを取得する
+                    // 参考: http://codebuckets.com/2017/10/19/getting-the-root-directory-path-for-net-core-applications/
+
+                    Regex appPathMatcher = new Regex(@"(?<!fil)[A-Za-z]:\\+[\S\s]*?(?=\\+bin)");
+                    ExeFileDir = appPathMatcher.Match(IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName))).Value;
+                }
             }
             else
             {
-                ExeFileDir = "";
+                ExeFileName = "/bin/dummyexe";
+                ExeFileDir = "/tmp";
             }
             HomeDir = IO.RemoveLastEnMark(Kernel.GetEnvStr("HOME"));
             if (Str.IsEmptyStr(HomeDir))
