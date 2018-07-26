@@ -30,7 +30,7 @@ namespace IPA.DN.CoreUtil
 {
     public static class Debug
     {
-        public static string GetObjectInnerString(object obj, string instance_base_name)
+        public static string GetObjectInnerString(object obj, string instance_base_name = "")
         {
             return GetObjectInnerString(obj.GetType(), obj, instance_base_name);
         }
@@ -45,7 +45,7 @@ namespace IPA.DN.CoreUtil
             return v.ToString();
         }
 
-        public static void PrintObjectInnerString(object obj, string instance_base_name)
+        public static void PrintObjectInnerString(object obj, string instance_base_name = "")
         {
             PrintObjectInnerString(obj.GetType(), obj, instance_base_name);
         }
