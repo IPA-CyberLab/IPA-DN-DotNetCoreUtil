@@ -107,17 +107,27 @@ namespace IPA.DN.CoreUtil
             ExeFileName = IO.RemoveLastEnMark(getMyExeFileName());
             if (Str.IsEmptyStr(ExeFileName) == false)
             {
-                if (IsDotNetCore == false)
+                ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
+                if (IsDotNetCore)
                 {
-                    ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
-                }
-                else
-                {
-                    // .NET Core の場合、アプリケーションの root ディレクトリを取得する
-                    // 参考: http://codebuckets.com/2017/10/19/getting-the-root-directory-path-for-net-core-applications/
-
-                    Regex appPathMatcher = new Regex(@"(?<!fil)[A-Za-z]:\\+[\S\s]*?(?=\\+bin)");
-                    ExeFileDir = appPathMatcher.Match(IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName))).Value;
+                    // .NET Core の場合、現在のディレクトリから 1 つずつ遡ってアプリケーションの root ディレクトリを取得する
+                    string tmp = ExeFileDir;
+                    while (true)
+                    {
+                        try
+                        {
+                            tmp = Path.GetDirectoryName(tmp);
+                            if (File.Exists(Path.Combine(tmp, "approot")))
+                            {
+                                ExeFileDir = tmp;
+                                break;
+                            }
+                        }
+                        catch
+                        {
+                            break;
+                        }
+                    }
                 }
             }
             else
