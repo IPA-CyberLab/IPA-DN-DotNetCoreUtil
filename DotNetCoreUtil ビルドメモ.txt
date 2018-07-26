@@ -39,7 +39,15 @@ git commit -m "minor fix"
 git push
 
 ■ Ubuntu 18.04 上でのビルド・実行
+
+cd ~/IPA-DN-DotNetCoreUtil/DotNetCoreUtilTestApp/
 dotnet run
 dotnet run --no-build
+
+
+
+
+cd ~/IPA-DN-DotNetCoreUtil/DotNetCoreUtilTestApp/
+git pull && dotnet run
 
 

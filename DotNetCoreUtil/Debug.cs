@@ -31,11 +31,12 @@ namespace IPA.DN.CoreUtil
     public static class Debug
     {
         static int num = 0;
-        public static DebugVars GetVarsFromClass(Type t, object obj = null, ImmutableHashSet<object> duplicate_check = null)
+        public static DebugVars GetVarsFromClass(Type t, string name = null, object obj = null, ImmutableHashSet<object> duplicate_check = null)
         {
-            if (num++ >= 100) Debugger.Break();
-
+            if (name == "s_ioCallback") Debugger.Break();
             if (duplicate_check == null) duplicate_check = ImmutableHashSet<object>.Empty;
+
+            if (Str.IsEmptyStr(name)) name = t.Name;
 
             DebugVars ret = new DebugVars();
 
@@ -81,15 +82,37 @@ namespace IPA.DN.CoreUtil
                         }
                         else
                         {
-                            if (data is ICollection)
+                            if (data is IEnumerable)
                             {
-                                Console.WriteLine("---");
+                                int n = 0;
+                                foreach (object item in (IEnumerable)data)
+                                {
+                                    if (duplicate_check.Contains(item) == false)
+                                    {
+                                        Type data_type2 = item?.GetType() ?? null;
+
+                                        if (IsPrimitiveType(data_type2))
+                                        {
+                                            ret.Vars.Add((info, item));
+                                        }
+                                        else if (item == null)
+                                        {
+                                            ret.Vars.Add((info, null));
+                                        }
+                                        else
+                                        {
+                                            ret.Childlen.Add(GetVarsFromClass(data_type2, info.Name, item, duplicate_check.Add(data)));
+                                        }
+                                    }
+
+                                    n++;
+                                }
                             }
                             else
                             {
                                 if (duplicate_check.Contains(data) == false)
                                 {
-                                    ret.Childlen.Add(GetVarsFromClass(data_type, data, duplicate_check.Add(data)));
+                                    ret.Childlen.Add(GetVarsFromClass(data_type, info.Name, data, duplicate_check.Add(data)));
                                 }
                             }
                         }
@@ -97,7 +120,7 @@ namespace IPA.DN.CoreUtil
                 }
             }
 
-            ret.BaseName = t.Name;
+            ret.BaseName = name;
 
             return ret;
         }
@@ -141,13 +164,17 @@ namespace IPA.DN.CoreUtil
         {
             if (t == null) return true;
             if (t.IsSubclassOf(typeof(System.Type))) return true;
+            if (t.IsSubclassOf(typeof(System.Delegate))) return true;
             if (t.IsEnum) return true;
             if (t.IsPrimitive) return true;
+            if (t == typeof(System.Delegate)) return true;
+            if (t == typeof(System.MulticastDelegate)) return true;
             if (t == typeof(string)) return true;
             if (t == typeof(DateTime)) return true;
             if (t == typeof(TimeSpan)) return true;
             if (t == typeof(IPAddr)) return true;
             if (t == typeof(IPAddress)) return true;
+            if (t == typeof(System.Numerics.BigInteger)) return true;
 
             return false;
         }

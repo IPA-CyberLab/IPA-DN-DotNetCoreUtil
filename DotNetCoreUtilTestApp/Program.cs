@@ -1,4 +1,11 @@
 ﻿using System;
+
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+
 using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.BigInt;
 
@@ -6,6 +13,11 @@ using static System.Console;
 
 namespace DotNetCoreUtilTestApp
 {
+    static class SClass1
+    {
+        static public List<string> StrList = new List<string>();
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -17,6 +29,14 @@ namespace DotNetCoreUtilTestApp
             WriteLine("path char: " + System.IO.Path.DirectorySeparatorChar);
 
             Console.WriteLine(Debug.GetVarsFromClass(typeof(Env)));
+
+            SClass1.StrList.Add("a");
+            SClass1.StrList.Add("b");
+            SClass1.StrList.Add("c");
+
+            Console.WriteLine(Debug.GetVarsFromClass(typeof(SClass1)));
+
+
 
             Util.DoNothing();
         }
