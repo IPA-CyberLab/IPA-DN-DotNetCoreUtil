@@ -2966,55 +2966,14 @@ namespace IPA.DN.CoreUtil
 
             return retstr.ToString();
         }
-
-        // エンコード関係
-        static Encoding asciiEncoding = Encoding.ASCII;
-        public static Encoding AsciiEncoding
-        {
-            get { return asciiEncoding; }
-        }
-
-        static Encoding shiftJisEncoding = Encoding.GetEncoding("shift_jis");
-        public static Encoding ShiftJisEncoding
-        {
-            get { return shiftJisEncoding; }
-        }
-
-        static Encoding iso2022JpEncoding = Encoding.GetEncoding("ISO-2022-JP");
-        public static Encoding ISO2022JPEncoding
-        {
-            get { return iso2022JpEncoding; }
-        }
-
-        static Encoding eucJpEncoding = Encoding.GetEncoding("euc-jp");
-        public static Encoding EucJpEncoding
-        {
-            get { return eucJpEncoding; }
-        }
-
-        static Encoding iso88591Encoding = Encoding.GetEncoding("iso-8859-1");
-        public static Encoding ISO88591Encoding
-        {
-            get { return iso88591Encoding; }
-        }
-
-        static Encoding gb2312Encoding = Encoding.GetEncoding("gb2312");
-        public static Encoding GB2312Encoding
-        {
-            get { return gb2312Encoding; }
-        }
-
-        static Encoding utf8Encoding = Encoding.UTF8;
-        public static Encoding Utf8Encoding
-        {
-            get { return utf8Encoding; }
-        }
-
-        static Encoding uniEncoding = Encoding.Unicode;
-        public static Encoding UniEncoding
-        {
-            get { return uniEncoding; }
-        }
+        public static Encoding AsciiEncoding { get; } = Encoding.ASCII;
+        public static Encoding ShiftJisEncoding { get; } = Encoding.GetEncoding("shift_jis");
+        public static Encoding ISO2022JPEncoding { get; } = Encoding.GetEncoding("ISO-2022-JP");
+        public static Encoding EucJpEncoding { get; } = Encoding.GetEncoding("euc-jp");
+        public static Encoding ISO88591Encoding { get; } = Encoding.GetEncoding("iso-8859-1");
+        public static Encoding GB2312Encoding { get; } = Encoding.GetEncoding("gb2312");
+        public static Encoding Utf8Encoding { get; } = Encoding.UTF8;
+        public static Encoding UniEncoding { get; } = Encoding.Unicode;
 
         // 文字列を正規化する
         public static void NormalizeString(ref string str)
