@@ -41,6 +41,8 @@ namespace DotNetCoreUtilTestApp
 
             byte[] recv_data = s.RecvAll(25600);
 
+            WriteLine($"recv_data.length = {recv_data.Length}");
+
             WriteLine(recv_data.GetString());
 
             s.Disconnect();
