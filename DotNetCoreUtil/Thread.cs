@@ -71,17 +71,17 @@ namespace IPA.DN.CoreUtil
         }
 
         [DllImport("System.Native", EntryPoint = "SystemNative_FLock", SetLastError = true)]
-        internal static extern int FLock(SafeFileHandle fd, LockOperations operation);
+        internal static extern int FLock(IntPtr fd, LockOperations operation);
 
         [DllImport("System.Native", EntryPoint = "SystemNative_Open", SetLastError = true)]
-        internal static extern SafeFileHandle Open(string filename, OpenFlags flags, int mode);
+        internal static extern IntPtr Open(string filename, OpenFlags flags, int mode);
 
         [DllImport("System.Native", EntryPoint = "SystemNative_Close", SetLastError = true)]
         internal static extern int Close(IntPtr fd);
 
         string filename;
         int locked_count = 0;
-        SafeFileHandle fs;
+        IntPtr fs;
 
         public MutantUnix(string name)
         {
@@ -97,7 +97,7 @@ namespace IPA.DN.CoreUtil
 
                 Permissions perm = Permissions.S_IRUSR | Permissions.S_IWUSR | Permissions.S_IRGRP | Permissions.S_IWGRP | Permissions.S_IROTH | Permissions.S_IWOTH;
 
-                SafeFileHandle f = Open(filename, OpenFlags.O_CREAT, (int)perm);
+                IntPtr f = Open(filename, OpenFlags.O_CREAT, (int)perm);
 
                 this.fs = f;
 
@@ -112,7 +112,7 @@ namespace IPA.DN.CoreUtil
             {
                 Close(this.fs);
 
-                this.fs = null;
+                this.fs = IntPtr.Zero;
             }
             locked_count--;
         }
