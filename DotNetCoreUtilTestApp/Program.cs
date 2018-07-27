@@ -26,16 +26,21 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            network_test();
+            dns_test();
         }
 
-        static void network_test()
+        static void dns_test()
         {
             IPAddress[] list = Domain.GetIP46("www.google.com");
 
             foreach (IPAddress a in list)
             {
                 Con.WriteLine(a.ToString());
+            }
+
+            foreach (string hostname in Domain.GetHostName(Domain.StrToIP("130.158.6.51")))
+            {
+                Con.WriteLine(hostname);
             }
         }
 
