@@ -51,8 +51,8 @@ namespace IPA.DN.CoreUtil
 
         public SendMailVersion DefaultVersion = SendMailVersion.Ver2_With_NetMail;
 
-        public const string DefaultMailer = "Microsoft Outlook Express 6.00.2900.2869";
-        public const string DefaultMimeOLE = "Produced By Microsoft MimeOLE V6.00.2900.2962";
+        public static readonly string DefaultMailer = Env.FrameworkInfoString;
+        public static readonly string DefaultMimeOLE = "Produced By " + Env.FrameworkInfoString;
         public const string DefaultPriority = "3";
         public const string DefaultMSMailPriority = "Normal";
         public const string DefaultTransferEncoding = "7bit";
@@ -140,7 +140,6 @@ namespace IPA.DN.CoreUtil
             }
             catch
             {
-                throw;
                 return false;
             }
 

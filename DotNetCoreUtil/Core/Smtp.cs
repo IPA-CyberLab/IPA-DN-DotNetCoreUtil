@@ -120,8 +120,8 @@ namespace IPA.DN.CoreUtil
 
     public class SmtpBody
     {
-        public string XMailer = "Microsoft Outlook Express 6.00.2900.2869";
-        public string MimeOLE = "Produced By Microsoft MimeOLE V6.00.2900.2962";
+        public string XMailer = Env.FrameworkInfoString;
+        public string MimeOLE = "Produced By " + Env.FrameworkInfoString;
         public string MSMailPriority = "Normal";
         public string MailPriority = "3";
         public MailAddress From;
