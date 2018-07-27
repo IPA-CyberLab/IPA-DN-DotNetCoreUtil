@@ -19,6 +19,7 @@ using System.Net.NetworkInformation;
 using System.Net.Mail;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable 0618
 
@@ -34,12 +35,53 @@ namespace IPA.DN.CoreUtil
             LOCK_UN = 8,    /* unlock */
         }
 
+        internal enum OpenFlags
+        {
+            // Access modes (mutually exclusive)
+            O_RDONLY = 0x0000,
+            O_WRONLY = 0x0001,
+            O_RDWR = 0x0002,
+
+            // Flags (combinable)
+            O_CLOEXEC = 0x0010,
+            O_CREAT = 0x0020,
+            O_EXCL = 0x0040,
+            O_TRUNC = 0x0080,
+            O_SYNC = 0x0100,
+        }
+
+        internal enum Permissions
+        {
+            Mask = S_IRWXU | S_IRWXG | S_IRWXO,
+
+            S_IRWXU = S_IRUSR | S_IWUSR | S_IXUSR,
+            S_IRUSR = 0x100,
+            S_IWUSR = 0x80,
+            S_IXUSR = 0x40,
+
+            S_IRWXG = S_IRGRP | S_IWGRP | S_IXGRP,
+            S_IRGRP = 0x20,
+            S_IWGRP = 0x10,
+            S_IXGRP = 0x8,
+
+            S_IRWXO = S_IROTH | S_IWOTH | S_IXOTH,
+            S_IROTH = 0x4,
+            S_IWOTH = 0x2,
+            S_IXOTH = 0x1,
+        }
+
         [DllImport("System.Native", EntryPoint = "SystemNative_FLock", SetLastError = true)]
-        internal static extern int FLock(IntPtr fd, LockOperations operation);
+        internal static extern int FLock(SafeFileHandle fd, LockOperations operation);
+
+        [DllImport("System.Native", EntryPoint = "SystemNative_Open", SetLastError = true)]
+        internal static extern SafeFileHandle Open(string filename, OpenFlags flags, int mode);
+
+        [DllImport("System.Native", EntryPoint = "SystemNative_Close", SetLastError = true)]
+        internal static extern int Close(IntPtr fd);
 
         string filename;
         int locked_count = 0;
-        FileStream fs;
+        SafeFileHandle fs;
 
         public MutantUnix(string name)
         {
@@ -52,8 +94,10 @@ namespace IPA.DN.CoreUtil
             if (locked_count == 0)
             {
                 IO.MakeDirIfNotExists(Env.UnixMutantDir);
-                FileStream f = File.Open(filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
-                FLock(f.Handle, LockOperations.LOCK_EX);
+
+                Permissions perm = Permissions.S_IRUSR | Permissions.S_IWUSR | Permissions.S_IRGRP | Permissions.S_IWGRP | Permissions.S_IROTH | Permissions.S_IWOTH;
+
+                SafeFileHandle f = Open(filename, OpenFlags.O_CREAT, (int)perm);
 
                 this.fs = f;
 
@@ -66,7 +110,7 @@ namespace IPA.DN.CoreUtil
             if (locked_count <= 0) throw new ApplicationException("locked_count <= 0");
             if (locked_count == 1)
             {
-                this.fs.Close();
+                Close(this.fs);
 
                 this.fs = null;
             }
