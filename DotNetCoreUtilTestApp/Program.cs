@@ -32,6 +32,8 @@ namespace DotNetCoreUtilTestApp
 
         static void sock_test()
         {
+            Con.WriteLine("Enter key!");
+            ReadLine();
             string hostname = "www.tsukuba.ac.jp";
             Sock s = Sock.Connect(hostname, 80);
 
