@@ -30,6 +30,7 @@ namespace DotNetCoreUtilTestApp
             Console.WriteLine();
 
             mutex_test2();
+            mutex_test2();
             Console.WriteLine();
         }
 
