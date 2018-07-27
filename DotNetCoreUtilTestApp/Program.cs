@@ -31,29 +31,57 @@ namespace DotNetCoreUtilTestApp
             sock_test();
         }
 
+        static void sock_test2()
+        {
+            string hostname = "www.tsukuba.ac.jp";
+            WriteLine("Connecting...");
+            IPAddress ip = Domain.GetIP(hostname)[0];
+            IPEndPoint endPoint = new IPEndPoint(ip, 80);
+            Socket s = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            s.Connect(endPoint);
+            string send_str = $"GET / HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
+
+            s.Send(send_str.GetBytes_UTF8());
+            WriteLine("Sent.");
+
+            byte[] tmp = new byte[65536];
+
+            int ret = s.Receive(tmp);
+            Con.WriteLine($"ret = {ret}");
+            s.Disconnect(false);
+        }
+
         static void sock_test()
         {
             //Con.WriteLine("Enter key!");
             //ReadLine();
-            string hostname = "www.tsukuba.ac.jp";
+            string hostname = "www.softether.com";
             WriteLine("Connecting...");
             Sock s = Sock.Connect(hostname, 80);
             WriteLine("Connected.");
 
             string send_str = $"GET / HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
 
-            s.Send(send_str.GetBytes());
+            if (s.SendAll(send_str.GetBytes()) == false)
+            {
+                throw new ApplicationException("Disconnected");
+            }
+            //s.Socket.Send(send_str.GetBytes());
             WriteLine("Sent.");
 
-            /*byte[] recv_data = s.Recv(100);
+            byte[] recv_data = s.Recv(65536 * 100);
+            if (recv_data == null)
+            {
+                throw new ApplicationException("Disconnected");
+            }
 
             WriteLine($"recv_data.length = {recv_data.Length}");
 
-            WriteLine(recv_data.GetString());*/
-
-            byte[] tmp = new byte[4];
+            WriteLine(recv_data.GetString());
+            /*
+            byte[] tmp = new byte[65536];
             int ret = s.Socket.Receive(tmp);
-            Con.WriteLine($"ret = {ret}");
+            Con.WriteLine($"ret = {ret}");*/
 
             s.Disconnect();
         }

@@ -1436,6 +1436,19 @@ namespace IPA.DN.CoreUtil
     // ソケット
     public class Sock
     {
+        static readonly SocketFlags DefaultSocketFlags;
+        static Sock()
+        {
+            if (Env.IsWindows)
+            {
+                Sock.DefaultSocketFlags = SocketFlags.Partial;
+            }
+            else
+            {
+                Sock.DefaultSocketFlags = SocketFlags.None;
+            }
+        }
+
         public const int TimeoutInfinite = Timeout.Infinite;
         public const int TimeoutTcpPortCheck = 10 * 1000;
         public const int TimeoutSslConnect = 15 * 1000;
@@ -2196,7 +2209,7 @@ namespace IPA.DN.CoreUtil
             SocketError err = 0;
             try
             {
-                ret = s.Receive(data, offset, size, SocketFlags.Partial);
+                ret = s.Receive(data, offset, size, DefaultSocketFlags);
             }
             catch (SocketException se)
             {
@@ -2291,7 +2304,7 @@ namespace IPA.DN.CoreUtil
             SocketError err = 0;
             try
             {
-                ret = s.Send(data, offset, size, SocketFlags.Partial);
+                ret = s.Send(data, offset, size, DefaultSocketFlags);
             }
             catch (SocketException se)
             {
