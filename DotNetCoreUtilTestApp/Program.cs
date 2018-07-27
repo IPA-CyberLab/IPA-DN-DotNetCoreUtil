@@ -51,7 +51,7 @@ namespace DotNetCoreUtilTestApp
 
             WriteLine(recv_data.GetString());*/
 
-            byte[] tmp = new byte[200];
+            byte[] tmp = new byte[4];
             int ret = s.Socket.Receive(tmp);
             Con.WriteLine($"ret = {ret}");
 
