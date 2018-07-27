@@ -14,6 +14,7 @@ using System.Text;
 using System.IO;
 
 using System.Net;
+using System.Net.Sockets;
 
 using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.BigInt;
@@ -32,8 +33,8 @@ namespace DotNetCoreUtilTestApp
 
         static void sock_test()
         {
-            Con.WriteLine("Enter key!");
-            ReadLine();
+            //Con.WriteLine("Enter key!");
+            //ReadLine();
             string hostname = "www.tsukuba.ac.jp";
             Sock s = Sock.Connect(hostname, 80);
 
@@ -41,11 +42,15 @@ namespace DotNetCoreUtilTestApp
 
             s.Send(send_str.GetBytes());
 
-            byte[] recv_data = s.Recv(100);
+            /*byte[] recv_data = s.Recv(100);
 
             WriteLine($"recv_data.length = {recv_data.Length}");
 
-            WriteLine(recv_data.GetString());
+            WriteLine(recv_data.GetString());*/
+
+            byte[] tmp = new byte[200];
+            int ret = s.Socket.Receive(tmp);
+            Con.WriteLine($"ret = {ret}");
 
             s.Disconnect();
         }
