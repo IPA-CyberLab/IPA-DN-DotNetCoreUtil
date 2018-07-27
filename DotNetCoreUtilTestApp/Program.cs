@@ -39,7 +39,7 @@ namespace DotNetCoreUtilTestApp
 
             s.Send(send_str.GetBytes());
 
-            byte[] recv_data = s.RecvAll(25600);
+            byte[] recv_data = s.Recv(100);
 
             WriteLine($"recv_data.length = {recv_data.Length}");
 
