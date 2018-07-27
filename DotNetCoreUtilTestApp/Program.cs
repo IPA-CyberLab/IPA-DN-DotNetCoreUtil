@@ -24,6 +24,42 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
+            ipinfo_test();
+        }
+
+        static void ipinfo_test()
+        {
+            while (true)
+            {
+                Console.WriteLine();
+                Console.Write("IP>");
+                string line = Console.ReadLine();
+                if (Str.IsEmptyStr(line) == false)
+                {
+                    if (Str.StrCmp(line, "exit"))
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        IPInfoEntry e = IPInfo.Search(line);
+
+                        if (e == null)
+                        {
+                            Console.WriteLine("not found.");
+                        }
+                        else
+                        {
+                            Console.WriteLine(e.Country2);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
+                }
+            }
         }
 
         static void mutex_test3_thread(object param)

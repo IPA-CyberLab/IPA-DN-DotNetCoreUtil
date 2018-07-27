@@ -673,6 +673,8 @@ namespace IPA.DN.CoreUtil
         // Encoding の初期化
         static Str()
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
             AsciiEncoding = Encoding.ASCII;
             ShiftJisEncoding = Encoding.GetEncoding("shift_jis");
             ISO2022JPEncoding = Encoding.GetEncoding("ISO-2022-JP");
