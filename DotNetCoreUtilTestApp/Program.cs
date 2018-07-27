@@ -36,11 +36,14 @@ namespace DotNetCoreUtilTestApp
             //Con.WriteLine("Enter key!");
             //ReadLine();
             string hostname = "www.tsukuba.ac.jp";
+            WriteLine("Connecting...");
             Sock s = Sock.Connect(hostname, 80);
+            WriteLine("Connected.");
 
             string send_str = $"GET / HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
 
             s.Send(send_str.GetBytes());
+            WriteLine("Sent.");
 
             /*byte[] recv_data = s.Recv(100);
 
