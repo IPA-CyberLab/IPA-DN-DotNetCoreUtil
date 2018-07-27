@@ -97,7 +97,7 @@ namespace IPA.DN.CoreUtil
 
                 Permissions perm = Permissions.S_IRUSR | Permissions.S_IWUSR | Permissions.S_IRGRP | Permissions.S_IWGRP | Permissions.S_IROTH | Permissions.S_IWOTH;
 
-                IntPtr f = Open("/", OpenFlags.O_CREAT, (int)perm);
+                IntPtr f = Open(filename, OpenFlags.O_CREAT, (int)perm);
                 if (f.ToInt64() < 0)
                 {
                     throw new IOException("Open failed.");
