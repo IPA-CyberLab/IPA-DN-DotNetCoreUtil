@@ -311,19 +311,12 @@ namespace IPA.DN.CoreUtil
         // byte 配列を結合する
         public static byte[] CombineByteArray(byte[] b1, byte[] b2)
         {
-            Buf b = new Buf();
-
-            if (b1 != null)
-            {
-                b.Write(b1);
-            }
-
-            if (b2 != null)
-            {
-                b.Write(b2);
-            }
-
-            return b.ByteData;
+            if (b1 == null) b1 = new byte[0];
+            if (b2 == null) b2 = new byte[0];
+            byte[] ret = new byte[b1.Length + b2.Length];
+            if (b1.Length >= 1) Array.Copy(b1, 0, ret, 0, b1.Length);
+            if (b2.Length >= 1) Array.Copy(b2, 0, ret, b1.Length, b2.Length);
+            return ret;
         }
 
         // byte 配列の先頭を削除する

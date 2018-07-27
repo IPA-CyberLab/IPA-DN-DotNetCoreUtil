@@ -1394,6 +1394,36 @@ namespace IPA.DN.CoreUtil
             File.WriteAllBytes(filename, buf.Read());
         }
 
+        // 受信した byte[] 配列を自動的にエンコーディング検出して string に変換する
+        public static string DecodeStringAutoDetect(byte[] data, out Encoding detected_encoding)
+        {
+            int bomSize;
+            detected_encoding = Str.GetEncoding(data, out bomSize);
+            if (detected_encoding == null)
+            {
+                detected_encoding = Encoding.UTF8;
+            }
+
+            data = Util.RemoveStartByteArray(data, bomSize);
+
+            return detected_encoding.GetString(data);
+        }
+
+        // 文字列をデコードする (BOM があれば BOM に従う)
+        public static string DecodeString(byte[] data, Encoding default_encoding, out Encoding detected_encoding)
+        {
+            int bomSize;
+            detected_encoding = CheckBOM(data, out bomSize);
+            if (detected_encoding == null)
+            {
+                detected_encoding = default_encoding;
+            }
+
+            data = Util.RemoveStartByteArray(data, bomSize);
+
+            return detected_encoding.GetString(data);
+        }
+
         // テキストファイルのエンコーディングを取得する
         public static Encoding GetEncoding(byte[] data)
         {

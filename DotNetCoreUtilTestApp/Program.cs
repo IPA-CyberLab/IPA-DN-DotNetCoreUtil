@@ -19,6 +19,7 @@ using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.BigInt;
 
 using static System.Console;
+using IPA.DN.CoreUtil.Helper.StrEncoding;
 
 namespace DotNetCoreUtilTestApp
 {
@@ -26,7 +27,23 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            dns_test();
+            sock_test();
+        }
+
+        static void sock_test()
+        {
+            string hostname = "www.tsukuba.ac.jp";
+            Sock s = Sock.Connect(hostname, 80);
+
+            string send_str = $"GET / HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
+
+            s.Send(send_str.GetBytes());
+
+            byte[] recv_data = s.RecvAll(25600);
+
+            WriteLine(recv_data.GetString());
+
+            s.Disconnect();
         }
 
         static void dns_test()
