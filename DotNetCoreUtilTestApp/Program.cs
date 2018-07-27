@@ -24,7 +24,14 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            ipinfo_test();
+            httpclient_test();
+        }
+
+        static void httpclient_test()
+        {
+            HttpClient c = new HttpClient();
+            Buf b = c.Get(new Uri("https://www.vpngate.net/ja/"));
+            WriteLine(Str.Utf8Encoding.GetString(b.ByteData));
         }
 
         static void ipinfo_test()
