@@ -42,6 +42,9 @@ git push
 
 cd ~/IPA-DN-DotNetCoreUtil/DotNetCoreUtilTestApp/
 dotnet run
+
+
+cd ~/IPA-DN-DotNetCoreUtil/DotNetCoreUtilTestApp/
 dotnet run --no-build
 
 

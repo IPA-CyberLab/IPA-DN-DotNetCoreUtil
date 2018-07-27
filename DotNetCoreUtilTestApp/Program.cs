@@ -24,7 +24,13 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            httpclient_test();
+            mail_test();
+        }
+
+        static void mail_test()
+        {
+            SendMail sm = new SendMail("10.32.0.14");
+            sm.Send("Test <noreply@icscoe.jp>", "Ahosan <da.ahosan1@softether.co.jp>", "こんにちは2", "これはテストです2");
         }
 
         static void httpclient_test()

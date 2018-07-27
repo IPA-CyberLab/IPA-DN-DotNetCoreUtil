@@ -42,16 +42,16 @@ namespace IPA.DN.CoreUtil
                 case SmtpLanguage.Japanese:
                     //CharsetList.Add(Str.ISO88591Encoding);
                     CharsetList.Add(Str.AsciiEncoding);
-                    CharsetList.Add(Str.ISO2022JPEncoding);
-                    CharsetList.Add(Str.GB2312Encoding);
+//                    CharsetList.Add(Str.ISO2022JPEncoding);
+//                    CharsetList.Add(Str.GB2312Encoding);
                     CharsetList.Add(Str.Utf8Encoding);
                     break;
 
                 case SmtpLanguage.Simpled_Chinese:
                     //CharsetList.Add(Str.ISO88591Encoding);
                     CharsetList.Add(Str.AsciiEncoding);
-                    CharsetList.Add(Str.GB2312Encoding);
-                    CharsetList.Add(Str.ISO2022JPEncoding);
+//                    CharsetList.Add(Str.GB2312Encoding);
+//                    CharsetList.Add(Str.ISO2022JPEncoding);
                     CharsetList.Add(Str.Utf8Encoding);
                     break;
 
@@ -59,8 +59,8 @@ namespace IPA.DN.CoreUtil
                     //CharsetList.Add(Str.ISO88591Encoding);
                     CharsetList.Add(Str.AsciiEncoding);
                     CharsetList.Add(Str.Utf8Encoding);
-                    CharsetList.Add(Str.ISO2022JPEncoding);
-                    CharsetList.Add(Str.GB2312Encoding);
+//                    CharsetList.Add(Str.ISO2022JPEncoding);
+//                    CharsetList.Add(Str.GB2312Encoding);
                     break;
             }
         }

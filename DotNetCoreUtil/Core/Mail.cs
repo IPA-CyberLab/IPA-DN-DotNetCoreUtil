@@ -56,7 +56,7 @@ namespace IPA.DN.CoreUtil
         public const string DefaultPriority = "3";
         public const string DefaultMSMailPriority = "Normal";
         public const string DefaultTransferEncoding = "7bit";
-        private static Encoding defaultEncoding = Str.ISO2022JPEncoding;
+        private static Encoding defaultEncoding = Str.Utf8Encoding;
         public static Encoding DefaultEncoding
         {
             get { return SendMail.defaultEncoding; }
@@ -140,6 +140,7 @@ namespace IPA.DN.CoreUtil
             }
             catch
             {
+                throw;
                 return false;
             }
 
