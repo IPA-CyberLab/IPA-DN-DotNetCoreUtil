@@ -29,9 +29,35 @@ namespace DotNetCoreUtilTestApp
             basic_test();
             Console.WriteLine();
 
-            mutex_test2();
-            mutex_test2();
+            mutex_test3();
             Console.WriteLine();
+        }
+
+        static void mutex_test3_thread(object param)
+        {
+            GlobalLock g = new GlobalLock("test");
+
+            Con.WriteLine($"thread #{ThreadObj.CurrentThreadId}: before lock");
+            using (g.Lock())
+            {
+                Con.WriteLine($"thread #{ThreadObj.CurrentThreadId}:locked");
+                Con.WriteLine($"thread #{ThreadObj.CurrentThreadId}:sleeping.");
+                Thread.Sleep(1000);
+                Con.WriteLine($"thread #{ThreadObj.CurrentThreadId}:before release");
+            }
+            Con.WriteLine($"thread #{ThreadObj.CurrentThreadId}:released");
+        }
+
+        static void mutex_test3()
+        {
+            List<ThreadObj> tl = new List<ThreadObj>();
+            for (int i = 0; i < 5; i++)
+            {
+                ThreadObj t = new ThreadObj(mutex_test3_thread);
+
+                tl.Add(t);
+            }
+            foreach (ThreadObj t in tl) t.WaitForEnd();
         }
 
         static void mutex_test2()
