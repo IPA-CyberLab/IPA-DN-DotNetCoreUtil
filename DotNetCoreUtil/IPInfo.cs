@@ -222,7 +222,7 @@ namespace IPA.DN.CoreUtil
         static long nextDownloadRetry = 0;
         public const string Url = "http://files.open.ad.jp/ip-database/gzip/mapping_ipv4_to_country.csv.gz";
         public static readonly string CacheFileName;
-        static readonly Mutex cacheFileMutex;
+        static readonly GlobalLock cache_file_global_lock = new GlobalLock("ipinfo_cache_file");
         static IPInfoCache cache = null;
         static object lockObj = new object();
 
@@ -230,9 +230,6 @@ namespace IPA.DN.CoreUtil
         {
 //             MutexSecurity sec = new MutexSecurity();
 //             sec.AddAccessRule(new MutexAccessRule("Everyone", MutexRights.FullControl, AccessControlType.Allow));
-            bool f;
-            cacheFileMutex = new Mutex(false, "IPInfoMutexSe", out f);
-
             CacheFileName = Path.Combine(Env.TempDir, "ipinfo_cache2.dat");
         }
 
@@ -432,8 +429,7 @@ namespace IPA.DN.CoreUtil
                     return;
                 }
 
-                cacheFileMutex.WaitOne();
-                try
+                using (cache_file_global_lock.Lock())
                 {
                     if (cache == null)
                     {
@@ -464,10 +460,6 @@ namespace IPA.DN.CoreUtil
                     {
                         nextDownloadRetry = Time.Tick64 + DownloadRetryMSecs;
                     }
-                }
-                finally
-                {
-                    cacheFileMutex.ReleaseMutex();
                 }
             }
         }
