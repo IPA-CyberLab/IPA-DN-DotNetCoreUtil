@@ -29,8 +29,23 @@ namespace DotNetCoreUtilTestApp
             basic_test();
             Console.WriteLine();
 
-            mutex_test();
+            mutex_test2();
             Console.WriteLine();
+        }
+
+        static void mutex_test2()
+        {
+            GlobalLock g = new GlobalLock("test");
+
+            Con.WriteLine("before lock");
+            using (g.Lock())
+            {
+                Con.WriteLine("locked");
+                Con.WriteLine("sleeping.");
+                Thread.Sleep(5000);
+                Con.WriteLine("before release");
+            }
+            Con.WriteLine("released");
         }
 
         static void mutex_test()

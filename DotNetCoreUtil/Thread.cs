@@ -25,6 +25,56 @@ using Microsoft.Win32.SafeHandles;
 
 namespace IPA.DN.CoreUtil
 {
+    public class GlobalLockHandle : IDisposable
+    {
+        public GlobalLock GlobalLock { get; }
+        Mutant mutant;
+
+        internal GlobalLockHandle(GlobalLock g)
+        {
+            this.GlobalLock = g;
+
+            mutant = Mutant.Create(this.GlobalLock.Name);
+            mutant.Lock();
+        }
+
+        void unlock_main()
+        {
+            if (mutant != null)
+            {
+                mutant.Unlock();
+                mutant = null;
+            }
+        }
+
+        public void Unlock()
+        {
+            unlock_main();
+        }
+
+        public void Dispose()
+        {
+            unlock_main();
+        }
+    }
+
+    public class GlobalLock
+    {
+        public string Name { get; }
+
+        public GlobalLock(string name)
+        {
+            this.Name = name;
+        }
+
+        public GlobalLockHandle Lock()
+        {
+            GlobalLockHandle h = new GlobalLockHandle(this);
+
+            return h;
+        }
+    }
+
     internal class MutantUnix : Mutant
     {
         internal enum LockOperations : int
