@@ -2554,7 +2554,13 @@ namespace IPA.DN.CoreUtil
             }
 
             sock.socket.LingerState = new LingerOption(false, 0);
-            sock.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+            try
+            {
+                sock.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+            }
+            catch
+            {
+            }
             sock.socket.NoDelay = true;
 
             sock.querySocketInformation();
