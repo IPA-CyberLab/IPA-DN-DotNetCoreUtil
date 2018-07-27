@@ -24,13 +24,6 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-
-            basic_test();
-            Console.WriteLine();
-
-            mutex_test3();
-            Console.WriteLine();
         }
 
         static void mutex_test3_thread(object param)

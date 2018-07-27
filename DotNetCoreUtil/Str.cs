@@ -661,6 +661,28 @@ namespace IPA.DN.CoreUtil
     // 文字列操作
     public static class Str
     {
+        public static Encoding AsciiEncoding { get; }
+        public static Encoding ShiftJisEncoding { get; }
+        public static Encoding ISO2022JPEncoding { get; }
+        public static Encoding EucJpEncoding { get; }
+        public static Encoding ISO88591Encoding { get; }
+        public static Encoding GB2312Encoding { get; }
+        public static Encoding Utf8Encoding { get; }
+        public static Encoding UniEncoding { get; }
+
+        // Encoding の初期化
+        static Str()
+        {
+            AsciiEncoding = Encoding.ASCII;
+            ShiftJisEncoding = Encoding.GetEncoding("shift_jis");
+            ISO2022JPEncoding = Encoding.GetEncoding("ISO-2022-JP");
+            EucJpEncoding = Encoding.GetEncoding("euc-jp");
+            ISO88591Encoding = Encoding.GetEncoding("iso-8859-1");
+            GB2312Encoding = Encoding.GetEncoding("gb2312");
+            Utf8Encoding = Encoding.UTF8;
+            UniEncoding = Encoding.Unicode;
+        }
+
         internal static readonly char[] standardSplitChars =
         {
             ' ', '　', '\t',
@@ -2966,14 +2988,6 @@ namespace IPA.DN.CoreUtil
 
             return retstr.ToString();
         }
-        public static Encoding AsciiEncoding { get; } = Encoding.ASCII;
-        public static Encoding ShiftJisEncoding { get; } = Encoding.GetEncoding("shift_jis");
-        public static Encoding ISO2022JPEncoding { get; } = Encoding.GetEncoding("ISO-2022-JP");
-        public static Encoding EucJpEncoding { get; } = Encoding.GetEncoding("euc-jp");
-        public static Encoding ISO88591Encoding { get; } = Encoding.GetEncoding("iso-8859-1");
-        public static Encoding GB2312Encoding { get; } = Encoding.GetEncoding("gb2312");
-        public static Encoding Utf8Encoding { get; } = Encoding.UTF8;
-        public static Encoding UniEncoding { get; } = Encoding.Unicode;
 
         // 文字列を正規化する
         public static void NormalizeString(ref string str)
