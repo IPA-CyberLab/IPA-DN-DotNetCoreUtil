@@ -13,6 +13,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.IO;
 
+using System.Net;
+
 using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.BigInt;
 
@@ -24,7 +26,17 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            mail_test();
+            network_test();
+        }
+
+        static void network_test()
+        {
+            IPAddress[] list = Domain.GetIP46("www.google.com");
+
+            foreach (IPAddress a in list)
+            {
+                Con.WriteLine(a.ToString());
+            }
         }
 
         static void mail_test()
