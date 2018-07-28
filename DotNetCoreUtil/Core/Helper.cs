@@ -24,6 +24,7 @@ namespace IPA.DN.CoreUtil.Helper.StrEncoding
         public static string GetString(this byte[] b) => Str.DecodeStringAutoDetect(b, out _);
 
         public static string GetHexString(this byte[] b, string padding = "") => Str.ByteToHex(b, padding);
+        public static byte[] GetHexBytes(this string s) => Str.HexToByte(s);
     }
 }
 

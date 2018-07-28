@@ -171,7 +171,14 @@ namespace IPA.DN.CoreUtil
         void init(byte[] data)
         {
             PemReader pem = new PemReader(new StringReader(data.GetString_Ascii()));
-            key = (AsymmetricKeyParameter)pem.ReadObject();
+            object o = pem.ReadObject();
+            if (o is AsymmetricCipherKeyPair)
+            {
+                AsymmetricCipherKeyPair pair = (AsymmetricCipherKeyPair)o;
+
+                o = pair.Private;
+            }
+            key = (AsymmetricKeyParameter)o;
         }
 
         public RsaInner(Cert cert)
@@ -192,10 +199,21 @@ namespace IPA.DN.CoreUtil
 
         public byte[] SignHash(byte[] hash)
         {
-            ISigner signer = SignerUtilities.GetSigner("SHA1withRSA");
+            hash = hash_for_sign(hash);
+            ISigner signer = SignerUtilities.GetSigner("RSA");
             signer.Init(true, key);
             signer.BlockUpdate(hash, 0, hash.Length);
             return signer.GenerateSignature();
+        }
+
+        byte[] hash_for_sign(byte[] data)
+        {
+            byte[] padding_data = {
+                    0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B, 0x0E,
+                    0x03, 0x02, 0x1A, 0x05, 0x00, 0x04, 0x14,
+            };
+
+            return Util.CombineByteArray(padding_data, data);
         }
 
         public bool VerifyData(byte[] data, byte[] sign)
@@ -206,7 +224,8 @@ namespace IPA.DN.CoreUtil
 
         public bool VerifyHash(byte[] hash, byte[] sign)
         {
-            ISigner signer = SignerUtilities.GetSigner("SHA1withRSA");
+            hash = hash_for_sign(hash);
+            ISigner signer = SignerUtilities.GetSigner("RSA");
             signer.Init(false, key);
             signer.BlockUpdate(hash, 0, hash.Length);
             return signer.VerifySignature(sign);

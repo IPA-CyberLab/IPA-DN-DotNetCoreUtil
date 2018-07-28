@@ -51,16 +51,17 @@ namespace DotNetCoreUtilTestApp
             byte[] hello_data = hello.GetBytes();
             WriteLine("src: " + hello_data.GetHexString());
 
-            Rsa rsa_private = new Rsa("@testcert.key");
+            Rsa rsa_private = new Rsa("@test1024.key");
             byte[] signed = rsa_private.SignData(hello_data);
             WriteLine("signed: " + signed.GetHexString());
 
-            Cert cert = new Cert("@testcert.cer");
+            Cert cert = new Cert("@test1024.cer");
             Rsa rsa_public = new Rsa(cert);
             WriteLine("verify: " + rsa_public.VerifyData(hello_data, signed));
 
             byte[] encryped = rsa_public.Encrypt(hello_data);
-            WriteLine("encrypted: " + signed.GetHexString());
+            //encryped = "1C813B8396104AB1436C9AE208D5FC1A12CA15955A773F49F246F80FEDF13F914DF792A991B245601E13CFEE7B53B9117B35E54ACE465140D853F1901A0E8E33D603B65C6ECF0E6AB390AF7CB404D325EAF1669BD5C4F68FBE52888F44FE0CD596EF7BEEB44133A77D847FF177545D8678D6D0EFC6E4F1DB86CC48FE263C481E".GetHexBytes();
+            WriteLine("encrypted: " + encryped.GetHexString());
 
             byte[] decrypted = rsa_private.Decrypt(encryped);
             WriteLine("decrypted: " + decrypted.GetHexString());
