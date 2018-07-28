@@ -6,6 +6,8 @@ using System.Collections.Immutable;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
+using System.Security.Cryptography;
+
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
@@ -19,6 +21,16 @@ using System.Net.Sockets;
 using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.BigInt;
 
+using Org.BouncyCastle;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Encodings;
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.X509;
+
 using static System.Console;
 using IPA.DN.CoreUtil.Helper.StrEncoding;
 
@@ -30,10 +42,68 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            sock_test3();
+            rsa_test();
+        }
+
+        static void rsa_test()
+        {
+            string hello = "Hello World";
+            byte[] hello_data = hello.GetBytes();
+            WriteLine("src: " + hello_data.GetHexString());
+
+            Rsa rsa_private = new Rsa("@testcert.key");
+            byte[] signed = rsa_private.SignData(hello_data);
+            WriteLine("signed: " + signed.GetHexString());
+
+            Cert cert = new Cert("@testcert.cer");
+            Rsa rsa_public = new Rsa(cert);
+            WriteLine("verify: " + rsa_public.VerifyData(hello_data, signed));
+
+            byte[] encryped = rsa_public.Encrypt(hello_data);
+            WriteLine("encrypted: " + signed.GetHexString());
+
+            byte[] decrypted = rsa_private.Decrypt(encryped);
+            WriteLine("decrypted: " + decrypted.GetHexString());
+
+            WriteLine("cert_hash: " + cert.Hash.GetHexString());
         }
 
 
+        static void rsa_test2()
+        {
+            string hello = "Hello World";
+            byte[] hello_data = hello.GetBytes();
+            WriteLine(hello_data.GetHexString());
+
+            PemReader private_pem = new PemReader(new StringReader(Str.ReadTextFile("@testcert.key")));
+            AsymmetricKeyParameter private_key = (AsymmetricKeyParameter)private_pem.ReadObject();
+
+            PemReader cert_pem = new PemReader(new StringReader(Str.ReadTextFile("@testcert.cer")));
+            X509Certificate cert = (X509Certificate)cert_pem.ReadObject();
+            AsymmetricKeyParameter public_key = cert.GetPublicKey();
+
+            IAsymmetricBlockCipher cipher = new Pkcs1Encoding(new RsaEngine());
+            cipher.Init(true, public_key);
+
+            byte[] encryped = cipher.ProcessBlock(hello_data, 0, hello_data.Length);
+
+            WriteLine(encryped.GetHexString());
+
+            cipher = new Pkcs1Encoding(new RsaEngine());
+            cipher.Init(false, private_key);
+
+            byte[] decryped = cipher.ProcessBlock(encryped, 0, encryped.Length);
+            WriteLine(decryped.GetHexString());
+
+            ISigner signer = SignerUtilities.GetSigner("SHA1withRSA");
+            signer.Init(true, private_key);
+            byte[] signed = signer.GenerateSignature();
+            WriteLine(signed.GetHexString());
+
+            signer = SignerUtilities.GetSigner("SHA1withRSA");
+            signer.Init(false, public_key);
+            WriteLine(signer.VerifySignature(signed));
+        }
 
         static List<Sock> sock_test3_socket_list = new List<Sock>();
         static SockEvent sock_test3_event = new SockEvent();

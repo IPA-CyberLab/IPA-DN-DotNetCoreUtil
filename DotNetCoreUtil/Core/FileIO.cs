@@ -1894,6 +1894,7 @@ namespace IPA.DN.CoreUtil
         // ファイル内容を読みだす
         public static byte[] ReadFileData(string filename)
         {
+            filename = IO.InnerFilePath(filename);
             FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             try
             {

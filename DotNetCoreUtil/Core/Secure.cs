@@ -9,59 +9,30 @@ using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Web;
 using System.IO;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
+using Org.BouncyCastle;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Encodings;
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.X509;
+
+using IPA.DN.CoreUtil.Helper.StrEncoding;
+
 namespace IPA.DN.CoreUtil
 {
-    // 共通鍵署名
-    public class CommonSign
-    {
-        byte[] keyData;
-        static uint init_dummy = CryptoConfigHelper.Init();
-
-        public CommonSign(byte[] key)
-        {
-            init(key);
-        }
-        public CommonSign(Buf buf)
-        {
-            init(buf.ByteData);
-        }
-        public CommonSign(string filename)
-        {
-            init(Buf.ReadFromFile(filename).ByteData);
-        }
-        void init(byte[] key)
-        {
-            keyData = (byte[])key.Clone();
-        }
-
-        public byte[] Sign(byte[] data)
-        {
-            Buf b = new Buf(data);
-            b.SeekToEnd();
-            b.Write(keyData);
-
-            return Secure.HashSHA1(b.ByteData);
-        }
-        public bool Verify(byte[] data, byte[] sign)
-        {
-            byte[] sign2 = Sign(data);
-
-            return Util.CompareByte(sign, sign2);
-        }
-    }
-
     // Rsa アルゴリズム
     public class Rsa
     {
         byte[] data;
         Cert cert;
-        static uint init_dummy = CryptoConfigHelper.Init();
         static object lockObj = new object();
 
         public Rsa(byte[] data)
@@ -81,8 +52,6 @@ namespace IPA.DN.CoreUtil
         {
             this.data = (byte[])data.Clone();
             this.cert = null;
-
-            Cert.deleteOldTempFiles();
         }
 
         public Rsa(Cert cert)
@@ -93,8 +62,6 @@ namespace IPA.DN.CoreUtil
         {
             this.cert = (Cert)cert.Clone();
             this.data = null;
-
-            Cert.deleteOldTempFiles();
         }
 
         public byte[] SignData(byte[] data)
@@ -170,39 +137,12 @@ namespace IPA.DN.CoreUtil
                 }
             }
         }
-
-        public int KeySizeBit
-        {
-            get
-            {
-                lock (lockObj)
-                {
-                    using (RsaInner rsa = new RsaInner(this.data, this.cert))
-                    {
-                        return rsa.KeySizeBit;
-                    }
-                }
-            }
-        }
     }
 
     // Rsa アルゴリズム (内部)
     class RsaInner : IDisposable
     {
-        static string sha1rsa = CryptoConfig.MapNameToOID("SHA1");
-        RSACryptoServiceProvider rsa;
-        static object lockObj = new Object();
-        static LocalDataStoreSlot slot = Thread.AllocateDataSlot();
-        static LocalDataStoreSlot slot2 = Thread.AllocateDataSlot();
-        static uint init_dummy = CryptoConfigHelper.Init();
-
-        public static void Lock()
-        {
-        }
-
-        public static void Unlock()
-        {
-        }
+        AsymmetricKeyParameter key;
 
         public RsaInner(byte[] data, Cert cert)
         {
@@ -230,8 +170,8 @@ namespace IPA.DN.CoreUtil
         }
         void init(byte[] data)
         {
-            Lock();
-            rsa = readRsaPrivate(data);
+            PemReader pem = new PemReader(new StringReader(data.GetString_Ascii()));
+            key = (AsymmetricKeyParameter)pem.ReadObject();
         }
 
         public RsaInner(Cert cert)
@@ -240,13 +180,8 @@ namespace IPA.DN.CoreUtil
         }
         void init(Cert cert)
         {
-            Lock();
-            string text1 = cert.X509Cert.GetKeyAlgorithm();
-            byte[] buffer1 = cert.X509Cert.GetKeyAlgorithmParameters();
-            byte[] buffer2 = cert.X509Cert.GetPublicKey();
-            Oid oid1 = new Oid("1.2.840.113549.1.1.1", "RSA");
-
-            rsa = (RSACryptoServiceProvider)(new PublicKey(oid1, new AsnEncodedData(oid1, buffer1), new AsnEncodedData(oid1, buffer2))).Key;
+            PemReader pem = new PemReader(new StringReader(cert.PublicKey.GetString_Ascii()));
+            key = (AsymmetricKeyParameter)pem.ReadObject();
         }
 
         public byte[] SignData(byte[] data)
@@ -257,10 +192,10 @@ namespace IPA.DN.CoreUtil
 
         public byte[] SignHash(byte[] hash)
         {
-            byte[] ret = null;
-            ret = rsa.SignHash(hash, sha1rsa);
-
-            return ret;
+            ISigner signer = SignerUtilities.GetSigner("SHA1withRSA");
+            signer.Init(true, key);
+            signer.BlockUpdate(hash, 0, hash.Length);
+            return signer.GenerateSignature();
         }
 
         public bool VerifyData(byte[] data, byte[] sign)
@@ -271,165 +206,39 @@ namespace IPA.DN.CoreUtil
 
         public bool VerifyHash(byte[] hash, byte[] sign)
         {
-            return rsa.VerifyHash(hash, sha1rsa, sign);
+            ISigner signer = SignerUtilities.GetSigner("SHA1withRSA");
+            signer.Init(false, key);
+            signer.BlockUpdate(hash, 0, hash.Length);
+            return signer.VerifySignature(sign);
         }
 
         public byte[] Encrypt(byte[] data)
         {
-            return rsa.Encrypt(data, false);
+            IAsymmetricBlockCipher rsa = new Pkcs1Encoding(new RsaEngine());
+            rsa.Init(true, key);
+            return rsa.ProcessBlock(data, 0, data.Length);
         }
 
         public byte[] Decrypt(byte[] data)
         {
-            return rsa.Decrypt(data, false);
-        }
-
-        // RSA の取得
-        static RSACryptoServiceProvider readRsaPrivate(byte[] data)
-        {
-            // From http://forums.l-space-design.com/blogs/day_of_the_developer/archive/2006/06/08/216.aspx
-            string t = Str.AsciiEncoding.GetString(data);
-            if (!t.StartsWith("-----BEGIN RSA PRIVATE KEY-----"))
-            {
-                throw new ArgumentException("Not an RSA Private Key");
-            }
-            t = t.Substring("-----BEGIN RSA PRIVATE KEY-----".Length);
-            t = t.Substring(0, t.IndexOf("----"));
-            t = t.Replace("\r", "").Replace("\n", "");
-            byte[] byteArray = System.Convert.FromBase64String(t);
-            System.IO.MemoryStream s = new MemoryStream(byteArray);
-            BinaryReader binr = new BinaryReader(s, Str.AsciiEncoding);
-            byte[] MODULUS, E, D, P, Q, DP, DQ, IQ;
-            // --------- Set up stream to decode the asn.1 encoded RSA private key ------
-            byte bt = 0;
-            ushort twobytes = 0;
-            int elems = 0;
-            RSAParameters result = new RSAParameters();
-            try
-            {
-                twobytes = binr.ReadUInt16();
-                if (twobytes == 0x8130) //data read as little endian order (actual data order for Sequence is 30 81)
-                    binr.ReadByte(); //advance 1 byte
-                else if (twobytes == 0x8230)
-                    binr.ReadInt16(); //advance 2 bytes
-                else
-                    return null;
-                twobytes = binr.ReadUInt16();
-                if (twobytes != 0x0102) //version number
-                    return null;
-                bt = binr.ReadByte();
-                if (bt != 0x00)
-                    return null;
-                //------ all private key components are Integer sequences ----
-                elems = getIntegerSize(binr);
-                MODULUS = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                E = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                D = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                P = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                Q = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                DP = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                DQ = binr.ReadBytes(elems);
-                elems = getIntegerSize(binr);
-                IQ = binr.ReadBytes(elems);
-                result.Modulus = MODULUS;
-                result.Exponent = E;
-                result.D = D;
-                result.P = P;
-                result.Q = Q;
-                result.DP = DP;
-                result.DQ = DQ;
-                result.InverseQ = IQ;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-            finally
-            {
-                binr.Close();
-            }
-            CspParameters cp = new CspParameters();
-            cp.Flags = CspProviderFlags.UseMachineKeyStore;
-            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(cp);
-            RSA.PersistKeyInCsp = false;
-            RSA.ImportParameters(result);
-            return RSA;
-        }
-
-        static int getIntegerSize(BinaryReader binr)
-        {
-            byte bt = 0;
-            byte lowbyte = 0x00;
-            byte highbyte = 0x00;
-            int count = 0;
-            bt = binr.ReadByte();
-            if (bt != 0x02) //expect integer
-                return 0;
-            bt = binr.ReadByte();
-            if (bt == 0x81)
-                count = binr.ReadByte(); // data size in next byte
-            else
-                if (bt == 0x82)
-            {
-                highbyte = binr.ReadByte(); // data size in next 2 bytes
-                lowbyte = binr.ReadByte();
-                byte[] modint = { lowbyte, highbyte, 0x00, 0x00 };
-                count = BitConverter.ToInt32(modint, 0);
-            }
-            else
-            {
-                count = bt; // we already have the data size
-            }
-            while (binr.PeekChar() == 0x00)
-            { //remove high order zeros in data
-                binr.ReadByte();
-                count -= 1;
-            }
-            return count;
+            IAsymmetricBlockCipher rsa = new Pkcs1Encoding(new RsaEngine());
+            rsa.Init(false, key);
+            return rsa.ProcessBlock(data, 0, data.Length);
         }
 
         public void Dispose()
         {
-            rsa.Clear();
-            rsa = null;
-            Unlock();
-        }
-
-        public int KeySizeBit
-        {
-            get
-            {
-                return rsa.KeySize;
-            }
         }
     }
 
     // 証明書
     public class Cert
     {
-        X509Certificate2 x509;
+        X509Certificate x509;
         static TimeSpan deleteOldCertSpan = new TimeSpan(0, 0, 30);
         static object lockObj = new Object();
-        static RSACryptoServiceProvider rsaDummy = null;
-        static uint init_dummy = CryptoConfigHelper.Init();
 
-        public int KeySizeBit
-        {
-            get
-            {
-                Rsa r = new Rsa(this);
-
-                return r.KeySizeBit;
-            }
-        }
-
-        public X509Certificate2 X509Cert
+        public X509Certificate X509Cert
         {
             get { return x509; }
         }
@@ -456,20 +265,15 @@ namespace IPA.DN.CoreUtil
         }
         void init(byte[] data)
         {
-            deleteOldTempFiles();
-            x509 = new X509Certificate2(data);
-
-            if (rsaDummy == null)
-            {
-                rsaDummy = (RSACryptoServiceProvider)(new X509Certificate2(data).PublicKey.Key);
-            }
+            PemReader cert_pem = new PemReader(new StringReader(data.GetString_Ascii()));
+            x509 = (X509Certificate)cert_pem.ReadObject();
         }
 
         public byte[] Hash
         {
             get
             {
-                return x509.GetCertHash();
+                return Secure.HashSHA1(x509.GetEncoded());
             }
         }
 
@@ -477,7 +281,10 @@ namespace IPA.DN.CoreUtil
         {
             get
             {
-                return x509.GetPublicKey();
+                StringWriter w = new StringWriter();
+                PemWriter pw = new PemWriter(w);
+                pw.WriteObject(x509.GetPublicKey());
+                return w.ToString().GetBytes_Ascii();
             }
         }
 
@@ -485,7 +292,10 @@ namespace IPA.DN.CoreUtil
         {
             get
             {
-                return x509.Export(X509ContentType.Cert);
+                StringWriter w = new StringWriter();
+                PemWriter pw = new PemWriter(w);
+                pw.WriteObject(x509);
+                return w.ToString().GetBytes_Ascii();
             }
         }
         public Buf ToBuf()
@@ -501,57 +311,6 @@ namespace IPA.DN.CoreUtil
         {
             return new Cert(this.ByteData);
         }
-
-        static DateTime lastDeletedDateTime = new DateTime();
-        static readonly TimeSpan deleteTimeSpan = new TimeSpan(0, 1, 0);
-        internal static void deleteOldTempFiles()
-        {
-            lock (lockObj)
-            {
-                DateTime now = Time.NowDateTime;
-
-                if (lastDeletedDateTime.Ticks == 0 ||
-                    now >= (lastDeletedDateTime + deleteTimeSpan))
-                {
-                    lastDeletedDateTime = now;
-
-                    string tempDir = Path.GetTempPath();
-                    string[] files = Directory.GetFiles(tempDir);
-
-                    if (files != null)
-                    {
-                        foreach (string name in files)
-                        {
-                            try
-                            {
-                                if (Str.StrCmpi(Path.GetExtension(name), ".tmp") && Path.GetFileName(name).StartsWith("tmp", StringComparison.CurrentCultureIgnoreCase))
-                                {
-                                    DateTime dt = File.GetLastWriteTimeUtc(name);
-                                    if ((DateTime.UtcNow - dt) >= deleteOldCertSpan)
-                                    {
-                                        FileInfo info = new FileInfo(name);
-
-                                        if (info.Length == 0)
-                                        {
-                                            try
-                                            {
-                                                File.Delete(name);
-                                            }
-                                            catch
-                                            {
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // Secure クラス
@@ -559,7 +318,6 @@ namespace IPA.DN.CoreUtil
     {
         static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
         static MD5 md5 = new MD5CryptoServiceProvider();
-        static uint init_dummy = CryptoConfigHelper.Init();
         public const uint SHA1Size = 20;
         public const uint MD5Size = 16;
         static object rand_lock = new object();
@@ -645,15 +403,7 @@ namespace IPA.DN.CoreUtil
         {
             byte[] ret;
 
-            RsaInner.Lock();
-            try
-            {
-                ret = md5.ComputeHash(data);
-            }
-            finally
-            {
-                RsaInner.Unlock();
-            }
+            ret = md5.ComputeHash(data);
 
             return ret;
         }
@@ -695,48 +445,6 @@ namespace IPA.DN.CoreUtil
             b.Write(srcData);
 
             return b.ByteData;
-        }
-    }
-
-    // CryptoConfigHelper クラス
-    public class CryptoConfigHelper
-    {
-        static object objLock = new Object();
-        static bool flag = false;
-
-        public static uint Init()
-        {
-            try
-            {
-                lock (objLock)
-                {
-                    if (flag == false)
-                    {
-                        flag = true;
-                        Type t = typeof(CryptoConfig);
-                        Hashtable ht = (Hashtable)t.InvokeMember("DefaultOidHT", System.Reflection.BindingFlags.GetProperty | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
-                            null, null, null);
-                        List<string> values = new List<string>();
-
-                        foreach (string key in ht.Keys)
-                        {
-                            string value = (string)ht[key];
-
-                            values.Add(value);
-                        }
-
-                        foreach (string s in values)
-                        {
-                            ht.Add(s, s);
-                        }
-                    }
-                }
-            }
-            catch
-            {
-            }
-
-            return 0;
         }
     }
 

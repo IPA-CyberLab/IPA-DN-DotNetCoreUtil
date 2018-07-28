@@ -22,6 +22,8 @@ namespace IPA.DN.CoreUtil.Helper.StrEncoding
         public static string GetString_Euc(this byte[] b) => Str.DecodeString(b, Str.EucJpEncoding, out _);
         public static string GetString(this byte[] b, Encoding default_encoding) => Str.DecodeString(b, default_encoding, out _);
         public static string GetString(this byte[] b) => Str.DecodeStringAutoDetect(b, out _);
+
+        public static string GetHexString(this byte[] b, string padding = "") => Str.ByteToHex(b, padding);
     }
 }
 
