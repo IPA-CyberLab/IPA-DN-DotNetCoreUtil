@@ -217,7 +217,7 @@ namespace IPA.DN.CoreUtil
 
                 int ret = Poll(p, timeout);
 
-                Dbg.WriteLine($"Poll end: ret = {ret}, reads = {reads.Length}, writes = {writes.Length}, pfds = {p.Length}");
+                //Dbg.WriteLine($"Poll end: ret = {ret}, reads = {reads.Length}, writes = {writes.Length}, pfds = {p.Length}");
 
                 //for (int i = 0; i < reads.Length; i++) Dbg.WriteLine($"reads[{i}] = {reads[i]}");
                 //for (int i = 0; i < writes.Length; i++) Dbg.WriteLine($"writes[{i}] = {writes[i]}");
