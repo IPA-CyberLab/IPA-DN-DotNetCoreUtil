@@ -28,8 +28,35 @@ using System.Net.NetworkInformation;
 
 namespace IPA.DN.CoreUtil
 {
-    public static class Debug
+    public static class Dbg
     {
+        static bool is_debug_mode = false;
+        public static bool IsDebugMode => is_debug_mode;
+
+        public static void SetDebugMode(bool b = true)
+        {
+            is_debug_mode = b;
+        }
+
+        public static void WriteLine()
+        {
+            WriteLine("");
+        }
+        public static void WriteLine(string str)
+        {
+            if (Dbg.IsDebugMode)
+            {
+                Console.WriteLine(str);
+            }
+        }
+        public static void WriteLine(string str, params object[] args)
+        {
+            if (Dbg.IsDebugMode)
+            {
+                Console.WriteLine(str, args);
+            }
+        }
+
         public static string GetObjectInnerString(object obj, string instance_base_name = "")
         {
             return GetObjectInnerString(obj.GetType(), obj, instance_base_name);
@@ -43,6 +70,28 @@ namespace IPA.DN.CoreUtil
             DebugVars v = GetVarsFromClass(t, instance_base_name, obj);
 
             return v.ToString();
+        }
+
+        public static void WriteObject(object obj, string instance_base_name = "")
+        {
+            WriteObject(obj.GetType(), obj, instance_base_name);
+        }
+        public static void WriteObject(Type t)
+        {
+            WriteObject(t, null, null);
+        }
+        public static void WriteObject(Type t, object obj, string instance_base_name)
+        {
+            if (Dbg.IsDebugMode == false)
+            {
+                return;
+            }
+
+            DebugVars v = GetVarsFromClass(t, instance_base_name, obj);
+
+            string str = v.ToString();
+
+            Console.WriteLine(str);
         }
 
         public static void PrintObjectInnerString(object obj, string instance_base_name = "")

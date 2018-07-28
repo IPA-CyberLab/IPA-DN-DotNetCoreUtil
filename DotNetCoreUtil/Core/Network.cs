@@ -35,40 +35,171 @@ namespace IPA.DN.CoreUtil
     }
 
     // ソケットイベント
-    public class SockEvent
+    public class SockEvent : IDisposable
     {
-        Event eventObj;
-        public Event Event
-        {
-            get { return eventObj; }
-        }
+        Event win32_event;
 
-        List<Sock> sockList;
+        internal List<Sock> unix_socklist;
+        IntPtr unix_pipe_read, unix_pipe_write;
+        int unix_current_pipe_data;
+
+        bool is_released = false;
+        object release_lock = new object();
 
         public SockEvent()
         {
-            eventObj = new Event();
-            sockList = new List<Sock>();
+            if (Env.IsWindows)
+            {
+                win32_event = new Event();
+            }
+            else
+            {
+                unix_socklist = new List<Sock>();
+                Unisys.NewPipe(out this.unix_pipe_read, out this.unix_pipe_write);
+            }
+        }
+
+        ~SockEvent()
+        {
+            release();
+        }
+
+        public void Dispose()
+        {
+            release();
+        }
+
+        void release()
+        {
+            lock (release_lock)
+            {
+                if (is_released == false)
+                {
+                    is_released = true;
+                    if (Env.IsUnix)
+                    {
+                        Unisys.Close(this.unix_pipe_read);
+                        Unisys.Close(this.unix_pipe_write);
+                    }
+                }
+            }
         }
 
         // ソケットをソケットイベントに関連付けして非同期に設定する
         public void JoinSock(Sock sock)
         {
-            try
+            if (sock.asyncMode)
             {
+                return;
+            }
+
+            if (Env.IsWindows)
+            {
+                // Windows
+                try
+                {
+                    if (sock.ListenMode != false || (sock.Type == SockType.Tcp && sock.Connected == false))
+                    {
+                        return;
+                    }
+
+                    Sock.WSAEventSelect(sock.Socket.Handle, win32_event.Handle, 35);
+                    sock.Socket.Blocking = false;
+
+                    sock.SockEvent = this;
+
+                    sock.asyncMode = true;
+                }
+                catch
+                {
+                }
+            }
+            else
+            {
+                // UNIX
                 if (sock.ListenMode != false || (sock.Type == SockType.Tcp && sock.Connected == false))
                 {
                     return;
                 }
 
-                Sock.WSAEventSelect(sock.Socket.Handle, eventObj.Handle, 35);
+                sock.asyncMode = true;
+
+                lock (unix_socklist)
+                {
+                    unix_socklist.Add(sock);
+                }
+
                 sock.Socket.Blocking = false;
 
-                sock.asyncMode = true;
+                sock.SockEvent = this;
+
+                this.Set();
             }
-            catch (Exception ex)
+        }
+
+        // イベントを叩く
+        public void Set()
+        {
+            if (Env.IsWindows)
             {
-                Console.WriteLine(ex.ToString());
+                this.win32_event.Set();
+            }
+            else
+            {
+                if (this.unix_current_pipe_data <= 100)
+                {
+                    Unisys.Write(this.unix_pipe_write, new byte[] { 0 }, 0, 1);
+                    this.unix_current_pipe_data++;
+                }
+            }
+        }
+
+        // イベントを待つ
+        public bool Wait(int timeout)
+        {
+            if (Env.IsWindows)
+            {
+                if (timeout == 0)
+                {
+                    return false;
+                }
+
+                return this.win32_event.Wait(timeout);
+            }
+            else
+            {
+                List<IntPtr> reads = new List<IntPtr>();
+                List<IntPtr> writes = new List<IntPtr>();
+
+                lock (this.unix_socklist)
+                {
+                    foreach (Sock s in this.unix_socklist)
+                    {
+                        reads.Add(s.Fd);
+                        if (s.writeBlocked)
+                        {
+                            writes.Add(s.Fd);
+                        }
+                    }
+                }
+
+                reads.Add(this.unix_pipe_read);
+
+                if (this.unix_current_pipe_data == 0)
+                {
+                    Unisys.Poll(reads.ToArray(), writes.ToArray(), timeout);
+                }
+
+                int readret;
+                byte[] tmp = new byte[1024];
+                this.unix_current_pipe_data = 0;
+                do
+                {
+                    readret = Unisys.Read(this.unix_pipe_read, tmp, 0, tmp.Length);
+                }
+                while (readret >= 1);
+
+                return true;
             }
         }
     }
@@ -1588,6 +1719,10 @@ namespace IPA.DN.CoreUtil
         internal RC4 sendKey, recvKey;
         internal Fifo sendFifo, recvFifo;
 
+        public SockEvent SockEvent = null;
+
+        public IntPtr Fd = new IntPtr(-1);
+
         [DllImport("ws2_32.dll", SetLastError = true)]
         internal static extern int WSAEventSelect(IntPtr s, IntPtr hEventObject, int lNetworkEvents);
 
@@ -1823,6 +1958,7 @@ namespace IPA.DN.CoreUtil
             }
 
             sock.socket = s;
+            sock.Fd = s.Handle;
 
             sock.querySocketInformation();
 
@@ -2444,6 +2580,8 @@ namespace IPA.DN.CoreUtil
 
                 ret.SetTimeout(TimeoutInfinite);
 
+                ret.Fd = (IntPtr)ret.socket.Handle;
+
                 ret.querySocketInformation();
 
                 if (getHostName)
@@ -2499,6 +2637,7 @@ namespace IPA.DN.CoreUtil
             s.Listen(0x7fffffff);
 
             Sock sock = new Sock();
+            sock.Fd = s.Handle;
             sock.connected = false;
             sock.asyncMode = false;
             sock.serverMode = true;
@@ -2581,6 +2720,7 @@ namespace IPA.DN.CoreUtil
             sock.connected = true;
             sock.asyncMode = false;
             sock.secureMode = false;
+            sock.Fd = sock.socket.Handle;
 
             sock.IsIPv6 = (ip.AddressFamily == AddressFamily.InterNetworkV6) ? true : false;
 
@@ -2604,8 +2744,33 @@ namespace IPA.DN.CoreUtil
         }
 
         // 切断
+        object unix_asyncmode_lock = new object();
         public void Disconnect()
         {
+            if (Env.IsUnix)
+            {
+                lock (unix_asyncmode_lock)
+                {
+                    if (this.asyncMode)
+                    {
+                        this.asyncMode = false;
+
+                        if (this.SockEvent != null)
+                        {
+                            lock (this.SockEvent.unix_socklist)
+                            {
+                                this.SockEvent.unix_socklist.Remove(this);
+                            }
+
+                            SockEvent se = this.SockEvent;
+                            this.SockEvent = null;
+
+                            se.Set();
+                        }
+                    }
+                }
+            }
+
             try
             {
                 this.disconnecting = true;
@@ -2616,7 +2781,9 @@ namespace IPA.DN.CoreUtil
 
                     try
                     {
-                        Sock.Connect("localhost", this.localPort);
+                        Sock s = Sock.Connect((this.IsIPv6 ? "::1" : "127.0.0.1"), this.localPort);
+
+                        s.Disconnect();
                     }
                     catch
                     {

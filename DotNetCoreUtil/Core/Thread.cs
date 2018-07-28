@@ -77,57 +77,6 @@ namespace IPA.DN.CoreUtil
 
     internal class MutantUnix : Mutant
     {
-        internal enum LockOperations : int
-        {
-            LOCK_SH = 1,    /* shared lock */
-            LOCK_EX = 2,    /* exclusive lock */
-            LOCK_NB = 4,    /* don't block when locking*/
-            LOCK_UN = 8,    /* unlock */
-        }
-
-        internal enum OpenFlags
-        {
-            // Access modes (mutually exclusive)
-            O_RDONLY = 0x0000,
-            O_WRONLY = 0x0001,
-            O_RDWR = 0x0002,
-
-            // Flags (combinable)
-            O_CLOEXEC = 0x0010,
-            O_CREAT = 0x0020,
-            O_EXCL = 0x0040,
-            O_TRUNC = 0x0080,
-            O_SYNC = 0x0100,
-        }
-
-        internal enum Permissions
-        {
-            Mask = S_IRWXU | S_IRWXG | S_IRWXO,
-
-            S_IRWXU = S_IRUSR | S_IWUSR | S_IXUSR,
-            S_IRUSR = 0x100,
-            S_IWUSR = 0x80,
-            S_IXUSR = 0x40,
-
-            S_IRWXG = S_IRGRP | S_IWGRP | S_IXGRP,
-            S_IRGRP = 0x20,
-            S_IWGRP = 0x10,
-            S_IXGRP = 0x8,
-
-            S_IRWXO = S_IROTH | S_IWOTH | S_IXOTH,
-            S_IROTH = 0x4,
-            S_IWOTH = 0x2,
-            S_IXOTH = 0x1,
-        }
-
-        [DllImport("System.Native", EntryPoint = "SystemNative_FLock", SetLastError = true)]
-        internal static extern int FLock(IntPtr fd, LockOperations operation);
-
-        [DllImport("System.Native", EntryPoint = "SystemNative_Open", SetLastError = true)]
-        internal static extern IntPtr Open(string filename, OpenFlags flags, int mode);
-
-        [DllImport("System.Native", EntryPoint = "SystemNative_Close", SetLastError = true)]
-        internal static extern int Close(IntPtr fd);
 
         string filename;
         int locked_count = 0;
@@ -145,15 +94,15 @@ namespace IPA.DN.CoreUtil
             {
                 IO.MakeDirIfNotExists(Env.UnixMutantDir);
 
-                Permissions perm = Permissions.S_IRUSR | Permissions.S_IWUSR | Permissions.S_IRGRP | Permissions.S_IWGRP | Permissions.S_IROTH | Permissions.S_IWOTH;
+                Unisys.Permissions perm = Unisys.Permissions.S_IRUSR | Unisys.Permissions.S_IWUSR | Unisys.Permissions.S_IRGRP | Unisys.Permissions.S_IWGRP | Unisys.Permissions.S_IROTH | Unisys.Permissions.S_IWOTH;
 
-                IntPtr f = Open(filename, OpenFlags.O_CREAT, (int)perm);
+                IntPtr f = Unisys.Open(filename, Unisys.OpenFlags.O_CREAT, (int)perm);
                 if (f.ToInt64() < 0)
                 {
                     throw new IOException("Open failed.");
                 }
 
-                if (FLock(f, LockOperations.LOCK_EX) == -1)
+                if (Unisys.FLock(f, Unisys.LockOperations.LOCK_EX) == -1)
                 {
                     throw new IOException("FLock failed.");
                 }
@@ -169,7 +118,7 @@ namespace IPA.DN.CoreUtil
             if (locked_count <= 0) throw new ApplicationException("locked_count <= 0");
             if (locked_count == 1)
             {
-                Close(this.fs);
+                Unisys.Close(this.fs);
 
                 this.fs = IntPtr.Zero;
             }

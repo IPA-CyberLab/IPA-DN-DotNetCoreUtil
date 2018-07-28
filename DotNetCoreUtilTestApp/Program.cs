@@ -28,6 +28,8 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
+            Dbg.SetDebugMode();
+
             sock_test3();
         }
 
@@ -40,7 +42,7 @@ namespace DotNetCoreUtilTestApp
         {
             while (true)
             {
-                sock_test3_event.Event.Wait(100);
+                sock_test3_event.Wait(1000);
 
                 Sock[] socks = null;
                 lock (sock_test3_socket_list)
@@ -94,6 +96,8 @@ namespace DotNetCoreUtilTestApp
                 {
                     sock_test3_socket_list.Add(s);
                 }
+
+                sock_test3_event.Set();
             }
         }
 
@@ -315,7 +319,7 @@ namespace DotNetCoreUtilTestApp
             WriteLine("path char: " + System.IO.Path.DirectorySeparatorChar);
 
             //Console.WriteLine(Debug.GetVarsFromClass(typeof(Env)));
-            Debug.PrintObjectInnerString(typeof(Env));
+            Dbg.PrintObjectInnerString(typeof(Env));
             //Debug.PrintObjectInnerString(typeof(System.Runtime.InteropServices.RuntimeInformation));
 
             Util.DoNothing();
