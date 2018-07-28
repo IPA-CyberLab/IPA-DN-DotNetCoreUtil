@@ -66,8 +66,9 @@ namespace IPA.DN.CoreUtil
 
                 sock.asyncMode = true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
             }
         }
     }
@@ -2439,7 +2440,6 @@ namespace IPA.DN.CoreUtil
                 ret.type = SockType.Tcp;
                 ret.serverMode = true;
                 ret.secureMode = false;
-
                 newSocket.NoDelay = true;
 
                 ret.SetTimeout(TimeoutInfinite);
@@ -2629,7 +2629,21 @@ namespace IPA.DN.CoreUtil
                     {
                         if (this.socket != null)
                         {
-                            this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+                            try
+                            {
+                                this.socket.LingerState = new LingerOption(false, 0);
+                            }
+                            catch
+                            {
+                            }
+
+                            try
+                            {
+                                this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+                            }
+                            catch
+                            {
+                            }
                         }
 
                         lock (lockObj)

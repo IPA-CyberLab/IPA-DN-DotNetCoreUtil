@@ -28,7 +28,108 @@ namespace DotNetCoreUtilTestApp
     {
         static void Main(string[] args)
         {
-            sock_test();
+            sock_test3();
+        }
+
+
+
+        static List<Sock> sock_test3_socket_list = new List<Sock>();
+        static SockEvent sock_test3_event = new SockEvent();
+
+        static void sock_test3_loop_thread(object param)
+        {
+            while (true)
+            {
+                sock_test3_event.Event.Wait(100);
+
+                Sock[] socks = null;
+                lock (sock_test3_socket_list)
+                {
+                    socks = sock_test3_socket_list.ToArray();
+                }
+
+                foreach (Sock s in socks)
+                {
+                    byte[] data = s.Recv(65536);
+                    if (data == null)
+                    {
+                        WriteLine($"Client {s.RemoteIP}:{s.RemotePort} disconnected.");
+                        lock (sock_test3_socket_list)
+                        {
+                            sock_test3_socket_list.Remove(s);
+                        }
+                        s.Disconnect();
+                    }
+                    else if (data.Length == 0)
+                    {
+                        // later
+                    }
+                    else
+                    {
+                        WriteLine($"Client {s.RemoteIP}:{s.RemotePort}: recv {data.Length} bytes.");
+                    }
+                }
+            }
+        }
+
+        static void sock_test3()
+        {
+            int port = 80;
+
+            ThreadObj loop_thread = new ThreadObj(sock_test3_loop_thread);
+
+            Sock a = Sock.Listen(port);
+
+            Console.WriteLine($"Listening {a.LocalPort} ...");
+
+            while (true)
+            {
+                Sock s = a.Accept();
+
+                WriteLine($"Connected from {s.LocalIP}");
+
+                sock_test3_event.JoinSock(s);
+
+                lock (sock_test3_socket_list)
+                {
+                    sock_test3_socket_list.Add(s);
+                }
+            }
+        }
+
+        static void sock_test4_accept_proc(Listener listener, Sock sock, object param)
+        {
+            Sock s = sock;
+            WriteLine($"Connected from {s.LocalIP}");
+
+            s.SetTimeout(3000);
+
+            s.SendAll("Hello\n".GetBytes_Ascii());
+
+            byte[] recv = s.Recv(4096);
+            if (recv == null)
+            {
+                Console.WriteLine("Disconnected.");
+            }
+            else
+            {
+                Console.WriteLine($"recv size = {recv.Length}");
+            }
+
+            s.Disconnect();
+        }
+
+        static void sock_test4()
+        {
+            Listener x = new Listener(80, sock_test4_accept_proc, null);
+            WriteLine($"Listening {x.Port}");
+
+            ReadLine();
+
+            WriteLine("Stop listening...");
+            x.Stop();
+            WriteLine("Stopped.");
+            ReadLine();
         }
 
         static void sock_test2()
@@ -38,6 +139,7 @@ namespace DotNetCoreUtilTestApp
             IPAddress ip = Domain.GetIP(hostname)[0];
             IPEndPoint endPoint = new IPEndPoint(ip, 80);
             Socket s = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            s.LingerState = new LingerOption(false, 0);
             s.Connect(endPoint);
             string send_str = $"GET / HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
 
