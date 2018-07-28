@@ -42,7 +42,51 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            rsa_test();
+            time_test();
+        }
+
+        static void time_test()
+        {
+            while (true)
+            {
+                WriteLine(Time.NowLong100Usecs);
+                ThreadObj.Sleep(5);
+            }
+        }
+
+        static void fullroute_test()
+        {
+            FullRouteSetThread t = new FullRouteSetThread(true);
+
+            t.WaitForReady(ThreadObj.Infinite);
+
+            while (true)
+            {
+                string ip = Con.ReadLine("IP>");
+
+                if (Str.StrCmpi(ip, "exit"))
+                {
+                    break;
+                }
+
+                FullRouteSetResult ret = t.FullRouteSet.Lookup(ip);
+
+                if (ret == null)
+                {
+                    Con.WriteLine("Not found.");
+                }
+                else
+                {
+                    Con.WriteLine("IP: {0}\nIPNet: {1}/{2}\nAS: {3} ({4})\nAS_PATH: {5}\nCountry: {6} ({7})",
+                        ret.IPAddress, ret.IPRouteNetwork,
+                        ret.IPRouteSubnetLength, ret.ASNumber, ret.ASName,
+                        ret.AS_PathString, ret.CountryCode2, ret.CountryName);
+                }
+            }
+
+            t.Stop();
+
+            return;
         }
 
         static void rsa_test()
