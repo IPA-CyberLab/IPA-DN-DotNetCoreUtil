@@ -54,3 +54,14 @@ cd ~/IPA-DN-DotNetCoreUtil/DotNetCoreUtilTestApp/
 git pull && dotnet run
 
 
+■ Ubuntu 18.04 上でのビルド・実行 (簡易)
+
+cd ~/IPA-DN-DotNetCoreUtil-Copy/DotNetCoreUtilTestApp/
+dotnet run
+
+
+cd ~/IPA-DN-DotNetCoreUtil-Copy/DotNetCoreUtilTestApp/
+dotnet run --no-build
+
+
+
