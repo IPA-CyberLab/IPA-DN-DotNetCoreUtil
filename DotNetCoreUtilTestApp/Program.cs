@@ -41,11 +41,21 @@ namespace DotNetCoreUtilTestApp
         static void Main(string[] args)
         {
             Dbg.SetDebugMode();
+
+            CancellationTokenSource s = new CancellationTokenSource();
+
+            var r = IO.EnumDirsWithCancel(new string[] { @"C:\tmp\SysInst", @"C:\tmp\xp180721" }, "", s.Token);
+            int num = 0;
+            foreach (DirEntry e in r)
+            {
+                //e.InnerPrint(num++.ToString());
+                e.FullPath.Print();
+            }
         }
 
         static void process_test()
         {
-            ChildProcess p = new ChildProcess("/bin/bash", "", "#!/bin/bash\r\necho aaa > aaa.txt\r\necho bbb\ndate\n\r\n\r\n".NormalizeCrlfThisPlatform(), true, 1000);
+            ChildProcess p = new ChildProcess(" / bin/bash", "", "#!/bin/bash\r\necho aaa > aaa.txt\r\necho bbb\ndate\n\r\n\r\n".NormalizeCrlfThisPlatform(), true, 1000);
 
                          //ChildProcess p = new ChildProcess(@"C:\git\dn-rlogin\rlogin_src\openssl-1.1.0h-x32\apps\openssl.exe", "", "version\n\n", true, 1000);
 

@@ -15,8 +15,26 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 
+using IPA.DN.CoreUtil.Helper.Basic;
+
 namespace IPA.DN.CoreUtil
 {
+    // 古いファイルから順番に削除する
+    public class OldFileEraser
+    {
+        string[] dir_list;
+        string[] extension_list;
+
+        public OldFileEraser(long max_total_size, string dir, string extension) : this(max_total_size, new string[] { dir }, new string[] { extension }) { }
+        public OldFileEraser(long max_total_size, string dir, string[] extensions) : this(max_total_size, new string[] { dir }, extensions) { }
+        public OldFileEraser(long max_total_size, string[] dirs, string extension) : this(max_total_size, dirs, new string[] { extension }) { }
+        public OldFileEraser(long max_total_size, string[] dirs, string[] extensions)
+        {
+            this.dir_list = dirs;
+            extension_list = extensions;
+        }
+    }
+
     // HamCore エントリ
     internal class HamCoreEntry : IComparable
     {
@@ -613,6 +631,41 @@ namespace IPA.DN.CoreUtil
             Close();
         }
 
+        // ファイルの拡張子が一致するかどうかチェック
+        public static bool IsExtensionMatch(string filename, string extension)
+        {
+            if (extension.IsEmpty()) return true;
+            if (extension.IsSamei("*") || extension.IsSamei("*.*")) return true;
+
+            extension = extension.TrimStartWith("*.");
+            if (extension.IsEmpty()) return true;
+            if (extension.IsSamei("*")) return true;
+            extension = "." + extension;
+
+            filename = Path.GetFileName(filename);
+            return filename.EndsWith(extension, StringComparison.InvariantCultureIgnoreCase);
+        }
+        public static bool IsExtensionsMatch(string filename, string extensions)
+        {
+            // 指定された拡張子を整理
+            if (extensions != null)
+            {
+                string[] tokens = extensions.Split(' ', '\t', ',', ';');
+                foreach (string ext in tokens)
+                {
+                    if (IsExtensionMatch(filename, ext))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
         // ファイルに文字列を書きこむ
         public static void WriteAllTextWithEncoding(string fileName, string str, Encoding encoding)
         {
@@ -701,39 +754,60 @@ namespace IPA.DN.CoreUtil
             return Path.Combine(Env.MyTempDir, name);
         }
 
-        // サブディレクトリを含んだディレクトリの列挙 (コールバック)
-        public delegate bool EnumDirCallbackProc(DirEntry e);
-
-        public static bool EnumDirWithCallback(string dirName, string file_exts, EnumDirCallbackProc cb)
+        // サブディレクトリを含んだディレクトリの列挙 (キャンセル可能)
+        class enum_dir_param
         {
-            List<string> ext_list = new List<string>();
-            // 指定された拡張子を整理
-            if (file_exts != null)
-            {
-                string[] tokens = file_exts.Split(' ', '\t', ',', ';');
-                foreach (string ext in tokens)
-                {
-                    string tmp = ext.ToLowerInvariant().Trim();
-                    if (Str.IsEmptyStr(tmp) == false)
-                    {
-                        if (tmp.StartsWith("*."))
-                        {
-                            tmp = tmp.Substring(2);
-                        }
-                        if (tmp.StartsWith("."))
-                        {
-                            tmp = tmp.Substring(1);
-                        }
-                        tmp = "." + tmp;
+            public CancellationToken cancel;
+            public List<DirEntry> DirList = new List<DirEntry>();
+        }
+        static bool enumDirWithCancel_callback(DirEntry e, object param)
+        {
+            enum_dir_param p = (enum_dir_param)param;
 
-                        ext_list.Add(tmp);
-                    }
-                }
+            if (p.cancel.IsCancellationRequested)
+            {
+                return false;
             }
 
-            return enumDirWithCallback(dirName, dirName, cb, ext_list);
+            p.DirList.Add(e);
+
+            return true;
         }
-        static bool enumDirWithCallback(string dirName, string baseDirName, EnumDirCallbackProc cb, List<string> ext_list)
+        public static List<DirEntry> EnumDirWithCancel(string dir_list, string file_exts, CancellationToken cancel = default(CancellationToken))
+        {
+            return EnumDirsWithCancel(new string[] { dir_list }, file_exts, cancel);
+        }
+        public static List<DirEntry> EnumDirsWithCancel(string[] dir_list, string file_exts, CancellationToken cancel = default(CancellationToken))
+        {
+            enum_dir_param p = new enum_dir_param();
+            p.cancel = cancel;
+            p.DirList = new List<DirEntry>();
+
+            bool ret = EnumDirsWithCallback(dir_list, file_exts, enumDirWithCancel_callback, p);
+
+            if (ret == false)
+            {
+                return null;
+            }
+
+            return p.DirList;
+        }
+
+        // サブディレクトリを含んだディレクトリの列挙 (コールバック)
+        public delegate bool EnumDirCallbackProc(DirEntry e, object param);
+        public static bool EnumDirsWithCallback(string[] dir_list, string file_exts, EnumDirCallbackProc cb, object cb_param)
+        {
+            foreach (string dir in dir_list)
+            {
+                if (EnumDirWithCallback(dir, file_exts, cb, cb_param) == false) return false;
+            }
+            return true;
+        }
+        public static bool EnumDirWithCallback(string dirName, string file_exts, EnumDirCallbackProc cb, object cb_param)
+        {
+            return enumDirWithCallback(dirName, dirName, cb, file_exts, cb_param);
+        }
+        static bool enumDirWithCallback(string dirName, string baseDirName, EnumDirCallbackProc cb, string ext_list, object cb_param)
         {
             string tmp = IO.InnerFilePath(dirName);
 
@@ -776,12 +850,12 @@ namespace IPA.DN.CoreUtil
                         e.fullPath = fullPath;
                         e.relativePath = GetRelativeFileName(fullPath, baseDirName);
 
-                        if (cb(e) == false)
+                        if (cb(e, cb_param) == false)
                         {
                             return false;
                         }
 
-                        enumDirWithCallback(fullPath, baseDirName, cb, ext_list);
+                        enumDirWithCallback(fullPath, baseDirName, cb, ext_list, cb_param);
                     }
                 }
             }
@@ -805,20 +879,7 @@ namespace IPA.DN.CoreUtil
 
                     bool ok = false;
 
-                    if (ext_list.Count == 0)
-                    {
-                        ok = true;
-                    }
-                    else
-                    {
-                        foreach (string ext in ext_list)
-                        {
-                            if (name.EndsWith(ext, StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                ok = true;
-                            }
-                        }
-                    }
+                    ok = IO.IsExtensionsMatch(fullPath, ext_list);
 
                     if (ok)
                     {
@@ -844,7 +905,7 @@ namespace IPA.DN.CoreUtil
                             e.fullPath = fullPath;
                             e.relativePath = GetRelativeFileName(fullPath, baseDirName);
 
-                            if (cb(e) == false)
+                            if (cb(e, cb_param) == false)
                             {
                                 return false;
                             }
