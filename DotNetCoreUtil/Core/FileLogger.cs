@@ -40,7 +40,7 @@ namespace IPA.DN.CoreUtil
         {
             lock (lockObj)
             {
-                this.logDir = logDir;
+                this.logDir = IO.InnerFilePath(logDir);
             }
         }
 

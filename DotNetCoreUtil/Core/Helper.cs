@@ -1,6 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading;
+using System.Data;
+using System.Data.Sql;
+using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Text;
+using System.Configuration;
+using System.Collections;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Web;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Net.NetworkInformation;
+
 using IPA.DN.CoreUtil;
 
 namespace IPA.DN.CoreUtil.Helper.Basic
@@ -100,6 +114,14 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string TruncStr(this string str, int len, string append_code = "") => Str.TruncStrEx(str, len, append_code.NonNull());
         public static byte[] HashSHA1(this string str) => Str.HashStr(str);
         public static byte[] HashSHA256(this string str) => Str.HashStrSHA256(str);
+        public static string CombinePath(this string str, string p1) => Path.Combine(str, p1);
+        public static string CombinePath(this string str, string p1, string p2) => Path.Combine(str, p1, p2);
+        public static string CombinePath(this string str, string p1, string p2, string p3) => Path.Combine(str, p1, p2, p3);
+        public static string NormalizePath(this string str) => IO.NormalizePath(str);
+        public static string InnerFilePath(this string str) => IO.InnerFilePath(str);
+        public static string RemoteLastEnMark(this string str) => IO.RemoteLastEnMark(str);
+        public static string GetDirectoryName(this string str) => Path.GetDirectoryName(str);
+        public static string GetFileName(this string str) => Path.GetFileName(str);
 
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);
