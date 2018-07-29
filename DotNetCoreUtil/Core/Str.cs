@@ -5041,6 +5041,28 @@ namespace IPA.DN.CoreUtil
             return o.ToArray();
         }
 
+        public static string OneLine(string s)
+        {
+            StringWriter w = new StringWriter();
+            string[] lines = Str.GetLines(s);
+            int num = 0;
+            foreach (string line in lines)
+            {
+                string ss = line.Trim();
+
+                if (Str.IsEmptyStr(ss) == false)
+                {
+                    if (num != 0)
+                    {
+                        w.Write(" / ");
+                    }
+                    w.Write(ss);
+                    num++;
+                }
+            }
+            return w.ToString();
+        }
+
         public static string ObjectToXMLSimple(object o)
         {
             return ObjectToXMLSimple(o, o.GetType());

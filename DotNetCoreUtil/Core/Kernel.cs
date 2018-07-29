@@ -118,12 +118,36 @@ namespace IPA.DN.CoreUtil
     {
         string stdout = "", stderr = "";
         int exitcode = -1;
+        int timeout;
+        Event timeout_thread_event = null;
+        Process proc;
+        bool finished = false;
+        bool killed = false;
+
+        void timeout_thread(object param)
+        {
+            this.timeout_thread_event.Wait(this.timeout);
+
+            if (finished == false)
+            {
+                try
+                {
+                    proc.Kill();
+                    killed = true;
+                }
+                catch
+                {
+                }
+            }
+        }
 
         public string StdOut => stdout;
         public string StdErr => stderr;
         public int ExitCode => exitcode;
-        public ChildProcess(string exe, string args = "", string input = "", bool throw_exception_on_exit_error = false)
+        public ChildProcess(string exe, string args = "", string input = "", bool throw_exception_on_exit_error = false, int timeout = ThreadObj.Infinite)
         {
+            this.timeout = timeout;
+
             Str.NormalizeString(ref args);
 
             ProcessStartInfo info = new ProcessStartInfo()
@@ -136,24 +160,55 @@ namespace IPA.DN.CoreUtil
                 RedirectStandardInput = !Str.IsEmptyStr(input),
             };
 
+            ThreadObj t = null;
+
             using (Process p = Process.Start(info))
             {
+                this.proc = p;
+
+                if (timeout != ThreadObj.Infinite)
+                {
+                    timeout_thread_event = new Event();
+
+                    t = new ThreadObj(timeout_thread);
+                }
+
                 if (Str.IsEmptyStr(input) == false)
                 {
                     p.StandardInput.Write(input);
                     p.StandardInput.Flush();
+                    p.StandardInput.Close();
                 }
 
                 stdout = p.StandardOutput.ReadToEnd();
                 stderr = p.StandardError.ReadToEnd();
 
                 p.WaitForExit();
+                finished = true;
+
+                if (timeout_thread_event != null)
+                {
+                    timeout_thread_event.Set();
+                }
+
+                if (t != null) t.WaitForEnd();
+
+                if (killed)
+                {
+                    if (Str.IsEmptyStr(stderr))
+                    {
+                        stderr = $"Process run timeout ({timeout.ToStr3()} msecs).";
+                    }
+                }
 
                 exitcode = p.ExitCode;
 
-                if (exitcode != 0)
+                if (throw_exception_on_exit_error)
                 {
-                    throw new ApplicationException($"ChildProcess: '{exe}': exitcode = {exitcode}, errorstr = {stderr}");
+                    if (exitcode != 0)
+                    {
+                        throw new ApplicationException($"ChildProcess: '{exe}': exitcode = {exitcode}, errorstr = {stderr.OneLine()}");
+                    }
                 }
             }
         }

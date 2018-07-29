@@ -47,15 +47,12 @@ namespace DotNetCoreUtilTestApp
 
         static void process_test()
         {
-/*            ChildProcess p = new ChildProcess("/bin/bash", "", "#!/bin/bash\r\necho aaa > aaa.txt\r\nexit 0\r\n\r\n"
-);*/
+            //ChildProcess p = new ChildProcess("/bin/bash", "", "#!/bin/bash\r\necho aaa > aaa.txt\r\necho bbb\ndate\n\r\n\r\n".NormalizeCrlfThisPlatform(), true, 1000);
 
-                         ChildProcess p = new ChildProcess(@"C:\git\dn-rlogin\rlogin_src\openssl-1.1.0h-x32\apps\openssl.exe", "", "version\r\nexit\r\n\r\n");
+                         ChildProcess p = new ChildProcess(@"C:\git\dn-rlogin\rlogin_src\openssl-1.1.0h-x32\apps\openssl.exe", "", "version\n\n", true, 1000);
 
             WriteLine(p.StdOut);
             WriteLine(p.StdErr);
-
-            p.ObjectToXmlPublic().XmlToObjectPublic(typeof(ChildProcess));
         }
 
         static void time_test()

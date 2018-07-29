@@ -56,6 +56,7 @@ namespace IPA.DN.CoreUtil.Helper.String
         public static object XmlToObjectPublic(this string s, Type t) => Str.XMLToObjectSimple(s, t);
         public static bool IsXmlStrForObjectPubllic(this string s) => Str.IsStrOkForXML(s);
         public static StrToken ToToken(this string s, string split_str = " ,\t\r\n") => new StrToken(s, split_str);
+        public static string OneLine(this string s) => Str.OneLine(s);
 
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);
