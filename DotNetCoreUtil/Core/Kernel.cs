@@ -24,7 +24,7 @@ using System.Net.Mail;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
 
-using IPA.DN.CoreUtil.Helper.String;
+using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {

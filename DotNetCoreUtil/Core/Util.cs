@@ -641,16 +641,7 @@ namespace IPA.DN.CoreUtil
             {
                 return false;
             }
-            int i, len;
-            len = b1.Length;
-            for (i = 0; i < len; i++)
-            {
-                if (b1[i] != b2[i])
-                {
-                    return false;
-                }
-            }
-            return true;
+            return System.Linq.Enumerable.SequenceEqual<byte>(b1, b2);
         }
 
         // byte[] 配列同士を比較する

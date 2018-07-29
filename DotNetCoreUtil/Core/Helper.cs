@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using IPA.DN.CoreUtil;
 
-namespace IPA.DN.CoreUtil.Helper.String
+namespace IPA.DN.CoreUtil.Helper.Basic
 {
-    public static class HelperString
+    public static class HelperBasic
     {
         public static byte[] GetBytes_UTF8(this string s, bool bom = false) => Util.CombineByteArray(bom ? Str.GetBOM(Str.Utf8Encoding) : null, Str.Utf8Encoding.GetBytes(s));
         public static byte[] GetBytes_UTF16LE(this string s, bool bom = false) => Util.CombineByteArray(bom ? Str.GetBOM(Str.Utf8Encoding) : null, Str.UniEncoding.GetBytes(s));
@@ -63,23 +63,74 @@ namespace IPA.DN.CoreUtil.Helper.String
         public static string FormatC(this string s, params object[] args) => Str.FormatC(s, args);
         public static void Printf(this string s) => Str.Printf(s, new object[0]);
         public static void Printf(this string s, params object[] args) => Str.Printf(s, args);
-        public static void Print(this string s, bool newline = true) => Console.Write(s + (newline ? Env.NewLine : ""));
-        public static void Debug(this string s) => Dbg.WriteLine(s);
+        public static string Print(this string s, bool newline = true) { Console.Write(s + (newline ? Env.NewLine : "")); return s; }
+        public static string Debug(this string s) { Dbg.WriteLine(s); return s; }
         public static int Search(this string s, string keyword, int start = 0, bool case_senstive = false) => Str.SearchStr(s, keyword, start, case_senstive);
+        public static string TrimCrlf(this string s) => Str.TrimCrlf(s);
+        public static string TrimStartWith(this string s, string key, bool case_sensitive = false) { Str.TrimStartWith(ref s, key, case_sensitive ? StringComparison.InvariantCulture : StringComparison.InvariantCultureIgnoreCase); return s; }
+        public static string TrimEndsWith(this string s, string key, bool case_sensitive = false) { Str.TrimEndsWith(ref s, key, case_sensitive ? StringComparison.InvariantCulture : StringComparison.InvariantCultureIgnoreCase); return s; }
+        public static string NonNull(this string s) { if (s == null) return ""; else return s; }
+        public static string NonNullTrim(this string s) { if (s == null) return ""; else return s.Trim(); }
+        public static string NormalizeSoftEther(this string s, bool trim = false) => Str.NormalizeStrSoftEther(s, trim);
+        public static string[] DivideStringByMultiKeywords(this string str, bool caseSensitive, params string[] keywords) => Str.DivideStringMulti(str, caseSensitive, keywords);
+        public static bool IsSuitableEncodingForString(this string s, Encoding enc) => Str.IsSuitableEncodingForString(s, enc);
+        public static bool IsStringNumOrAlpha(this string s) => Str.IsStringNumOrAlpha(s);
+        public static string GetLeft(this string str, int len) => Str.GetLeft(str, len);
+        public static string[] SplitStringForSearch(this string str) => Str.SplitStringForSearch(str);
+        public static void WriteTextFile(this string s, string filename, Encoding enc = null, bool writeBom = false) { if (enc == null) enc = Str.Utf8Encoding; Str.WriteTextFile(filename, s, enc, writeBom); }
+        public static bool StartsWithMulti(this string str, StringComparison comp, params string[] keys) => Str.StartsWithMulti(str, comp, keys);
+        public static int FindStringsMulti(this string str, int findStartIndex, StringComparison comp, out int foundKeyIndex, params string[] keys) => Str.FindStrings(str, findStartIndex, comp, out foundKeyIndex, keys);
+        public static string RemoveSpace(this string str) { Str.RemoveSpace(ref str); return str; }
+        public static string Normalize(this string str, bool space = true, bool toHankaku = true, bool toZenkaku = false, bool toZenkakuKana = true) { Str.NormalizeString(ref str, space, toHankaku, toZenkaku, toZenkakuKana); return str; }
+        public static string EncodeUrl(this string str, Encoding e) => Str.ToUrl(str, e);
+        public static string DecodeUrl(this string str, Encoding e) => Str.FromUrl(str, e);
+        public static string EncodeHtml(this string str, bool forceAllSpaceToTag) => Str.ToHtml(str, forceAllSpaceToTag);
+        public static string DecodeHtml(this string str) => Str.FromHtml(str);
+        public static bool IsPrintableAndSafe(this string str, bool crlf_ok = true, bool html_tag_ng = false) => Str.IsPrintableAndSafe(str, crlf_ok, html_tag_ng);
+        public static string Unescape(this string s) => Str.Unescape(s);
+        public static string Escape(this string s) => Str.Escape(s);
+        public static int GetWidth(this string s) => Str.GetStrWidth(s);
+        public static bool IsAllUpperStr(this string s) => Str.IsAllUpperStr(s);
+        public static string ReplaceStr(this string str, string oldKeyword, string newKeyword, bool caseSensitive = false) => Str.ReplaceStr(str, oldKeyword, newKeyword, caseSensitive);
+        public static bool CheckStrLen(this string str, int len) => Str.CheckStrLen(str, len);
+        public static bool CheckMailAddress(this string str) => Str.CheckMailAddress(str);
+        public static bool IsSafeAsFileName(this string str, bool path_char_ng = false) => Str.IsSafe(str, path_char_ng);
+        public static string MakeSafePath(this string str) => Str.MakeSafePathName(str);
+        public static string MakeSafeFileName(this string str) => Str.MakeSafeFileName(str);
+        public static string TruncStr(this string str, int len, string append_code = "") => Str.TruncStrEx(str, len, append_code.NonNull());
+        public static byte[] HashSHA1(this string str) => Str.HashStr(str);
+        public static byte[] HashSHA256(this string str) => Str.HashStrSHA256(str);
 
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);
+        public static List<string> ToList(this string[] t) => Str.StrArrayToList(t);
+        public static string Combine(this string[] t, string sepstr) => Str.CombineStringArray(t, sepstr);
 
         public static string MakeCharArray(this char c, int len) => Str.MakeCharArray(c, len);
+        public static bool IsZenkaku(this char c) => Str.IsZenkaku(c);
+        public static bool IsCharNumOrAlpha(this char c) => Str.IsCharNumOrAlpha(c);
+        public static bool IsPrintableAndSafe(this char c, bool crlf_ok = true, bool html_tag_ng = false) => Str.IsPrintableAndSafe(c, crlf_ok, html_tag_ng);
 
         public static byte[] NormalizeCrlfWindows(this byte[] s) => Str.NormalizeCrlfWindows(s);
         public static byte[] NormalizeCrlfUnix(this byte[] s) => Str.NormalizeCrlfUnix(s);
         public static byte[] NormalizeCrlfThisPlatform(this byte[] s) => Str.NormalizeCrlfThisPlatform(s);
 
+        public static byte[] CloneByte(this byte[] a) => Util.CopyByte(a);
+        public static byte[] CombineByte(this byte[] a, byte[] b) => Util.CombineByteArray(a, b);
+        public static byte[] ExtractByte(this byte[] a, int start, int len) => Util.ExtractByteArray(a, start, len);
+        public static byte[] ExtractByte(this byte[] a, int start) => Util.ExtractByteArray(a, start, a.Length - start);
+        public static bool IsSameByte(this byte[] a, byte[] b) => Util.CompareByte(a, b);
+        public static int MemCmp(this byte[] a, byte[] b) => Util.CompareByteRetInt(a, b);
+
         public static void InnerDebug(this object o, string instance_base_name = "") => Dbg.WriteObject(o, instance_base_name);
         public static void InnerPrint(this object o, string instance_base_name = "") => Dbg.PrintObjectInnerString(o, instance_base_name);
         public static string GetInnerStr(this object o, string instance_base_name = "") => Dbg.GetObjectInnerString(o, instance_base_name);
         public static string ObjectToXmlPublic(this object o, Type t = null) => Str.ObjectToXMLSimple(o, t ?? o.GetType());
+        public static object CloneObject(this object o) => Str.CloneObject(o);
+        public static byte[] ObjectToBinary(this object o) => Str.ObjectToBinary(o);
+        public static object BinaryToObject(byte[] b) => Str.BinaryToObject(b);
+        public static object Print(this object s, bool newline = true) { Console.Write((s == null ? "null" : s.ToString()) + (newline ? Env.NewLine : "")); return s; }
+        public static object Debug(this object s) { Dbg.WriteLine((s == null ? "null" : s.ToString())); return s; }
 
         public static string ToStr3(this long s) => Str.ToStr3(s);
         public static string ToStr3(this int s) => Str.ToStr3(s);

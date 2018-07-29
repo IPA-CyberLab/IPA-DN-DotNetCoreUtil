@@ -24,7 +24,7 @@ using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
-using IPA.DN.CoreUtil.Helper.String;
+using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {
@@ -464,6 +464,45 @@ namespace IPA.DN.CoreUtil
             b.Write(srcData);
 
             return b.ByteData;
+        }
+
+        // パスワードハッシュの生成
+        public const int PasswordSaltSize = 16;
+        public const int PasswordKeySize = 32;
+        public const int PasswordIterations = 1234;
+        public static string SaltPassword(string password, byte[] salt = null)
+        {
+            if (salt == null)
+            {
+                salt = Secure.Rand(PasswordSaltSize);
+            }
+
+            byte[] pw = password.NonNull().GetBytes_UTF8();
+            byte[] src = pw;
+
+            for (int i = 0; i < PasswordIterations; i++)
+            {
+                src = Secure.HashSHA256(src.CombineByte(salt));
+            }
+
+            return src.CombineByte(salt).GetHexString();
+        }
+
+        // パスワードハッシュの検証
+        public static bool VeritySaltedPassword(string hash, string password)
+        {
+            byte[] data = hash.GetHexBytes();
+            if (data.Length != (PasswordSaltSize + PasswordKeySize))
+            {
+                throw new ApplicationException("data.Length != (PasswordSaltSize + PasswordKeySize)");
+            }
+
+            byte[] pw = data.ExtractByte(0, PasswordKeySize);
+            byte[] salt = data.ExtractByte(PasswordKeySize, PasswordSaltSize);
+
+            string hash2 = SaltPassword(password, salt);
+
+            return hash.GetHexBytes().IsSameByte(hash2.GetHexBytes());
         }
     }
 

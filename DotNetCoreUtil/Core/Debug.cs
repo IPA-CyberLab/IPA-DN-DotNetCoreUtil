@@ -38,16 +38,18 @@ namespace IPA.DN.CoreUtil
             is_debug_mode = b;
         }
 
-        public static void WriteLine()
+        public static string WriteLine()
         {
             WriteLine("");
+            return "";
         }
-        public static void WriteLine(string str)
+        public static string WriteLine(string str)
         {
             if (Dbg.IsDebugMode)
             {
                 Console.WriteLine(str);
             }
+            return str;
         }
         public static void WriteLine(string str, params object[] args)
         {

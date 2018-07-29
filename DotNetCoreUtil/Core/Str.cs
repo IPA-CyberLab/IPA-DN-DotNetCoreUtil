@@ -23,7 +23,7 @@ using System.Xml.Serialization;
 using System.Runtime.InteropServices;
 using IPA.DN.CoreUtil.BigInt;
 
-using IPA.DN.CoreUtil.Helper.String;
+using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {
@@ -3119,11 +3119,11 @@ namespace IPA.DN.CoreUtil
         }
 
         // 文字列が安全かどうか検査する
-        public static bool IsSafe(string s)
+        public static bool IsSafe(string s, bool path_char_ng = false)
         {
             foreach (char c in s)
             {
-                if (IsSafe(c) == false)
+                if (IsSafe(c, path_char_ng) == false)
                 {
                     return false;
                 }
@@ -3133,7 +3133,7 @@ namespace IPA.DN.CoreUtil
         }
 
         // 文字が安全かどうか検査する
-        public static bool IsSafe(char c)
+        public static bool IsSafe(char c, bool path_char_ng = false)
         {
             char[] b = Path.GetInvalidFileNameChars();
 
@@ -3145,9 +3145,12 @@ namespace IPA.DN.CoreUtil
                 }
             }
 
-            if (c == '\\' || c == '/')
+            if (path_char_ng)
             {
-                return false;
+                if (c == '\\' || c == '/')
+                {
+                    return false;
+                }
             }
 
             return true;
@@ -3302,20 +3305,6 @@ namespace IPA.DN.CoreUtil
             return BinaryToObject(ObjectToBinary(o));
         }
 
-        // バイナリか XML のどちらかをオブジェクトに変換する
-        public static object AnyToObject(byte[] data)
-        {
-            if (data.Length >= 5)
-            {
-                if (Str.StrCmpi(Encoding.ASCII.GetString(data, 0, 5), "<SOAP"))
-                {
-                    return XMLDataToObject(data);
-                }
-            }
-
-            return BinaryToObject(data);
-        }
-
         // オブジェクトをバイナリに変換する
         public static byte[] ObjectToBinary(object o)
         {
@@ -3335,60 +3324,6 @@ namespace IPA.DN.CoreUtil
             ms.Position = 0;
 
             return f.Deserialize(ms);
-        }
-
-        // オブジェクトを XML に変換する
-        public static string ObjectToXMLString(object o)
-        {
-            //             SoapFormatter f = new SoapFormatter();
-            //             MemoryStream ms = new MemoryStream();
-            //             f.Serialize(ms, o);
-            //             ms.Position = 0;
-            // 
-            //             StreamReader r = new StreamReader(ms);
-            // 
-            //             return r.ReadToEnd();
-
-            return "";
-        }
-        public static byte[] ObjectToXMLData(object o)
-        {
-            //             SoapFormatter f = new SoapFormatter();
-            //             MemoryStream ms = new MemoryStream();
-            //             f.Serialize(ms, o);
-            //             ms.Position = 0;
-            // 
-            //             return ms.ToArray();
-
-            return null;
-        }
-
-        // XML をオブジェクトに変換する
-        public static object XMLStringToObject(string data)
-        {
-            //             SoapFormatter f = new SoapFormatter();
-            //             MemoryStream ms = new MemoryStream();
-            //             StreamWriter w = new StreamWriter(ms);
-            //             w.Write(data);
-            //             w.Flush();
-            // 
-            //             ms.Position = 0;
-            // 
-            //             return f.Deserialize(ms);
-
-            return null;
-        }
-        public static object XMLDataToObject(byte[] data)
-        {
-            //             SoapFormatter f = new SoapFormatter();
-            //             MemoryStream ms = new MemoryStream();
-            //             ms.Write(data, 0, data.Length);
-            // 
-            //             ms.Position = 0;
-            // 
-            //             return f.Deserialize(ms);
-
-            return null;
         }
 
         // 複数の文字列を結合する
@@ -3489,6 +3424,10 @@ namespace IPA.DN.CoreUtil
             b.Write(HashStr(str));
             b.SeekToBegin();
             return b.ReadInt64();
+        }
+        public static byte[] HashStrSHA256(string str)
+        {
+            return Secure.HashSHA256(Encoding.UTF8.GetBytes(str));
         }
 
         // SHA-256 パスワードハッシュ
@@ -3817,6 +3756,7 @@ namespace IPA.DN.CoreUtil
                     "_",
                     "　",
                     "\t",
+                    "T",
                 };
 
             string[] tokens = str.Split(sps, StringSplitOptions.RemoveEmptyEntries);

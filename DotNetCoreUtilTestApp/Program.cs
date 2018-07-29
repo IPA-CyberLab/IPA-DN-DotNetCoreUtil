@@ -32,7 +32,7 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
 using static System.Console;
-using IPA.DN.CoreUtil.Helper.String;
+using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace DotNetCoreUtilTestApp
 {
@@ -41,18 +41,6 @@ namespace DotNetCoreUtilTestApp
         static void Main(string[] args)
         {
             Dbg.SetDebugMode();
-
-            DateTime now = Time.NowDateTime;
-
-            now.InnerPrint();
-
-            string str = now.ToDtStr(false, DtstrOption.All, true);
-
-            str.Print();
-
-            DateTime dt = str.ToDateTime(false);
-
-            dt.InnerPrint();
         }
 
         static void process_test()
