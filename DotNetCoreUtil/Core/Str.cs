@@ -23,8 +23,18 @@ using System.Xml.Serialization;
 using System.Runtime.InteropServices;
 using IPA.DN.CoreUtil.BigInt;
 
+using IPA.DN.CoreUtil.Helper.String;
+
 namespace IPA.DN.CoreUtil
 {
+    // DateTime をシンブル文字列に変換
+    public enum DtstrOption
+    {
+        All,
+        DateOnly,
+        TimeOnly,
+    }
+
     // キーバリューリスト
     public class KeyValueList
     {
@@ -3686,6 +3696,36 @@ namespace IPA.DN.CoreUtil
             return false;
         }
 
+        // 文字列を double に変換する
+        public static double StrToDouble(string str)
+        {
+            try
+            {
+                Str.RemoveSpaceChar(ref str);
+                Str.NormalizeString(ref str, true, true, false, false);
+                return double.Parse(str);
+            }
+            catch
+            {
+                return 0.0;
+            }
+        }
+
+        // 文字列を decimal に変換する
+        public static decimal StrToDecimal(string str)
+        {
+            try
+            {
+                Str.RemoveSpaceChar(ref str);
+                Str.NormalizeString(ref str, true, true, false, false);
+                return decimal.Parse(str);
+            }
+            catch
+            {
+                return 0.0m;
+            }
+        }
+
         // 文字列を int 型に変換する
         public static int StrToInt(string str)
         {
@@ -3762,7 +3802,10 @@ namespace IPA.DN.CoreUtil
         }
         public static DateTime StrToDateTime(string str, bool toUtc)
         {
-            return StrToDateTime(str).ToUniversalTime();
+            if (toUtc)
+                return StrToDateTime(str).ToUniversalTime();
+            else
+                return StrToDateTime(str);
         }
         public static DateTime StrToDateTime(string str)
         {
@@ -3846,7 +3889,10 @@ namespace IPA.DN.CoreUtil
         }
         public static DateTime StrToTime(string str, bool toUtc)
         {
-            return StrToTime(str).ToUniversalTime();
+            if (toUtc)
+                return StrToTime(str).ToUniversalTime();
+            else
+                return StrToTime(str);
         }
         public static DateTime StrToTime(string str)
         {
@@ -3871,9 +3917,25 @@ namespace IPA.DN.CoreUtil
                 string hourStr = tokens[0];
                 string minuteStr = tokens[1];
                 string secondStr = tokens[2];
+                string msecStr = "";
                 int hour = -1;
                 int minute = -1;
                 int second = -1;
+                int msecond = 0;
+                long add_ticks = 0;
+
+                int msec_index = secondStr.Search(".");
+                if (msec_index != -1)
+                {
+                    msecStr = secondStr.Substring(msec_index + 1);
+                    secondStr = secondStr.Substring(0, msec_index);
+
+                    msecStr = "0." + msecStr;
+
+                    decimal tmp = msecStr.ToDecimal();
+                    msecond = (int)((tmp % 1.0m) * 1000.0m);
+                    add_ticks = (int)((tmp % 0.001m) * 10000000.0m);
+                }
 
                 if ((hourStr.Length == 1 || hourStr.Length == 2) && IsNumber(hourStr))
                 {
@@ -3888,12 +3950,12 @@ namespace IPA.DN.CoreUtil
                     second = StrToInt(secondStr);
                 }
 
-                if (hour < 0 || hour >= 25 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
+                if (hour < 0 || hour >= 25 || minute < 0 || minute >= 60 || second < 0 || second >= 60 || msecond < 0 || msecond >= 1000)
                 {
                     throw new ArgumentException();
                 }
 
-                return new DateTime(2000, 1, 1, hour, minute, second);
+                return new DateTime(2000, 1, 1, hour, minute, second, msecond).AddTicks(add_ticks);
             }
             else if (tokens.Length == 2)
             {
@@ -3978,7 +4040,10 @@ namespace IPA.DN.CoreUtil
         }
         public static DateTime StrToDate(string str, bool toUtc)
         {
-            return StrToDate(str).ToUniversalTime();
+            if (toUtc)
+                return StrToDate(str).ToUniversalTime();
+            else
+                return StrToDate(str);
         }
         public static DateTime StrToDate(string str)
         {
@@ -4256,6 +4321,35 @@ namespace IPA.DN.CoreUtil
             string msecStr = ((decimal)ticks / (decimal)10000000).ToString(".000");
 
             return dt.ToString("yyyyMMdd_HHmmss") + "." + msecStr.Split('.')[1];
+        }
+
+        public static string DateTimeToDtstr(DateTime dt, bool with_msecs = false, DtstrOption option = DtstrOption.All, bool with_nanosecs = false)
+        {
+            long ticks = dt.Ticks % 10000000;
+            if (ticks >= 9999999) ticks = 9999999;
+
+            string msecStr = "";
+            if (with_nanosecs)
+            {
+                msecStr = ((decimal)ticks / (decimal)10000000).ToString(".0000000");
+            }
+            else if (with_msecs)
+            {
+                msecStr = ((decimal)ticks / (decimal)10000000).ToString(".000");
+            }
+
+            string ret = dt.ToString("yyyy/MM/dd HH:mm:ss") + ((with_msecs || with_nanosecs) ? "." + msecStr.Split('.')[1] : "");
+
+            if (option == DtstrOption.DateOnly)
+            {
+                ret = ret.ToToken(" ")[0];
+            }
+            else if (option == DtstrOption.TimeOnly)
+            {
+                ret = ret.ToToken(" ")[1];
+            }
+
+            return ret;
         }
 
         // 文字列置換

@@ -38,6 +38,8 @@ namespace IPA.DN.CoreUtil.Helper.String
         public static long ToLong(this string s) => Str.StrToLong(s);
         public static uint ToUInt(this string s) => Str.StrToUInt(s);
         public static ulong ToULong(this string s) => Str.StrToULong(s);
+        public static double ToDouble(this string s) => Str.StrToDouble(s);
+        public static decimal ToDecimal(this string s) => Str.StrToDecimal(s);
         public static bool IsSame(this string s, string t, bool ignore_case = false) => ((s == null && t == null) ? true : ((s == null || t == null) ? false : (ignore_case ? Str.StrCmpi(s, t) : Str.StrCmp(s, t))));
         public static bool IsSamei(this string s, string t) => IsSame(s, t, true);
         public static int Cmp(this string s, string t, bool ignore_case = false) => ((s == null && t == null) ? 0 : ((s == null ? 1 : t == null ? -1 : (ignore_case ? Str.StrCmpiRetInt(s, t) : Str.StrCmpRetInt(s, t)))));
@@ -57,6 +59,13 @@ namespace IPA.DN.CoreUtil.Helper.String
         public static bool IsXmlStrForObjectPubllic(this string s) => Str.IsStrOkForXML(s);
         public static StrToken ToToken(this string s, string split_str = " ,\t\r\n") => new StrToken(s, split_str);
         public static string OneLine(this string s) => Str.OneLine(s);
+        public static string FormatC(this string s) => Str.FormatC(s);
+        public static string FormatC(this string s, params object[] args) => Str.FormatC(s, args);
+        public static void Printf(this string s) => Str.Printf(s, new object[0]);
+        public static void Printf(this string s, params object[] args) => Str.Printf(s, args);
+        public static void Print(this string s, bool newline = true) => Console.Write(s + (newline ? Env.NewLine : ""));
+        public static void Debug(this string s) => Dbg.WriteLine(s);
+        public static int Search(this string s, string keyword, int start = 0, bool case_senstive = false) => Str.SearchStr(s, keyword, start, case_senstive);
 
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);
@@ -67,12 +76,17 @@ namespace IPA.DN.CoreUtil.Helper.String
         public static byte[] NormalizeCrlfUnix(this byte[] s) => Str.NormalizeCrlfUnix(s);
         public static byte[] NormalizeCrlfThisPlatform(this byte[] s) => Str.NormalizeCrlfThisPlatform(s);
 
+        public static void InnerDebug(this object o, string instance_base_name = "") => Dbg.WriteObject(o, instance_base_name);
+        public static void InnerPrint(this object o, string instance_base_name = "") => Dbg.PrintObjectInnerString(o, instance_base_name);
+        public static string GetInnerStr(this object o, string instance_base_name = "") => Dbg.GetObjectInnerString(o, instance_base_name);
         public static string ObjectToXmlPublic(this object o, Type t = null) => Str.ObjectToXMLSimple(o, t ?? o.GetType());
 
         public static string ToStr3(this long s) => Str.ToStr3(s);
         public static string ToStr3(this int s) => Str.ToStr3(s);
         public static string ToStr3(this ulong s) => Str.ToStr3(s);
         public static string ToStr3(this uint s) => Str.ToStr3(s);
+
+        public static string ToDtStr(this DateTime dt, bool with_msecs = false, DtstrOption option = DtstrOption.All, bool with_nanosecs = false) => Str.DateTimeToDtstr(dt, with_msecs, option, with_nanosecs);
     }
 }
 
