@@ -144,6 +144,10 @@ namespace IPA.DN.CoreUtil
         public string StdOut => stdout;
         public string StdErr => stderr;
         public int ExitCode => exitcode;
+        public bool TimeoutKilled => killed;
+        public bool IsOk => exitcode == 0;
+        public bool IsError => !IsOk;
+
         public ChildProcess(string exe, string args = "", string input = "", bool throw_exception_on_exit_error = false, int timeout = ThreadObj.Infinite)
         {
             this.timeout = timeout;
