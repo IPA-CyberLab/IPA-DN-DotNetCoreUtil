@@ -24,6 +24,8 @@ using System.Net.Mail;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
 
+using IPA.DN.CoreUtil.Helper.String;
+
 namespace IPA.DN.CoreUtil
 {
     public static class Kernel
@@ -108,6 +110,52 @@ namespace IPA.DN.CoreUtil
             p.Start();
 
             return p;
+        }
+    }
+
+    // 子プロセスの起動・制御用クラス
+    public class ChildProcess
+    {
+        string stdout = "", stderr = "";
+        int exitcode = -1;
+
+        public string StdOut => stdout;
+        public string StdErr => stderr;
+        public int ExitCode => exitcode;
+        public ChildProcess(string exe, string args = "", string input = "", bool throw_exception_on_exit_error = false)
+        {
+            Str.NormalizeString(ref args);
+
+            ProcessStartInfo info = new ProcessStartInfo()
+            {
+                FileName = IO.InnerFilePath(exe),
+                Arguments = args,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = !Str.IsEmptyStr(input),
+            };
+
+            using (Process p = Process.Start(info))
+            {
+                if (Str.IsEmptyStr(input) == false)
+                {
+                    p.StandardInput.Write(input);
+                    p.StandardInput.Flush();
+                }
+
+                stdout = p.StandardOutput.ReadToEnd();
+                stderr = p.StandardError.ReadToEnd();
+
+                p.WaitForExit();
+
+                exitcode = p.ExitCode;
+
+                if (exitcode != 0)
+                {
+                    throw new ApplicationException($"ChildProcess: '{exe}': exitcode = {exitcode}, errorstr = {stderr}");
+                }
+            }
         }
     }
 }

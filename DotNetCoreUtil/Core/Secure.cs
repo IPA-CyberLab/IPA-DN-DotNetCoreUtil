@@ -24,7 +24,7 @@ using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
-using IPA.DN.CoreUtil.Helper.StrEncoding;
+using IPA.DN.CoreUtil.Helper.String;
 
 namespace IPA.DN.CoreUtil
 {

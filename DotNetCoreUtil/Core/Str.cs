@@ -4554,7 +4554,7 @@ namespace IPA.DN.CoreUtil
         {
             uint mode = 0;
             string keystr = "", valuestr = "";
-            if (splitStr == null)
+            if (Str.IsEmptyStr(splitStr))
             {
                 splitStr = StrToken.DefaultSplitStr;
             }
@@ -4733,6 +4733,44 @@ namespace IPA.DN.CoreUtil
         }
 
         // 改行コードを正規化する
+        public static string NormalizeCrlfWindows(string str)
+        {
+            return NormalizeCrlf(str, new byte[] { 13, 10 });
+        }
+        public static string NormalizeCrlfUnix(string str)
+        {
+            return NormalizeCrlf(str, new byte[] { 10 });
+        }
+        public static string NormalizeCrlfThisPlatform(string str)
+        {
+            if (Env.IsWindows)
+            {
+                return NormalizeCrlfWindows(str);
+            }
+            else
+            {
+                return NormalizeCrlfUnix(str);
+            }
+        }
+        public static byte[] NormalizeCrlfWindows(byte[] str)
+        {
+            return NormalizeCrlf(str, new byte[] { 13, 10 });
+        }
+        public static byte[] NormalizeCrlfUnix(byte[] str)
+        {
+            return NormalizeCrlf(str, new byte[] { 10 });
+        }
+        public static byte[] NormalizeCrlfThisPlatform(byte[] str)
+        {
+            if (Env.IsWindows)
+            {
+                return NormalizeCrlfWindows(str);
+            }
+            else
+            {
+                return NormalizeCrlfUnix(str);
+            }
+        }
         public static string NormalizeCrlf(string str)
         {
             return NormalizeCrlf(str, new byte[] { 13, 10 });

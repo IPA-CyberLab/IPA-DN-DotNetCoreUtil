@@ -32,7 +32,7 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
 using static System.Console;
-using IPA.DN.CoreUtil.Helper.StrEncoding;
+using IPA.DN.CoreUtil.Helper.String;
 
 namespace DotNetCoreUtilTestApp
 {
@@ -42,7 +42,20 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            time_test();
+            process_test();
+        }
+
+        static void process_test()
+        {
+/*            ChildProcess p = new ChildProcess("/bin/bash", "", "#!/bin/bash\r\necho aaa > aaa.txt\r\nexit 0\r\n\r\n"
+);*/
+
+                         ChildProcess p = new ChildProcess(@"C:\git\dn-rlogin\rlogin_src\openssl-1.1.0h-x32\apps\openssl.exe", "", "version\r\nexit\r\n\r\n");
+
+            WriteLine(p.StdOut);
+            WriteLine(p.StdErr);
+
+            p.ObjectToXmlPublic().XmlToObjectPublic(typeof(ChildProcess));
         }
 
         static void time_test()
