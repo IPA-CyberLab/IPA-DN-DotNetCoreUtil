@@ -23,15 +23,101 @@ namespace IPA.DN.CoreUtil
     public class OldFileEraser
     {
         string[] dir_list;
-        string[] extension_list;
+        string extension_list;
+        long max_total_size;
 
-        public OldFileEraser(long max_total_size, string dir, string extension) : this(max_total_size, new string[] { dir }, new string[] { extension }) { }
-        public OldFileEraser(long max_total_size, string dir, string[] extensions) : this(max_total_size, new string[] { dir }, extensions) { }
-        public OldFileEraser(long max_total_size, string[] dirs, string extension) : this(max_total_size, dirs, new string[] { extension }) { }
-        public OldFileEraser(long max_total_size, string[] dirs, string[] extensions)
+        public OldFileEraser(long max_total_size, string dir, string extensions = "*") : this(max_total_size, new string[] { dir }, extensions) { }
+        public OldFileEraser(long max_total_size, string[] dirs, string extensions = "*")
         {
-            this.dir_list = dirs;
-            extension_list = extensions;
+            List<string> tmp = new List<string>();
+            foreach (string dir in dirs) tmp.Add(dir.InnerFilePath());
+            this.dir_list = tmp.ToArray();
+
+            this.extension_list = extensions;
+            this.max_total_size = max_total_size;
+        }
+
+        // 定期的に削除を実行するスレッドを開始
+        public void StartIntervalThread(int interval, CancellationToken cancel = default(CancellationToken))
+        {
+            Event halt_event = new Event();
+
+            ThreadObj thread = new ThreadObj((param) =>
+            {
+                while (cancel.IsCancellationRequested == false)
+                {
+                    halt_event.Wait(interval);
+                    if (cancel.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    ProcessNow(cancel);
+                    DateTime.Now.Debug();
+                }
+            });
+
+            cancel.Register(() =>
+            {
+                halt_event.Set();
+                thread.WaitForEnd();
+            }
+            );
+
+            thread.Thread.IsBackground = true;
+        }
+
+        // すぐに削除実行
+        public void ProcessNow(CancellationToken cancel = default(CancellationToken))
+        {
+            try
+            {
+                // 列挙
+                List<DirEntry> list = IO.EnumDirsWithCancel(this.dir_list, this.extension_list, cancel);
+
+                // 更新日時でソート
+                list.Sort((x, y) => (x.UpdateDate.CompareTo(y.UpdateDate)));
+
+                // 合計サイズを取得
+                long total_size = 0;
+                foreach (var v in list) if (v.IsFolder == false) total_size += v.FileSize;
+
+                List<DirEntry> delete_files = new List<DirEntry>();
+
+                // 削除をしていきます
+                long delete_size = total_size - max_total_size;
+                foreach (var v in list)
+                {
+                    if (delete_size <= 0) break;
+                    if (v.IsFolder == false)
+                    {
+                        try
+                        {
+                            File.Delete(v.FullPath);
+
+                            //Dbg.WriteLine($"File '{v.FullPath}' deleted.");
+
+                            // 削除に成功したら delete_size を減じる
+                            delete_size -= v.FileSize;
+
+                            // 親ディレクトリが削除できる場合は削除する
+                            // (検索した対象ディレクトリは削除しない)
+                            if (v.RelativePath.FindStringsMulti(0, StringComparison.InvariantCultureIgnoreCase, out _, "\\", "/") != -1)
+                            {
+                                Directory.Delete(v.FullPath.GetDirectoryName());
+
+                                //Dbg.WriteLine($"Directory '{v.FullPath.GetDirectoryName()}' deleted.");
+                            }
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -420,40 +506,25 @@ namespace IPA.DN.CoreUtil
     public class DirEntry : IComparable<DirEntry>
     {
         internal bool folder;
-        public bool IsFolder
-        {
-            get { return folder; }
-        }
+        public bool IsFolder => folder;
+
         internal string fileName;
-        public string FileName
-        {
-            get { return fileName; }
-        }
+        public string FileName => fileName;
+
         internal string fullPath;
-        public string FullPath
-        {
-            get { return fullPath; }
-        }
+        public string FullPath => fullPath;
+
         internal string relativePath;
-        public string RelativePath
-        {
-            get { return relativePath; }
-        }
+        public string RelativePath => relativePath;
+
         internal long fileSize;
-        public long FileSize
-        {
-            get { return fileSize; }
-        }
+        public long FileSize => fileSize;
+
         internal DateTime createDate;
-        public DateTime CreateDate
-        {
-            get { return createDate; }
-        }
+        public DateTime CreateDate => createDate;
+
         internal DateTime updateDate;
-        public DateTime UpdateDate
-        {
-            get { return updateDate; }
-        }
+        public DateTime UpdateDate => updateDate;
 
         public int CompareTo(DirEntry other)
         {

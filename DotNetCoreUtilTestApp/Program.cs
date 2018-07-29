@@ -42,15 +42,16 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            CancellationTokenSource s = new CancellationTokenSource();
+            OldFileEraser e = new OldFileEraser(10000, new string[] { @"/tmp/a/" , "/tmp/b/"}, "*.txt");
 
-            var r = IO.EnumDirsWithCancel(new string[] { @"C:\tmp\SysInst", @"C:\tmp\xp180721" }, "", s.Token);
-            int num = 0;
-            foreach (DirEntry e in r)
-            {
-                //e.InnerPrint(num++.ToString());
-                e.FullPath.Print();
-            }
+            //e.ProcessNow();
+
+            CancellationTokenSource cancel = new CancellationTokenSource();
+            e.StartIntervalThread(1000, cancel.Token);
+
+            Con.ReadLine();
+
+            cancel.Cancel();
         }
 
         static void process_test()
