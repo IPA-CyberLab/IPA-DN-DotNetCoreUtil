@@ -129,7 +129,7 @@ namespace IPA.DN.CoreUtil
                 lock (lockObj)
                 {
                     DateTime now = DateTime.Now;
-                    string nowStr = now.ToString() + "." + now.Millisecond.ToString("000");
+                    string nowStr = Str.DateTimeToDtstr(now, true);
 
                     string tmp = nowStr + "," + str + "\r\n";
 
