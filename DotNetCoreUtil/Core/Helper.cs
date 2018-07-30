@@ -125,7 +125,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);
-        public static List<string> ToList(this string[] t) => Str.StrArrayToList(t);
+        public static List<string> ToList(this string[] t, bool remove_empty = false, bool distinct = false, bool distinct_case_sensitive = false) => Str.StrArrayToList(t, remove_empty, distinct, distinct_case_sensitive);
         public static string Combine(this string[] t, string sepstr) => Str.CombineStringArray(t, sepstr);
 
         public static string MakeCharArray(this char c, int len) => Str.MakeCharArray(c, len);

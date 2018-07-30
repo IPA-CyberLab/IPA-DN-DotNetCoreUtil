@@ -2643,13 +2643,32 @@ namespace IPA.DN.CoreUtil
         }
 
         // 文字列配列を文字列リストに変換
-        public static List<string> StrArrayToList(string[] strArray)
+        public static List<string> StrArrayToList(string[] strArray, bool remove_empty = false, bool distinct = false, bool distinct_case_sensitive = false)
         {
             List<string> ret = new List<string>();
 
             foreach (string s in strArray)
             {
-                ret.Add(s);
+                if (remove_empty == false || s.IsEmpty() == false)
+                {
+                    ret.Add(s);
+                }
+            }
+
+            if (distinct)
+            {
+                List<string> ret2 = new List<string>();
+                HashSet<string> tmp = new HashSet<string>();
+                foreach (string s in ret)
+                {
+                    string t = s;
+                    if (distinct_case_sensitive == false) t = s.ToUpperInvariant();
+                    if (tmp.Add(t))
+                    {
+                        ret2.Add(t);
+                    }
+                }
+                ret = ret2;
             }
 
             return ret;

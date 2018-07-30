@@ -42,16 +42,24 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            OldFileEraser e = new OldFileEraser(10000, new string[] { @"/tmp/a/" , "/tmp/b/"}, "*.txt");
+            linux_kernel_conf_test();
+        }
 
-            //e.ProcessNow();
-
-            CancellationTokenSource cancel = new CancellationTokenSource();
-            e.StartIntervalThread(1000, cancel.Token);
-
-            Con.ReadLine();
-
-            cancel.Cancel();
+        static void linux_kernel_conf_test()
+        {
+            var t = IO.ReadAllTextWithAutoGetEncoding(@"c:\tmp\test.txt").GetLines().ToList(true, true, false);
+            StringWriter w = new StringWriter();
+            foreach (string s in t)
+            {
+                w.WriteLine($"./scripts/config --enable {s}");
+            }
+            w.WriteLine();
+            foreach (string s in t)
+            {
+                w.WriteLine($"./scripts/config --set-val {s} y");
+            }
+            w.WriteLine();
+            w.ToString().WriteTextFile(@"c:\tmp\test2.txt");
         }
 
         static void process_test()
