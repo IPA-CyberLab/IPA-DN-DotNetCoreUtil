@@ -42,24 +42,53 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            linux_kernel_conf_test();
+            linux_c_h_add_autoconf_test();
+        }
+
+        static void linux_c_h_add_autoconf_test()
+        {
+            var files = IO.EnumDirWithCancel(@"C:\git\DN-LinuxKernel-Learn\linux-2.6.18", "*.c *.h");
+            foreach (var file in files)
+            {
+                if (file.IsFolder == false)
+                {
+                    if (file.FileName.IsSamei("autoconf.h") == false)
+                    {
+                        Encoding enc;
+
+                        try
+                        {
+                            string txt = IO.ReadAllTextWithAutoGetEncoding(file.FullPath, out enc, out _);
+                            txt = "#include \"linux/autoconf.h\"\n" + txt;
+                            txt.WriteTextFile(file.FullPath, enc);
+                            //file.FullPath.Print();
+                        }
+                        catch (Exception ex)
+                        {
+                            ex.ToString().Print();
+                        }
+                    }
+                }
+            }
         }
 
         static void linux_kernel_conf_test()
         {
-            var t = IO.ReadAllTextWithAutoGetEncoding(@"c:\tmp\test.txt").GetLines().ToList(true, true, false);
-            StringWriter w = new StringWriter();
-            foreach (string s in t)
+            var enable_config_list = IO.ReadAllTextWithAutoGetEncoding(@"c:\tmp\test.txt").GetLines().ToList(true, true, false);
+
+            string current_config = IO.ReadAllTextWithAutoGetEncoding(@"c:\tmp\current_config.txt").NormalizeCrlfUnix();
+
+            foreach (string s in enable_config_list)
             {
-                w.WriteLine($"./scripts/config --enable {s}");
+                string old_str1 = $"\n{s}=m\n";
+                string old_str2 = $"\n# {s} is not set\n";
+                string new_str = $"\n{s}=y\n";
+
+                current_config = current_config.ReplaceStr(old_str1, new_str, true);
+                current_config = current_config.ReplaceStr(old_str2, new_str, true);
             }
-            w.WriteLine();
-            foreach (string s in t)
-            {
-                w.WriteLine($"./scripts/config --set-val {s} y");
-            }
-            w.WriteLine();
-            w.ToString().WriteTextFile(@"c:\tmp\test2.txt");
+
+            current_config.WriteTextFile(@"c:\tmp\new_config.txt");
         }
 
         static void process_test()

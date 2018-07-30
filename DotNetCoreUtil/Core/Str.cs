@@ -1282,7 +1282,7 @@ namespace IPA.DN.CoreUtil
                 else if (data[0] == 0xfe && data[1] == 0xff)
                 {
                     bomNumBytes = 2;
-                    return Encoding.GetEncoding("unicodeFFFE");
+                    return Encoding.GetEncoding("utf-16BE");
                 }
                 else if (data[0] == 0xef && data[1] == 0xbb && data[2] == 0xbf)
                 {
@@ -1303,23 +1303,33 @@ namespace IPA.DN.CoreUtil
         // Encoding の種類に応じた適切な BOM を取得する
         public static byte[] GetBOM(Encoding encoding)
         {
-            if (Str.StrCmpi(encoding.BodyName, "utf-32BE"))
+            string name = "";
+            try
+            {
+                name = encoding.BodyName;
+            }
+            catch
+            {
+                name = encoding.WebName;
+            }
+            
+            if (Str.StrCmpi(name, "utf-32BE"))
             {
                 return new byte[] { 0x00, 0x00, 0xfe, 0xff };
             }
-            else if (Str.StrCmpi(encoding.BodyName, "utf-32"))
+            else if (Str.StrCmpi(name, "utf-32"))
             {
                 return new byte[] { 0xff, 0xfe, 0x00, 0x00 };
             }
-            else if (Str.StrCmpi(encoding.BodyName, "utf-16"))
+            else if (Str.StrCmpi(name, "utf-16"))
             {
                 return new byte[] { 0xff, 0xfe };
             }
-            else if (Str.StrCmpi(encoding.BodyName, "unicodeFFFE"))
+            else if (Str.StrCmpi(name, "utf-16BE"))
             {
                 return new byte[] { 0xfe, 0xff };
             }
-            else if (Str.StrCmpi(encoding.BodyName, "utf-8"))
+            else if (Str.StrCmpi(name, "utf-8"))
             {
                 return new byte[] { 0xef, 0xbb, 0xbf };
             }
@@ -1508,7 +1518,7 @@ namespace IPA.DN.CoreUtil
 
                     if (n1 > n2)
                     {
-                        return Encoding.GetEncoding("unicodeFFFE");
+                        return Encoding.GetEncoding("utf-16BE");
                     }
                     else
                     {
@@ -1532,38 +1542,38 @@ namespace IPA.DN.CoreUtil
                     if (b2 >= 0x80)
                         //not Japanese
                         //ASCII
-                        return System.Text.Encoding.ASCII;
+                        return Str.AsciiEncoding;
                     else if (len - 2 > i &&
                         b2 == bDollar && data[i + 2] == bAT)
                         //JIS_0208 1978
                         //JIS
-                        return System.Text.Encoding.GetEncoding(50220);
+                        return Str.ISO2022JPEncoding;
                     else if (len - 2 > i &&
                         b2 == bDollar && data[i + 2] == bB)
                         //JIS_0208 1983
                         //JIS
-                        return System.Text.Encoding.GetEncoding(50220);
+                        return Str.ISO2022JPEncoding;
                     else if (len - 5 > i &&
                         b2 == bAnd && data[i + 2] == bAT && data[i + 3] == bESC &&
                         data[i + 4] == bDollar && data[i + 5] == bB)
                         //JIS_0208 1990
                         //JIS
-                        return System.Text.Encoding.GetEncoding(50220);
+                        return Str.ISO2022JPEncoding;
                     else if (len - 3 > i &&
                         b2 == bDollar && data[i + 2] == bOP && data[i + 3] == bD)
                         //JIS_0212
                         //JIS
-                        return System.Text.Encoding.GetEncoding(50220);
+                        return Str.ISO2022JPEncoding;
                     else if (len - 2 > i &&
                         b2 == bOP && (data[i + 2] == bB || data[i + 2] == bJ))
                         //JIS_ASC
                         //JIS
-                        return System.Text.Encoding.GetEncoding(50220);
+                        return Str.ISO2022JPEncoding;
                     else if (len - 2 > i &&
                         b2 == bOP && data[i + 2] == bI)
                         //JIS_KANA
                         //JIS
-                        return System.Text.Encoding.GetEncoding(50220);
+                        return Str.ISO2022JPEncoding;
                 }
             }
 
@@ -1616,13 +1626,13 @@ namespace IPA.DN.CoreUtil
 
             if (euc > sjis && euc > utf8)
                 //EUC
-                return System.Text.Encoding.GetEncoding(51932);
+                return Str.EucJpEncoding;
             else if (sjis > euc && sjis > utf8)
                 //SJIS
-                return System.Text.Encoding.GetEncoding(932);
+                return Str.ShiftJisEncoding;
             else if (utf8 > euc && utf8 > sjis)
                 //UTF8
-                return System.Text.Encoding.UTF8;
+                return Str.Utf8Encoding;
 
             return null;
         }

@@ -759,7 +759,8 @@ namespace IPA.DN.CoreUtil
         }
 
         // ファイルを自動的に文字コードを認識して文字列を読み込む
-        public static string ReadAllTextWithAutoGetEncoding(string fileName)
+        public static string ReadAllTextWithAutoGetEncoding(string fileName) => ReadAllTextWithAutoGetEncoding(fileName, out _, out _);
+        public static string ReadAllTextWithAutoGetEncoding(string fileName, out Encoding applied_encoding, out bool bom_exists)
         {
             fileName = InnerFilePath(fileName);
 
@@ -773,6 +774,10 @@ namespace IPA.DN.CoreUtil
             }
 
             data = Util.RemoveStartByteArray(data, bomSize);
+
+            applied_encoding = enc;
+
+            bom_exists = (bomSize != 0);
 
             return enc.GetString(data);
         }
@@ -969,10 +974,10 @@ namespace IPA.DN.CoreUtil
                             DirEntry e = new DirEntry();
 
                             e.fileName = Path.GetFileName(name);
-                            e.fileSize = info.Length;
-                            e.createDate = info.CreationTimeUtc;
+                            try { e.fileSize = info.Length; } catch { }
+                            try { e.createDate = info.CreationTimeUtc; } catch { }
+                            try { e.updateDate = info.LastWriteTimeUtc; } catch { }
                             e.folder = false;
-                            e.updateDate = info.LastWriteTimeUtc;
                             e.fullPath = fullPath;
                             e.relativePath = GetRelativeFileName(fullPath, baseDirName);
 
