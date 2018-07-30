@@ -56,12 +56,17 @@ namespace DotNetCoreUtilTestApp
                     {
                         Encoding enc;
 
+                        string tag = "#include \"linux/autoconf.h\"\n";
+
                         try
                         {
                             string txt = IO.ReadAllTextWithAutoGetEncoding(file.FullPath, out enc, out _);
-                            txt = "#include \"linux/autoconf.h\"\n" + txt;
-                            txt.WriteTextFile(file.FullPath, enc);
-                            //file.FullPath.Print();
+                            if (txt.StartsWith(tag) == false)
+                            {
+                                txt = tag + txt;
+                                txt.WriteTextFile(file.FullPath, enc);
+                                //file.FullPath.Print();
+                            }
                         }
                         catch (Exception ex)
                         {
