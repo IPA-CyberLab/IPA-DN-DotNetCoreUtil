@@ -42,7 +42,7 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            linux_c_h_add_autoconf_test();
+            AppRes.TextFile1.Print();
         }
 
         static void linux_c_h_add_autoconf_test()
