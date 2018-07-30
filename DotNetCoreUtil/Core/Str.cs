@@ -1325,7 +1325,7 @@ namespace IPA.DN.CoreUtil
             {
                 return new byte[] { 0xff, 0xfe };
             }
-            else if (Str.StrCmpi(name, "utf-16BE"))
+            else if (Str.StrCmpi(name, "utf-16BE") || Str.StrCmpi(name, "unicodeFFFE"))
             {
                 return new byte[] { 0xfe, 0xff };
             }
