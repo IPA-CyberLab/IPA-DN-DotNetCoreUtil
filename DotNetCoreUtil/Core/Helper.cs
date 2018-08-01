@@ -41,7 +41,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static byte[] GetHexBytes(this string s) => Str.HexToByte(s);
 
         public static bool IsEmpty(this string s) => Str.IsEmptyStr(s);
-        public static bool IsSolid(this string s) => !Str.IsEmptyStr(s);
+        public static bool IsFilled(this string s) => !Str.IsEmptyStr(s);
         public static bool ToBool(this string s) => Str.StrToBool(s);
         public static byte[] ToByte(this string s) => Str.StrToByte(s);
         public static DateTime ToDate(this string s, bool to_utc = false) => Str.StrToDate(s, to_utc);
@@ -122,6 +122,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string RemoteLastEnMark(this string str) => IO.RemoteLastEnMark(str);
         public static string GetDirectoryName(this string str) => Path.GetDirectoryName(str);
         public static string GetFileName(this string str) => Path.GetFileName(str);
+        public static bool IsExtensionMatch(this string str, string ext_list) => IO.IsExtensionsMatch(str, ext_list);
+        public static string ReplaceStrWithReplaceClass(this string str, object replace_class, bool case_sensitive = false) => Str.ReplaceStrWithReplaceClass(str, replace_class, case_sensitive);
 
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);

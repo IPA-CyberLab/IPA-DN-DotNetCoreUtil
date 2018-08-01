@@ -21,6 +21,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Runtime.InteropServices;
+using System.Reflection;
 using IPA.DN.CoreUtil.BigInt;
 
 using IPA.DN.CoreUtil.Helper.Basic;
@@ -2823,6 +2824,30 @@ namespace IPA.DN.CoreUtil
             }
         }
 
+        // 文字列の置換 (置換クラスを利用)
+        public static string ReplaceStrWithReplaceClass(string str, object replace_class, bool case_sensitive = false)
+        {
+            Type t = replace_class.GetType();
+
+            MemberInfo[] members = t.GetMembers(BindingFlags.Instance | BindingFlags.Public);
+            foreach (MemberInfo member in members)
+            {
+                FieldInfo fi = member as FieldInfo;
+                if (fi != null)
+                {
+                    object value = (object)fi.GetValue(replace_class);
+                    string s = value?.ToString() ?? null;
+                    s = s.NonNull();
+
+                    string name = fi.Name;
+
+                    str = str.ReplaceStr(name, s, case_sensitive);
+                }
+            }
+
+            return str;
+        }
+
         // 文字列の置換
         public static string ReplaceStr(string str, string oldKeyword, string newKeyword)
         {
@@ -3434,6 +3459,12 @@ namespace IPA.DN.CoreUtil
             {
                 return str.Substring(0, len) + append_code;
             }
+        }
+
+        // 新しい GUID を生成
+        public static string NewGuid(bool brackets = false)
+        {
+            return (brackets ? "{" : "") + Guid.NewGuid().ToString().ToUpperInvariant() + (brackets ? "}" : "");
         }
 
         // 新しい乱数文字列を生成
@@ -4582,7 +4613,7 @@ namespace IPA.DN.CoreUtil
                 return false;
             }
         }
-        public static bool IsSolidStr(string str)
+        public static bool IsFilledStr(string str)
         {
             return !IsEmptyStr(str);
         }

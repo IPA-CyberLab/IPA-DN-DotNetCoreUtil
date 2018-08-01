@@ -124,4 +124,10 @@
   <data name="TextFile1" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>AppRes\TextFile1.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
+  <data name="vcxfilter" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>AppRes\vcxfilter.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+  </data>
+  <data name="vcxproj" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>AppRes\vcxproj.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+  </data>
 </root>

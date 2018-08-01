@@ -703,7 +703,7 @@ namespace IPA.DN.CoreUtil
         }
 
         // ファイルの拡張子が一致するかどうかチェック
-        public static bool IsExtensionMatch(string filename, string extension)
+        static bool is_extension_match(string filename, string extension)
         {
             if (extension.IsEmpty()) return true;
             if (extension.IsSamei("*") || extension.IsSamei("*.*")) return true;
@@ -711,7 +711,7 @@ namespace IPA.DN.CoreUtil
             extension = extension.TrimStartWith("*.");
             if (extension.IsEmpty()) return true;
             if (extension.IsSamei("*")) return true;
-            extension = "." + extension;
+            if (extension.StartsWith(".") == false) extension = "." + extension;
 
             filename = Path.GetFileName(filename);
             return filename.EndsWith(extension, StringComparison.InvariantCultureIgnoreCase);
@@ -724,7 +724,7 @@ namespace IPA.DN.CoreUtil
                 string[] tokens = extensions.Split(' ', '\t', ',', ';');
                 foreach (string ext in tokens)
                 {
-                    if (IsExtensionMatch(filename, ext))
+                    if (is_extension_match(filename, ext))
                     {
                         return true;
                     }
@@ -835,6 +835,7 @@ namespace IPA.DN.CoreUtil
         {
             public CancellationToken cancel;
             public List<DirEntry> DirList = new List<DirEntry>();
+            public bool ExcludeDirectory;
         }
         static bool enumDirWithCancel_callback(DirEntry e, object param)
         {
@@ -845,19 +846,24 @@ namespace IPA.DN.CoreUtil
                 return false;
             }
 
-            p.DirList.Add(e);
+            if (p.ExcludeDirectory == false || e.IsFolder == false)
+            {
+                p.DirList.Add(e);
+            }
 
             return true;
         }
-        public static List<DirEntry> EnumDirWithCancel(string dir_list, string file_exts, CancellationToken cancel = default(CancellationToken))
+        public static List<DirEntry> EnumDirWithCancel(string dir_list, string file_exts = null, CancellationToken cancel = default(CancellationToken))
         {
             return EnumDirsWithCancel(new string[] { dir_list }, file_exts, cancel);
         }
-        public static List<DirEntry> EnumDirsWithCancel(string[] dir_list, string file_exts, CancellationToken cancel = default(CancellationToken))
+        public static List<DirEntry> EnumDirsWithCancel(string[] dir_list, string file_exts = null, CancellationToken cancel = default(CancellationToken))
         {
             enum_dir_param p = new enum_dir_param();
             p.cancel = cancel;
             p.DirList = new List<DirEntry>();
+
+            p.ExcludeDirectory = file_exts.IsFilled();
 
             bool ret = EnumDirsWithCallback(dir_list, file_exts, enumDirWithCancel_callback, p);
 

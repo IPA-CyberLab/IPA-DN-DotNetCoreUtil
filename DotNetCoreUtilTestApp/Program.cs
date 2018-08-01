@@ -42,7 +42,106 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            AppRes.TextFile1.Print();
+            //linux_c_h_add_autoconf_test();
+
+            vc_project_maker(@"C:\tmp\projtest");
+        }
+
+        class vcp_replace_str_list
+        {
+            public string __PROJ_GUID__;
+            public string __APPNAME__;
+            public StringWriter __INCLUDE_FILE_LIST__ = new StringWriter();
+            public StringWriter __COMPILE_FILE_LIST__ = new StringWriter();
+            public StringWriter __NONE_FILE_LIST__ = new StringWriter();
+
+            public StringWriter __FILTER_LIST__ = new StringWriter();
+            public StringWriter __INCLUDE_LIST__ = new StringWriter();
+            public StringWriter __COMPILE_LIST__ = new StringWriter();
+            public StringWriter __NONE_LIST__ = new StringWriter();
+        }
+
+        public static void vc_project_maker(string base_dir)
+        {
+            // scan files
+            var files = IO.EnumDirWithCancel(base_dir);
+
+            SortedSet<string> dir_list = new SortedSet<string>();
+
+            List<DirEntry> include_list = new List<DirEntry>();
+            List<DirEntry> compile_list = new List<DirEntry>();
+            List<DirEntry> none_list = new List<DirEntry>();
+
+            foreach (var file in files)
+            {
+                if (file.IsFolder == false)
+                {
+                    string relative_dir = file.RelativePath.GetDirectoryName();
+                    if (relative_dir.IsFilled())
+                    {
+                        dir_list.Add(relative_dir);
+
+                        if (file.FileName.IsExtensionMatch(".c .cpp .s .asm"))
+                        {
+                            compile_list.Add(file);
+                        }
+                        else if (file.FileName.IsExtensionMatch(".h"))
+                        {
+                            include_list.Add(file);
+                        }
+                        else
+                        {
+                            none_list.Add(file);
+                        }
+                    }
+                }
+            }
+
+            vcp_replace_str_list r = new vcp_replace_str_list()
+            {
+                __PROJ_GUID__ = Str.NewGuid(true),
+                __APPNAME__ = base_dir.RemoteLastEnMark().GetFileName(),
+            };
+
+            foreach (var e in include_list)
+            {
+                r.__INCLUDE_FILE_LIST__.WriteLine($"    <ClInclude Include=\"{e.RelativePath}\" />");
+
+                r.__INCLUDE_LIST__.WriteLine($"    <ClInclude Include=\"{e.RelativePath}\">");
+                r.__INCLUDE_LIST__.WriteLine($"      <Filter>{e.RelativePath.GetDirectoryName()}</Filter>");
+                r.__INCLUDE_LIST__.WriteLine($"    </ClInclude>");
+            }
+
+            foreach (var e in compile_list)
+            {
+                r.__COMPILE_FILE_LIST__.WriteLine($"    <ClCompile Include=\"{e.RelativePath}\" />");
+
+                r.__COMPILE_LIST__.WriteLine($"    <ClCompile Include=\"{e.RelativePath}\">");
+                r.__COMPILE_LIST__.WriteLine($"      <Filter>{e.RelativePath.GetDirectoryName()}</Filter>");
+                r.__COMPILE_LIST__.WriteLine($"    </ClCompile>");
+            }
+
+            foreach (var e in none_list)
+            {
+                r.__NONE_FILE_LIST__.WriteLine($"    <None Include=\"{e.RelativePath}\" />");
+
+                r.__NONE_LIST__.WriteLine($"    <None Include=\"{e.RelativePath}\">");
+                r.__NONE_LIST__.WriteLine($"      <Filter>{e.RelativePath.GetDirectoryName()}</Filter>");
+                r.__NONE_LIST__.WriteLine($"    </None>");
+            }
+
+            foreach (var dir in dir_list)
+            {
+                r.__FILTER_LIST__.WriteLine($"    <Filter Include=\"{dir}\">");
+                r.__FILTER_LIST__.WriteLine($"      <UniqueIdentifier>{Str.NewGuid(true)}</UniqueIdentifier>");
+                r.__FILTER_LIST__.WriteLine("    </Filter>");
+            }
+
+            string vcxproj = AppRes.vcxproj.ReplaceStrWithReplaceClass(r);
+            string filters = AppRes.vcxfilter.ReplaceStrWithReplaceClass(r);
+
+            IO.WriteAllTextWithEncoding(base_dir.CombinePath($"{r.__APPNAME__}.vcxproj"), vcxproj, Str.Utf8Encoding, false);
+            IO.WriteAllTextWithEncoding(base_dir.CombinePath($"{r.__APPNAME__}.vcxproj.filters"), filters, Str.Utf8Encoding, false);
         }
 
         static void linux_c_h_add_autoconf_test()

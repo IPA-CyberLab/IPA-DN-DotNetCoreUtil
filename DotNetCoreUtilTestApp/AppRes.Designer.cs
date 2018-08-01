@@ -80,5 +80,48 @@ namespace DotNetCoreUtilTestApp {
                 return ResourceManager.GetString("TextFile1", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///&lt;Project ToolsVersion=&quot;4.0&quot; xmlns=&quot;http://schemas.microsoft.com/developer/msbuild/2003&quot;&gt;
+        ///  &lt;ItemGroup&gt;
+        ///__FILTER_LIST__
+        ///  &lt;/ItemGroup&gt;
+        ///  &lt;ItemGroup&gt;
+        ///__INCLUDE_LIST__
+        ///  &lt;/ItemGroup&gt;
+        ///  &lt;ItemGroup&gt;
+        ///__COMPILE_LIST__
+        ///  &lt;/ItemGroup&gt;
+        ///  &lt;ItemGroup&gt;
+        ///__NONE_LIST__
+        ///  &lt;/ItemGroup&gt;
+        ///&lt;/Project&gt;
+        /// に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        public static string vcxfilter {
+            get {
+                return ResourceManager.GetString("vcxfilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///&lt;Project DefaultTargets=&quot;Build&quot; ToolsVersion=&quot;15.0&quot; xmlns=&quot;http://schemas.microsoft.com/developer/msbuild/2003&quot;&gt;
+        ///  &lt;ItemGroup Label=&quot;ProjectConfigurations&quot;&gt;
+        ///    &lt;ProjectConfiguration Include=&quot;Debug|Win32&quot;&gt;
+        ///      &lt;Configuration&gt;Debug&lt;/Configuration&gt;
+        ///      &lt;Platform&gt;Win32&lt;/Platform&gt;
+        ///    &lt;/ProjectConfiguration&gt;
+        ///  &lt;/ItemGroup&gt;
+        ///  &lt;PropertyGroup Label=&quot;Globals&quot;&gt;
+        ///    &lt;VCProjectVersion&gt;15.0&lt;/VCProjectVersion&gt;
+        ///    &lt;ProjectGuid&gt;{2D4F7C2B-9081-473B-A1B5-47CBB7CC59D0}&lt;/P [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        public static string vcxproj {
+            get {
+                return ResourceManager.GetString("vcxproj", resourceCulture);
+            }
+        }
     }
 }
