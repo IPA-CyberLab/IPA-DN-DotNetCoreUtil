@@ -150,7 +150,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static void InnerPrint(this object o, string instance_base_name = "") => Dbg.PrintObjectInnerString(o, instance_base_name);
         public static string GetInnerStr(this object o, string instance_base_name = "") => Dbg.GetObjectInnerString(o, instance_base_name);
         public static string ObjectToXmlPublic(this object o, Type t = null) => Str.ObjectToXMLSimple(o, t ?? o.GetType());
-        public static object CloneObject(this object o) => Str.CloneObject(o);
+        public static object CloneSerializableObject(this object o) => Str.CloneObject(o);
         public static byte[] ObjectToBinary(this object o) => Str.ObjectToBinary(o);
         public static object BinaryToObject(byte[] b) => Str.BinaryToObject(b);
         public static object Print(this object s, bool newline = true) { Console.Write((s == null ? "null" : s.ToString()) + (newline ? Env.NewLine : "")); return s; }

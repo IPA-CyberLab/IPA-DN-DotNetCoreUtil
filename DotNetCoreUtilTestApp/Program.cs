@@ -41,7 +41,7 @@ using IPA.DN.CoreUtil.Helper.Basic;
 namespace DotNetCoreUtilTestApp
 {
     [Serializable]
-    class T1
+    class T1 : ICloneable
     {
         public string s1 { get; set; }
         public int i1 { get; set; }
@@ -49,6 +49,11 @@ namespace DotNetCoreUtilTestApp
         public List<string> strlist { get; set; }
 
         public  T1 child { get; set; }
+
+        public object Clone()
+        {
+            return this.MemberwiseClone();
+        }
     }
 
     class T2
@@ -66,7 +71,7 @@ namespace DotNetCoreUtilTestApp
             t1.s1 = "こんにちは";
             t1.i1 = 123;
             t1.d1 = 3.1415;
-            t1.child = (T1)t1.CloneObject();
+            t1.child = (T1)t1.CloneSerializableObject();
             t1.strlist = new List<string>();
             t1.strlist.Add("ねこ");
             t1.strlist.Add("いぬ\nへび");

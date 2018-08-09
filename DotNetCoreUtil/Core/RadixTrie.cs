@@ -23,6 +23,10 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Net.Mail;
 
+// By Paraschiv Andrei Technical Blog
+// http://paratechnical.blogspot.com/2011/03/radix-tree-implementation-in-c.html
+// https://gist.githubusercontent.com/paratechnical/2869170/raw/79a8a56c04f5a3183b8ffe1f50dd200c4d6b68ef/C%23%20radix%20tree
+
 namespace IPA.DN.CoreUtil
 {
     /// <summary>
@@ -78,6 +82,7 @@ namespace IPA.DN.CoreUtil
             }
         }
     }
+
 
     public class RadixTrie
     {
