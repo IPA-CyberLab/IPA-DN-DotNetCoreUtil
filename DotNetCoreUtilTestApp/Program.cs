@@ -64,7 +64,7 @@ namespace DotNetCoreUtilTestApp
 
             ConfigTest default_config = new ConfigTest()
             {
-                Str1 = "Hello2\n   World2\nねこ\nStr2: World",
+                Str1 = "a\nb\nc\nd\ne\nf\ng",
                 Str2 = "World",
                 Flag1 = true,
                 Int1 = 123,
