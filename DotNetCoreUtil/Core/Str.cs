@@ -1374,7 +1374,7 @@ namespace IPA.DN.CoreUtil
         // テキストファイルを読み込む
         public static string ReadTextFile(string filename)
         {
-            byte[] data = IO.ReadFileData(filename);
+            byte[] data = IO.ReadFile(filename);
             int bomSize = 0;
 
             Encoding enc = GetEncoding(data, out bomSize);
@@ -1391,7 +1391,7 @@ namespace IPA.DN.CoreUtil
         }
         public static string ReadTextFile(string filename, Encoding encoding)
         {
-            byte[] data = IO.ReadFileData(filename);
+            byte[] data = IO.ReadFile(filename);
 
             Encoding enc = encoding;
 
@@ -1412,7 +1412,7 @@ namespace IPA.DN.CoreUtil
 
             buf.SeekToBegin();
 
-            File.WriteAllBytes(filename, buf.Read());
+            IO.SaveFile(filename, buf.Read());
         }
 
         // 受信した byte[] 配列を自動的にエンコーディング検出して string に変換する

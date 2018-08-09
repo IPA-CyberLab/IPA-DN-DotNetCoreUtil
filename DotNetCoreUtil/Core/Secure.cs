@@ -510,7 +510,7 @@ namespace IPA.DN.CoreUtil
     {
         public static bool IsKernelModeSignedFile(string fileName)
         {
-            return IsKernelModeSignedFile(File.ReadAllBytes(fileName));
+            return IsKernelModeSignedFile(IO.ReadFile(fileName));
         }
 
         public static bool IsKernelModeSignedFile(byte[] data)

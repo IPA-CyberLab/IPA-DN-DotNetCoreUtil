@@ -82,7 +82,7 @@ namespace IPA.DN.CoreUtil
                     }
                 }
 
-                byte[] srcData = File.ReadAllBytes(srcFileNameList[i]);
+                byte[] srcData = IO.ReadFile(srcFileNameList[i]);
                 DateTime date = File.GetLastWriteTime(srcFileNameList[i]);
 
                 switch (format)

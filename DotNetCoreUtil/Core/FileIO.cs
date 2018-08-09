@@ -214,7 +214,7 @@ namespace IPA.DN.CoreUtil
         {
             string name = IO.GetRelativeFileName(fileName, baseDirFileName);
 
-            AddFile(name, File.ReadAllBytes(fileName));
+            AddFile(name, IO.ReadFile(fileName));
         }
 
         public void AddFile(string name, byte[] data)
@@ -738,16 +738,13 @@ namespace IPA.DN.CoreUtil
         }
 
         // ファイルに文字列を書きこむ
-        public static void WriteAllTextWithEncoding(string fileName, string str, Encoding encoding)
-        {
-            WriteAllTextWithEncoding(fileName, str, encoding, false);
-        }
-        public static void WriteAllTextWithEncoding(string fileName, string str, Encoding encoding, bool appendBom)
+        public static void WriteAllTextWithEncoding(string fileName, string str, Encoding encoding, bool appendBom = false, bool if_same_contents_do_nothing = false)
         {
             fileName = InnerFilePath(fileName);
 
             byte[] data = encoding.GetBytes(str);
             byte[] bom = null;
+            bool ok = true;
             if (appendBom)
             {
                 bom = Str.GetBOM(encoding);
@@ -755,7 +752,12 @@ namespace IPA.DN.CoreUtil
 
             data = Util.CombineByteArray(bom, data);
 
-            File.WriteAllBytes(fileName, data);
+            if (if_same_contents_do_nothing)
+            {
+                //byte[] data2 = File.Read
+            }
+
+            IO.SaveFile(fileName, data);
         }
 
         // ファイルを自動的に文字コードを認識して文字列を読み込む
@@ -764,7 +766,7 @@ namespace IPA.DN.CoreUtil
         {
             fileName = InnerFilePath(fileName);
 
-            byte[] data = File.ReadAllBytes(fileName);
+            byte[] data = IO.ReadFile(fileName);
 
             int bomSize;
             Encoding enc = Str.GetEncoding(data, out bomSize);
@@ -1152,7 +1154,7 @@ namespace IPA.DN.CoreUtil
 
             if (skipIfNoChange || deleteBom)
             {
-                byte[] srcData = File.ReadAllBytes(tmp1);
+                byte[] srcData = IO.ReadFile(tmp1);
                 byte[] destData = new byte[0];
                 bool changed = true;
                 int bomSize;
@@ -1180,7 +1182,7 @@ namespace IPA.DN.CoreUtil
 
                         if (size == srcData.Length || srcData.Length == 0)
                         {
-                            destData = File.ReadAllBytes(tmp2);
+                            destData = IO.ReadFile(tmp2);
                         }
                     }
                     catch
@@ -1195,7 +1197,7 @@ namespace IPA.DN.CoreUtil
 
                 if (changed)
                 {
-                    File.WriteAllBytes(tmp2, srcData);
+                    IO.SaveFile(tmp2, srcData);
                     CopyFileTimestamp(tmp2, tmp1);
                 }
             }
@@ -2032,25 +2034,6 @@ namespace IPA.DN.CoreUtil
         public static DateTime GetLastAccessTimeLocal(string filename)
         {
             return File.GetLastAccessTime(InnerFilePath(filename));
-        }
-
-        // ファイル内容を読みだす
-        public static byte[] ReadFileData(string filename)
-        {
-            filename = IO.InnerFilePath(filename);
-            FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            try
-            {
-                long size = fs.Length;
-                int size2 = (int)Math.Min(size, int.MaxValue);
-                byte[] ret = new byte[size2];
-                fs.Read(ret, 0, size2);
-                return ret;
-            }
-            finally
-            {
-                fs.Close();
-            }
         }
     }
 }

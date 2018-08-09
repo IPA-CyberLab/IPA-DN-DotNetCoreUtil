@@ -186,7 +186,7 @@ namespace IPA.DN.CoreUtil
 
         public void SaveToFile(string filename)
         {
-            File.WriteAllBytes(filename, ToBuf().ByteData);
+            IO.SaveFile(filename, ToBuf().ByteData);
         }
 
         public void Add(CsvEntry e)
