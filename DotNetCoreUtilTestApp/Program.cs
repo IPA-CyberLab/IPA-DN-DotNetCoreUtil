@@ -33,32 +33,27 @@ using Org.BouncyCastle.X509;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using YamlDotNet.Serialization;
 
 
 using static System.Console;
 using IPA.DN.CoreUtil.Helper.Basic;
+using YamlDotNet.Core;
 
 namespace DotNetCoreUtilTestApp
 {
-    [Serializable]
-    class T1 : ICloneable
+    public class ConfigTest : ICloneable
     {
-        public string s1 { get; set; }
-        public int i1 { get; set; }
-        public double d1 { get; set; }
-        public List<string> strlist { get; set; }
+        public string Str1 { get; set; }
+        public string Str2 { get; set; }
+        public List<string> StrList { get; set; }
+        public bool Flag1 { get; set; }
+        public int Int1 { get; set; }
 
-        public  T1 child { get; set; }
-
-        public object Clone()
+        object ICloneable.Clone()
         {
             return this.MemberwiseClone();
         }
-    }
-
-    class T2
-    {
-        public string s1;
     }
 
     class Program
@@ -67,25 +62,29 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            T1 t1 = new T1();
-            t1.s1 = "こんにちは";
-            t1.i1 = 123;
-            t1.d1 = 3.1415;
-            t1.child = (T1)t1.CloneSerializableObject();
-            t1.strlist = new List<string>();
-            t1.strlist.Add("ねこ");
-            t1.strlist.Add("いぬ\nへび");
-            t1.strlist.Add("さる");
+            /*ConfigTest t = new ConfigTest()
+            {
+                Str1 = "Hello2",
+                Str2 = "World",
+                Flag1 = true,
+                Int1 = 123,
+                StrList = new List<string>(Str.SplitStringForSearch("dog cat mouse killer hamster")),
+            };
 
-            string yaml = t1.ObjectToYaml();
+            Cfg<ConfigTest>.WriteConfigToFile("@test.config", t, "# Hello");
 
-            yaml.Print();
+            ConfigTest t2 = Cfg<ConfigTest>.ReadConfigFromFile("@test.config", null);
 
-            "-------------".Print();
+            t2.InnerDebug();*/
 
-            T1 t2 = Yaml.Deserialize<T1>(yaml);
-
-            Yaml.Serialize(t2).Print();
+            using (Cfg<ConfigTest> cfg = new Cfg<ConfigTest>(false, 1, 1, null, "@test.config"))
+            {
+                while (true)
+                {
+                    if (Con.ReadLine("Enter>") == "q") break;
+                    cfg.Config.Int1++;
+                }
+            }
         }
 
         class vcp_replace_str_list

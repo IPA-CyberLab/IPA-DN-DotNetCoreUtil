@@ -752,12 +752,7 @@ namespace IPA.DN.CoreUtil
 
             data = Util.CombineByteArray(bom, data);
 
-            if (if_same_contents_do_nothing)
-            {
-                //byte[] data2 = File.Read
-            }
-
-            IO.SaveFile(fileName, data);
+            IO.SaveFile(fileName, data, 0, data.Length, if_same_contents_do_nothing);
         }
 
         // ファイルを自動的に文字コードを認識して文字列を読み込む
@@ -1248,8 +1243,23 @@ namespace IPA.DN.CoreUtil
         {
             SaveFile(name, data, 0, data.Length);
         }
-        static public void SaveFile(string name, byte[] data, int offset, int size)
+        static public void SaveFile(string name, byte[] data, int offset, int size, bool do_nothing_if_same_contents = false)
         {
+            if (do_nothing_if_same_contents)
+            {
+                try
+                {
+                    byte[] current_data = IO.ReadFile(name);
+                    if (Util.CompareByte(current_data, Util.ExtractByteArray(data, offset, size)))
+                    {
+                        return;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
             IO io = FileCreate(name);
             try
             {

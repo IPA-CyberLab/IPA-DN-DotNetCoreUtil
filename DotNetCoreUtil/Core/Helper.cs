@@ -155,6 +155,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static object BinaryToObject(byte[] b) => Str.BinaryToObject(b);
         public static object Print(this object s, bool newline = true) { Console.Write((s == null ? "null" : s.ToString()) + (newline ? Env.NewLine : "")); return s; }
         public static object Debug(this object s) { Dbg.WriteLine((s == null ? "null" : s.ToString())); return s; }
+        public static ulong GetObjectHash(this object o) => Util.GetObjectHash(o);
 
         public static string ToStr3(this long s) => Str.ToStr3(s);
         public static string ToStr3(this int s) => Str.ToStr3(s);

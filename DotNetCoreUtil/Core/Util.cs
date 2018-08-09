@@ -254,6 +254,20 @@ namespace IPA.DN.CoreUtil
             return BitConverter.ToInt64(c, 0);
         }
 
+        // オブジェクトのハッシュ値を計算
+        public static ulong GetObjectHash(object o)
+        {
+            if (o == null) return 0;
+            try
+            {
+                return Str.HashStrToLong(Json.Serialize(o, true, false, null));
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
         // ストリームからすべて読み出す
         public static byte[] ReadAllFromStream(Stream st)
         {

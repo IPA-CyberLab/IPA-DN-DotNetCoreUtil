@@ -26,6 +26,7 @@ namespace IPA.DN.CoreUtil
         public static string Serialize(object obj)
         {
             SerializerBuilder sb = new SerializerBuilder();
+            sb.EmitDefaults();
             Serializer s = sb.Build();
             StringWriter w = new StringWriter();
             s.Serialize(w, obj, obj.GetType());
@@ -35,6 +36,7 @@ namespace IPA.DN.CoreUtil
         public static T Deserialize<T>(string str)
         {
             DeserializerBuilder db = new DeserializerBuilder();
+            db.IgnoreUnmatchedProperties();
             Deserializer d = db.Build();
             return d.Deserialize<T>(str);
         }

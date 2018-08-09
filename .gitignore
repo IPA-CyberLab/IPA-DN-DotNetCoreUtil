@@ -334,3 +334,4 @@ ASALocalRun/
 
 # End of https://www.gitignore.io/api/visualstudio
 /DotNetCoreUtilTestApp/test.txt
+/DotNetCoreUtilTestApp/test.config
