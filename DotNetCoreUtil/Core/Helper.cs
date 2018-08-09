@@ -169,6 +169,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth) => Json.Serialize(obj, include_null, escape_html, max_depth);
         public static T JsonToObject<T>(this string str, bool include_null = false, int? max_depth = Json.DefaultMaxDepth) => Json.Deserialize<T>(str, include_null, max_depth);
         public static dynamic JsonToDynamic(this string str) => Json.DeserializeDynamic(str);
+        public static string ObjectToYaml(this object obj) => Yaml.Serialize(obj);
+        public static T YamlToObject<T>(this string str) => Yaml.Deserialize<T>(str);
     }
 }
 

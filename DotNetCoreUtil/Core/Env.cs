@@ -35,6 +35,7 @@ namespace IPA.DN.CoreUtil
         static public string UnixMutantDir { get; }
         static public string ExeFileName { get; }
         static public string ExeFileDir { get; }
+        static public string AppRootDir { get; }
         static public string WindowsDir { get; }
         static public string SystemDir { get; }
         static public string TempDir { get; }
@@ -109,33 +110,31 @@ namespace IPA.DN.CoreUtil
             ExeFileName = IO.RemoveLastEnMark(getMyExeFileName());
             if (Str.IsEmptyStr(ExeFileName) == false)
             {
-                ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
-                if (IsDotNetCore)
+                AppRootDir = ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
+                // 現在のディレクトリから 1 つずつ遡ってアプリケーションの root ディレクトリを取得する
+                string tmp = ExeFileDir;
+                while (true)
                 {
-                    // .NET Core の場合、現在のディレクトリから 1 つずつ遡ってアプリケーションの root ディレクトリを取得する
-                    string tmp = ExeFileDir;
-                    while (true)
+                    try
                     {
-                        try
+                        tmp = Path.GetDirectoryName(tmp);
+                        if (File.Exists(Path.Combine(tmp, "approot")))
                         {
-                            tmp = Path.GetDirectoryName(tmp);
-                            if (File.Exists(Path.Combine(tmp, "approot")))
-                            {
-                                ExeFileDir = tmp;
-                                break;
-                            }
-                        }
-                        catch
-                        {
+                            AppRootDir = tmp;
                             break;
                         }
+                    }
+                    catch
+                    {
+                        break;
                     }
                 }
             }
             else
             {
-                ExeFileName = "/bin/dummyexe";
+                ExeFileName = "/tmp/dummyexe";
                 ExeFileDir = "/tmp";
+                AppRootDir = IO.RemoveLastEnMark(Environment.CurrentDirectory);
             }
             HomeDir = IO.RemoveLastEnMark(Kernel.GetEnvStr("HOME"));
             if (Str.IsEmptyStr(HomeDir))
@@ -148,7 +147,7 @@ namespace IPA.DN.CoreUtil
             }
             else
             {
-                HomeDir = ExeFileDir;
+                HomeDir = AppRootDir;
                 if (IsUnix)
                 {
                     UnixMutantDir = Path.Combine("/tmp", ".dnmutant");

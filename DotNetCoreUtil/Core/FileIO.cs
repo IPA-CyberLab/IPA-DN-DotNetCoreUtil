@@ -2000,7 +2000,7 @@ namespace IPA.DN.CoreUtil
             }
             else
             {
-                return CombinePath(Env.ExeFileDir, src.Substring(1));
+                return NormalizePath(CombinePath(Env.AppRootDir, src.Substring(1)));
             }
         }
 

@@ -72,7 +72,7 @@ namespace DotNetCoreUtilTestApp
             t1.strlist.Add("いぬ\nへび");
             t1.strlist.Add("さる");
 
-            string yaml = Yaml.Serialize(t1);
+            string yaml = t1.ObjectToYaml();
 
             yaml.Print();
 
