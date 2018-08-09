@@ -172,6 +172,8 @@ namespace IPA.DN.CoreUtil
     // ユーティリティクラス
     public static class Util
     {
+        public static readonly DateTime ZeroDateTimeValue = new DateTime(1800, 1, 1);
+
         // サイズ定数
         public const int SizeOfInt32 = 4;
         public const int SizeOfInt16 = 2;
@@ -614,6 +616,22 @@ namespace IPA.DN.CoreUtil
         public static void CopyByte(byte[] dst, int dstOffset, byte[] src, int srcOffset, int size)
         {
             Array.Copy(src, srcOffset, dst, dstOffset, size);
+        }
+
+        public static DateTime NormalizeDateTime(DateTime dt)
+        {
+            if (IsZero(dt)) return Util.ZeroDateTimeValue;
+            return dt;
+        }
+
+        // DateTime がゼロかどうか検査する
+        public static bool IsZero(DateTime dt)
+        {
+            if (dt.Ticks == 0 || dt == Util.ZeroDateTimeValue)
+            {
+                return true;
+            }
+            return false;
         }
 
         // byte[] 配列がオールゼロかどうか検査する

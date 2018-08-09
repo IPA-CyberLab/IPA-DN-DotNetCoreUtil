@@ -31,20 +31,34 @@ using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+
 using static System.Console;
 using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace DotNetCoreUtilTestApp
 {
+    class T1
+    {
+        public string s1;
+
+        public  T1 child;
+    }
+
+    class T2
+    {
+        public string s1;
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
             Dbg.SetDebugMode();
 
-            //linux_c_h_add_autoconf_test();
 
-            vc_project_maker(@"C:\tmp\projtest");
         }
 
         class vcp_replace_str_list
@@ -146,7 +160,7 @@ namespace DotNetCoreUtilTestApp
 
         static void linux_c_h_add_autoconf_test()
         {
-            var files = IO.EnumDirWithCancel(@"C:\git\DN-LinuxKernel-Learn\linux-2.6.18", "*.c *.h");
+            var files = IO.EnumDirWithCancel(@"C:\git\DN-LinuxKernel-Learn\linux-2.6.39", "*.c *.h");
             foreach (var file in files)
             {
                 if (file.IsFolder == false)
@@ -155,7 +169,7 @@ namespace DotNetCoreUtilTestApp
                     {
                         Encoding enc;
 
-                        string tag = "#include \"linux/autoconf.h\"\n";
+                        string tag = "#include \"linux/generated/autoconf.h\"\n";
 
                         try
                         {

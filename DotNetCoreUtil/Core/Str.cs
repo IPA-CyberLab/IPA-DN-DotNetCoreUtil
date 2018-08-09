@@ -3808,6 +3808,8 @@ namespace IPA.DN.CoreUtil
         }
         public static DateTime StrToDateTime(string str)
         {
+            if (Str.IsEmptyStr(str)) return Util.ZeroDateTimeValue;
+
             Str.NormalizeString(ref str, true, true, false, false);
             str = str.Trim();
             string[] sps =
@@ -4327,6 +4329,11 @@ namespace IPA.DN.CoreUtil
         {
             long ticks = dt.Ticks % 10000000;
             if (ticks >= 9999999) ticks = 9999999;
+
+            if (dt.IsZeroDateTime())
+            {
+                return "";
+            }
 
             string msecStr = "";
             if (with_nanosecs)

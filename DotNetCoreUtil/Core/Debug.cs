@@ -45,6 +45,7 @@ namespace IPA.DN.CoreUtil
         }
         public static string WriteLine(string str)
         {
+            if (str == null) str = "null";
             if (Dbg.IsDebugMode)
             {
                 Console.WriteLine(str);

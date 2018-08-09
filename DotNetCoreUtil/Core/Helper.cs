@@ -77,7 +77,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string FormatC(this string s, params object[] args) => Str.FormatC(s, args);
         public static void Printf(this string s) => Str.Printf(s, new object[0]);
         public static void Printf(this string s, params object[] args) => Str.Printf(s, args);
-        public static string Print(this string s, bool newline = true) { Console.Write(s + (newline ? Env.NewLine : "")); return s; }
+        public static string Print(this string s, bool newline = true) { Console.Write((s == null ? "null" : s) + (newline ? Env.NewLine : "")); return s; }
         public static string Debug(this string s) { Dbg.WriteLine(s); return s; }
         public static int Search(this string s, string keyword, int start = 0, bool case_senstive = false) => Str.SearchStr(s, keyword, start, case_senstive);
         public static string TrimCrlf(this string s) => Str.TrimCrlf(s);
@@ -162,6 +162,13 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string ToStr3(this uint s) => Str.ToStr3(s);
 
         public static string ToDtStr(this DateTime dt, bool with_msecs = false, DtstrOption option = DtstrOption.All, bool with_nanosecs = false) => Str.DateTimeToDtstr(dt, with_msecs, option, with_nanosecs);
+
+        public static bool IsZeroDateTime(this DateTime dt) => Util.IsZero(dt);
+        public static DateTime NormalizeDateTime(this DateTime dt) => Util.NormalizeDateTime(dt);
+
+        public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth) => Json.Serialize(obj, include_null, escape_html, max_depth);
+        public static T JsonToObject<T>(this string str, bool include_null = false, int? max_depth = Json.DefaultMaxDepth) => Json.Deserialize<T>(str, include_null, max_depth);
+        public static dynamic JsonToDynamic(this string str) => Json.DeserializeDynamic(str);
     }
 }
 
