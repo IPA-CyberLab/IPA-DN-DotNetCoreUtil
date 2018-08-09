@@ -62,22 +62,16 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
-            /*ConfigTest t = new ConfigTest()
+            ConfigTest default_config = new ConfigTest()
             {
-                Str1 = "Hello2",
+                Str1 = "Hello2\n   World2\nねこ\nStr2: World",
                 Str2 = "World",
                 Flag1 = true,
                 Int1 = 123,
                 StrList = new List<string>(Str.SplitStringForSearch("dog cat mouse killer hamster")),
             };
 
-            Cfg<ConfigTest>.WriteConfigToFile("@test.config", t, "# Hello");
-
-            ConfigTest t2 = Cfg<ConfigTest>.ReadConfigFromFile("@test.config", null);
-
-            t2.InnerDebug();*/
-
-            using (Cfg<ConfigTest> cfg = new Cfg<ConfigTest>(false, 1, 1, null, "@test.config"))
+            using (Cfg<ConfigTest> cfg = new Cfg<ConfigTest>(false, 1, 1, default_config, "@test.config"))
             {
                 while (true)
                 {
