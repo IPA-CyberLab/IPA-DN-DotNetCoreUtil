@@ -50,17 +50,17 @@ namespace IPA.DN.CoreUtil
             return JsonConvert.DeserializeObject<T>(str, setting);
         }
 
-        public static dynamic DeserializeDynamic(string str)
-        {
-            dynamic ret = JObject.Parse(str);
-            return ret;
-        }
-
         public static string SerializeDynamic(dynamic d)
         {
             JObject o = (JObject)d;
 
             return o.ToString();
+        }
+
+        public static dynamic DeserializeDynamic(string str)
+        {
+            dynamic ret = JObject.Parse(str);
+            return ret;
         }
 
         public static dynamic NewDynamicObject()

@@ -40,11 +40,15 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace DotNetCoreUtilTestApp
 {
+    [Serializable]
     class T1
     {
-        public string s1;
+        public string s1 { get; set; }
+        public int i1 { get; set; }
+        public double d1 { get; set; }
+        public List<string> strlist { get; set; }
 
-        public  T1 child;
+        public  T1 child { get; set; }
     }
 
     class T2
@@ -58,7 +62,25 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
+            T1 t1 = new T1();
+            t1.s1 = "こんにちは";
+            t1.i1 = 123;
+            t1.d1 = 3.1415;
+            t1.child = (T1)t1.CloneObject();
+            t1.strlist = new List<string>();
+            t1.strlist.Add("ねこ");
+            t1.strlist.Add("いぬ\nへび");
+            t1.strlist.Add("さる");
 
+            string yaml = Yaml.Serialize(t1);
+
+            yaml.Print();
+
+            "-------------".Print();
+
+            T1 t2 = Yaml.Deserialize<T1>(yaml);
+
+            Yaml.Serialize(t2).Print();
         }
 
         class vcp_replace_str_list
