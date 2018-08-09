@@ -204,7 +204,7 @@ namespace IPA.DN.CoreUtil
 
             str = header_str + "\n\n" + str + "\n\n";
 
-            //str = str.NormalizeCrlfThisPlatform();
+            str = str.NormalizeCrlfThisPlatform();
 
             string new_filename = filename + ".new";
 
