@@ -52,6 +52,9 @@ namespace IPA.DN.CoreUtil
         public int ReadPollingIntervalSecs { get; }
         public int UpdatePollingIntervalSecs { get; }
 
+        int current_version = 0;
+        public int CurrentConfigVersion => this.current_version;
+
         ThreadObj polling_thread_obj = null;
         Event halt_event = new Event();
         bool halt = false;
@@ -91,6 +94,8 @@ namespace IPA.DN.CoreUtil
             this.Config = t;
             this.ReadPollingIntervalSecs = read_polling_interval_secs;
             this.UpdatePollingIntervalSecs = update_polling_interval_secs;
+
+            current_version++;
 
             // スレッドの作成
             halt_event = new Event();
@@ -134,6 +139,7 @@ namespace IPA.DN.CoreUtil
                             try
                             {
                                 WriteConfigToFile(this.FileName, this.Config, this.HeaderStr, this.ConfigLock);
+                                current_version++;
                                 last_hash = current_hash;
                             }
                             catch (Exception ex)
@@ -162,6 +168,7 @@ namespace IPA.DN.CoreUtil
                                 if (last_hash != new_hash)
                                 {
                                     last_hash = new_hash;
+                                    current_version++;
                                     this.Config = read_t;
 
                                     Dbg.WriteLine($"File configuration is modified. Loading from the file '{this.FileName.GetFileName()}'.");
@@ -178,13 +185,20 @@ namespace IPA.DN.CoreUtil
 
             if (this.ReadOnly == false)
             {
-                try
+                ulong current_hash = this.ConfigHash;
+
+                if (last_hash != current_hash)
                 {
-                    WriteConfigToFile(this.FileName, this.Config, this.HeaderStr, this.ConfigLock);
-                }
-                catch (Exception ex)
-                {
-                    Dbg.WriteLine(ex.ToString());
+                    Dbg.WriteLine($"Memory configuration is updated. Saving to the file '{this.FileName.GetFileName()}'.");
+                    try
+                    {
+                        WriteConfigToFile(this.FileName, this.Config, this.HeaderStr, this.ConfigLock);
+                        current_version++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Dbg.WriteLine(ex.ToString());
+                    }
                 }
             }
         }
@@ -202,7 +216,7 @@ namespace IPA.DN.CoreUtil
 
             if (header_str.IsEmpty()) header_str = "\n\n";
 
-            str = header_str + "\n\n" + str + "\n\n";
+            str = header_str + "\n\n" + str + "\n";
 
             str = str.NormalizeCrlfThisPlatform();
 
