@@ -20,7 +20,7 @@ using IPA.DN.CoreUtil.Helper.Basic;
 namespace IPA.DN.CoreUtil
 {
     public class Cfg<T> : IDisposable
-        where T : class, ICloneable, new()
+        where T : class, new()
     {
         public readonly object ConfigLock = new object();
         public T Config { get; set; }
@@ -30,7 +30,7 @@ namespace IPA.DN.CoreUtil
             {
                 lock (this.ConfigLock)
                 {
-                    return (T)this.Config.Clone();
+                    return (T)this.Config.CloneSerializableObject();
                 }
             }
         }
@@ -62,7 +62,7 @@ namespace IPA.DN.CoreUtil
         public Cfg(bool read_only = true, int read_polling_interval_secs = 2, int update_polling_interval_secs = 1, T default_config = null, string filename = null, string header_str = null)
         {
             if (default_config == null) default_config = new T();
-            this.DefaultConfig = (T)default_config.Clone();
+            this.DefaultConfig = (T)default_config.CloneSerializableObject();
             if (filename.IsEmpty()) filename = "@" + default_config.GetType().ToString().MakeSafeFileName() + ".config";
             this.FileName = IO.InnerFilePath(filename);
             this.DirName = this.FileName.GetDirectoryName();
@@ -272,7 +272,7 @@ namespace IPA.DN.CoreUtil
                 }
                 else
                 {
-                    return (T)default_config.Clone();
+                    return (T)default_config.CloneSerializableObject();
                 }
             }
 
@@ -290,7 +290,7 @@ namespace IPA.DN.CoreUtil
                 }
                 else
                 {
-                    return (T)default_config.Clone();
+                    return (T)default_config.CloneSerializableObject();
                 }
             }
         }

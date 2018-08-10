@@ -125,6 +125,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static bool IsExtensionMatch(this string str, string ext_list) => IO.IsExtensionsMatch(str, ext_list);
         public static string ReplaceStrWithReplaceClass(this string str, object replace_class, bool case_sensitive = false) => Str.ReplaceStrWithReplaceClass(str, replace_class, case_sensitive);
 
+        public static byte[] NonNull(this byte[] b) { if (b == null) return new byte[0]; else return b; }
+
         public static string LinesToStr(this string[] lines) => Str.LinesToStr(lines);
         public static string[] UniqueToken(this string[] t) => Str.UniqueToken(t);
         public static List<string> ToList(this string[] t, bool remove_empty = false, bool distinct = false, bool distinct_case_sensitive = false) => Str.StrArrayToList(t, remove_empty, distinct, distinct_case_sensitive);
@@ -172,6 +174,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static dynamic JsonToDynamic(this string str) => Json.DeserializeDynamic(str);
         public static string ObjectToYaml(this object obj) => Yaml.Serialize(obj);
         public static T YamlToObject<T>(this string str) => Yaml.Deserialize<T>(str);
+
+        public static byte[] ReadToEnd(this Stream s, int max_size = 0) => IO.ReadStreamToEnd(s, max_size);
     }
 }
 

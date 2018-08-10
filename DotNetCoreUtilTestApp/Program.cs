@@ -42,43 +42,43 @@ using YamlDotNet.Core;
 
 namespace DotNetCoreUtilTestApp
 {
-    public class ConfigTest : ICloneable
-    {
-        public string Str1 { get; set; }
-        public string Str2 { get; set; }
-        public List<string> StrList { get; set; }
-        public bool Flag1 { get; set; }
-        public int Int1 { get; set; }
-
-        object ICloneable.Clone()
-        {
-            return this.MemberwiseClone();
-        }
-    }
-
     class Program
     {
         static void Main(string[] args)
         {
             Dbg.SetDebugMode();
 
-            ConfigTest default_config = new ConfigTest()
-            {
-                Str1 = "a\r\nb\r\nc\r\n",
-                Str2 = "World",
-                Flag1 = true,
-                Int1 = 123,
-                StrList = new List<string>(Str.SplitStringForSearch("dog cat mouse killer hamster")),
-            };
+            //twitter_test();
 
-            using (Cfg<ConfigTest> cfg = new Cfg<ConfigTest>(false, 1, 1, default_config, "@test.config"))
-            {
-                while (true)
-                {
-                    if (Con.ReadLine("Enter>") == "q") break;
-                    cfg.Config.Int1++;
-                }
-            }
+            slack_test();
+        }
+
+        public static void slack_test()
+        {
+            WebApi a = new WebApi();
+
+            //var r = a.RequestWithQuery( WebApiMethods.GET, "https://slack.com/api/api.test", new Tuple<string, string>("aaa", "bbb"));
+            //var r = a.RequestWithQuery(WebApiMethods.DELETE, "https://slack.com/api/api.test", new Tuple<string, string>("aaa", "bbb"));
+            dynamic d = Json.NewDynamicObject();
+            d.args = Json.NewDynamicObject();
+            d.args.aaa = "犬";
+            d.args.bbb = "ネコ";
+
+            WebRet r = a.RequestWithJsonDynamic(WebApiMethods.POST, "https://reqres.in/api/users", d);
+
+            r.ToString().Print();
+
+
+            Con.WriteLine(r.JsonDynamic.args.aaa);
+            Con.WriteLine(r.JsonDynamic.createdAt);
+        }
+
+        public class TwConfig
+        {
+        }
+
+        public static void twitter_test()
+        {
         }
 
         class vcp_replace_str_list

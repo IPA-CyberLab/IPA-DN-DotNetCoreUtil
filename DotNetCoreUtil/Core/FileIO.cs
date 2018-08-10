@@ -744,7 +744,6 @@ namespace IPA.DN.CoreUtil
 
             byte[] data = encoding.GetBytes(str);
             byte[] bom = null;
-            bool ok = true;
             if (appendBom)
             {
                 bom = Str.GetBOM(encoding);
@@ -2044,6 +2043,26 @@ namespace IPA.DN.CoreUtil
         public static DateTime GetLastAccessTimeLocal(string filename)
         {
             return File.GetLastAccessTime(InnerFilePath(filename));
+        }
+
+        // Stream を最後まで読む
+        public static byte[] ReadStreamToEnd(Stream s, int max_size = 0)
+        {
+            if (max_size <= 0) max_size = int.MaxValue;
+            MemoryStream ms = new MemoryStream();
+
+            byte[] tmp = new byte[200000];
+            while (true)
+            {
+                int r = s.Read(tmp, 0, tmp.Length);
+                if (r == 0)
+                {
+                    break;
+                }
+                ms.Write(tmp, 0, r);
+            }
+
+            return ms.ToArray();
         }
     }
 }
