@@ -87,7 +87,7 @@ namespace DotNetCoreUtilTestApp
                     }
                 }
 
-                //a.PostMessage(channel_id, "こんにちは！", true);
+                a.PostMessage(channel_id, $"こんにちは！ {Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true);
             }
         }
 
