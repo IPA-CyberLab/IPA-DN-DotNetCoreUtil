@@ -20,6 +20,16 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {
+    public class WebResponseException : Exception
+    {
+        public WebResponseException(string message) : base(message) { }
+    }
+
+    public abstract class WebResponseBasic
+    {
+        public abstract void CheckError();
+    }
+
     public class WebRet
     {
         public string Url { get; }
@@ -28,22 +38,11 @@ namespace IPA.DN.CoreUtil
         public string MediaType { get; }
         public string CharSet { get; }
         public Encoding DefaultEncoding { get; }
+        public WebApi Api { get; }
 
-        dynamic json_dynamic = null;
-        public dynamic JsonDynamic
+        public WebRet(WebApi webapi, string url, string contents_type, byte[] data)
         {
-            get
-            {
-                if (json_dynamic == null)
-                {
-                    json_dynamic = Json.DeserializeDynamic(this.ToString());
-                }
-                return json_dynamic;
-            }
-        }
-
-        public WebRet(string url, string contents_type, byte[] data)
-        {
+            this.Api = webapi;
             this.Url = url.NonNull();
             this.ContentsType = contents_type.NonNull();
 
@@ -69,10 +68,42 @@ namespace IPA.DN.CoreUtil
             }
 
             this.Data = data.NonNull();
+
+            if (this.Api.DebugPrintResponse)
+            {
+                Json.Normalize(this.ToString()).Debug();
+            }
         }
 
         public override string ToString() => this.Data.GetString(this.DefaultEncoding);
         public string ToString(Encoding encoding) => this.Data.GetString(encoding);
+
+        dynamic json_dynamic = null;
+        public dynamic JsonDynamic
+        {
+            get
+            {
+                if (json_dynamic == null)
+                {
+                    json_dynamic = Json.DeserializeDynamic(this.ToString());
+                }
+                return json_dynamic;
+            }
+        }
+
+        public T Deserialize<T>()
+        {
+            return Json.Deserialize<T>(this.ToString(), this.Api.Json_IncludeNull, this.Api.MaxDepth);
+        }
+
+        public T DeserializeAndCheckError<T>() where T: WebResponseBasic
+        {
+            T t = Deserialize<T>();
+
+            t.CheckError();
+
+            return t;
+        }
     }
 
     public enum WebApiMethods
@@ -89,12 +120,15 @@ namespace IPA.DN.CoreUtil
         public int MaxRecvSize { get; set; } = 100 * 1024 * 1024;
         public bool SslAccentAnyCerts { get; set; } = false;
         public List<string> SslAcceptCertSHA1HashList { get; set; } = new List<string>();
+        public Encoding RequestEncoding { get; set; } = Str.Utf8Encoding;
 
         public bool Json_IncludeNull { get; set; } = false;
         public bool Json_EscapeHtml { get; set; } = false;
         public int? MaxDepth { get; set; } = Json.DefaultMaxDepth;
 
-        public static string BuildQueryString(params Tuple<string, string>[] query_list)
+        public bool DebugPrintResponse { get; set; } = false;
+
+        public string BuildQueryString(params Tuple<string, string>[] query_list)
         {
             StringWriter w = new StringWriter();
             int count = 0;
@@ -106,14 +140,14 @@ namespace IPA.DN.CoreUtil
                     {
                         w.Write("&");
                     }
-                    w.Write($"{t.Item1}={t.Item2}");
+                    w.Write($"{t.Item1.EncodeUrl(this.RequestEncoding)}={t.Item2.EncodeUrl(this.RequestEncoding)}");
                     count++;
                 }
             }
             return w.ToString();
         }
 
-        HttpWebRequest create(WebApiMethods method, string url, params Tuple<string, string>[] query_list)
+        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params Tuple<string, string>[] query_list)
         {
             string qs = "";
 
@@ -157,12 +191,12 @@ namespace IPA.DN.CoreUtil
 
         public WebRet RequestWithQuery(WebApiMethods method, string url, params Tuple<string, string>[] query_list)
         {
-            HttpWebRequest r = create(method, url, query_list);
+            HttpWebRequest r = CreateWebRequest(method, url, query_list);
 
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
             {
-                string qs = WebApi.BuildQueryString(query_list);
-                byte[] qs_byte = qs.GetBytes_UTF8();
+                string qs = BuildQueryString(query_list);
+                byte[] qs_byte = qs.GetBytes(this.RequestEncoding);
 
                 Stream upload = r.GetRequestStream();
                 upload.Write(qs_byte, 0, qs_byte.Length);
@@ -171,21 +205,21 @@ namespace IPA.DN.CoreUtil
             using (HttpWebResponse res = (HttpWebResponse)r.GetResponse())
             {
                 byte[] data = res.GetResponseStream().ReadToEnd(this.MaxRecvSize);
-                return new WebRet(res.ResponseUri.ToString(), res.ContentType, data);
+                return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
             }
         }
 
-        public WebRet RequestWithJson(WebApiMethods method, string url, string json_string)
+        public virtual WebRet RequestWithJson(WebApiMethods method, string url, string json_string)
         {
             if (!(method == WebApiMethods.POST || method == WebApiMethods.PUT)) throw new ArgumentException("method");
 
-            HttpWebRequest r = create(method, url);
+            HttpWebRequest r = CreateWebRequest(method, url);
 
             r.ContentType = "application/json";
 
             json_string.Debug();
 
-            byte[] upload_data = json_string.GetBytes_UTF8();
+            byte[] upload_data = json_string.GetBytes(this.RequestEncoding);
 
             Stream upload = r.GetRequestStream();
             upload.Write(upload_data, 0, upload_data.Length);
@@ -193,7 +227,7 @@ namespace IPA.DN.CoreUtil
             using (HttpWebResponse res = (HttpWebResponse)r.GetResponse())
             {
                 byte[] data = res.GetResponseStream().ReadToEnd(this.MaxRecvSize);
-                return new WebRet(res.ResponseUri.ToString(), res.ContentType, data);
+                return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
             }
         }
 
@@ -202,12 +236,12 @@ namespace IPA.DN.CoreUtil
             return Json.Serialize(obj, this.Json_IncludeNull, this.Json_EscapeHtml, this.MaxDepth);
         }
 
-        public WebRet RequestWithJsonObject(WebApiMethods method, string url, object json_object)
+        public virtual WebRet RequestWithJsonObject(WebApiMethods method, string url, object json_object)
         {
             return RequestWithJson(method, url, this.JsonSerialize(json_object));
         }
 
-        public WebRet RequestWithJsonDynamic(WebApiMethods method, string url, dynamic json_dynamic)
+        public virtual WebRet RequestWithJsonDynamic(WebApiMethods method, string url, dynamic json_dynamic)
         {
             return RequestWithJson(method, url, Json.SerializeDynamic(json_dynamic));
         }

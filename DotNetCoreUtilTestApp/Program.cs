@@ -53,24 +53,36 @@ namespace DotNetCoreUtilTestApp
             slack_test();
         }
 
+        [Serializable]
+        public class SlackTestSecretSettings
+        {
+            public string ClientId { get; set; }
+            public string ClientSecret { get; set; }
+            public string AccessToken { get; set; }
+        }
+
         public static void slack_test()
         {
-            WebApi a = new WebApi();
+            Cfg<SlackTestSecretSettings> secret = new Cfg<SlackTestSecretSettings>();
+            {
+                SlackApi a = new SlackApi(secret.ConfigSafe.ClientId, secret.ConfigSafe.AccessToken);
 
-            //var r = a.RequestWithQuery( WebApiMethods.GET, "https://slack.com/api/api.test", new Tuple<string, string>("aaa", "bbb"));
-            //var r = a.RequestWithQuery(WebApiMethods.DELETE, "https://slack.com/api/api.test", new Tuple<string, string>("aaa", "bbb"));
-            dynamic d = Json.NewDynamicObject();
-            d.args = Json.NewDynamicObject();
-            d.args.aaa = "犬";
-            d.args.bbb = "ネコ";
+                a.DebugPrintResponse = true;
 
-            WebRet r = a.RequestWithJsonDynamic(WebApiMethods.POST, "https://reqres.in/api/users", d);
+                a.AuthGenerateAuthorizeUrl("client identify", "https://tools.sehosts.com/", "abc").Print();
 
-            r.ToString().Print();
+                //var at = a.AuthGetAccessToken(secret.ConfigSafe.ClientSecret, "47656437648.414467157330.e53934f3cd8a1d28c64b2e17b2f97422f609bf702fd6eb5267765e7ddfbd7011", "https://tools.sehosts.com/");
+                //at.InnerDebug();
 
+                var cl = a.GetChannelsList();
+                string channel_id = "";
+                foreach (var c in cl.Channels)
+                {
+                    if (c.name.IsSamei("test")) channel_id = c.id;
+                }
 
-            Con.WriteLine(r.JsonDynamic.args.aaa);
-            Con.WriteLine(r.JsonDynamic.createdAt);
+                a.PostMessage(channel_id, "こんにちは！", true);
+            }
         }
 
         public class TwConfig

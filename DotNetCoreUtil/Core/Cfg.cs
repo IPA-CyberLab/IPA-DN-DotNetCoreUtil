@@ -63,7 +63,7 @@ namespace IPA.DN.CoreUtil
         {
             if (default_config == null) default_config = new T();
             this.DefaultConfig = (T)default_config.CloneSerializableObject();
-            if (filename.IsEmpty()) filename = "@" + default_config.GetType().ToString().MakeSafeFileName() + ".config";
+            if (filename.IsEmpty()) filename = "@" + default_config.GetType().ToString().MakeSafeFileName() + ".cfg";
             this.FileName = IO.InnerFilePath(filename);
             this.DirName = this.FileName.GetDirectoryName();
             IO.MakeDirIfNotExists(this.DirName);
@@ -314,7 +314,7 @@ namespace IPA.DN.CoreUtil
             }
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             Dispose(true);
         }
