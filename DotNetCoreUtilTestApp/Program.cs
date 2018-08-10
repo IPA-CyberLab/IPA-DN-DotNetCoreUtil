@@ -38,6 +38,8 @@ using YamlDotNet.Serialization;
 
 using static System.Console;
 using IPA.DN.CoreUtil.Helper.Basic;
+using IPA.DN.CoreUtil.Helper.SlackApi;
+
 using YamlDotNet.Core;
 
 namespace DotNetCoreUtilTestApp
@@ -78,10 +80,14 @@ namespace DotNetCoreUtilTestApp
                 string channel_id = "";
                 foreach (var c in cl.Channels)
                 {
-                    if (c.name.IsSamei("test")) channel_id = c.id;
+                    if (c.name.IsSamei("test"))
+                    {
+                        channel_id = c.id;
+                        Con.WriteLine(c.created.ToDateTimeOfSlack().ToLocalTime().ToDtStr());
+                    }
                 }
 
-                a.PostMessage(channel_id, "こんにちは！", true);
+                //a.PostMessage(channel_id, "こんにちは！", true);
             }
         }
 

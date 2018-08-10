@@ -17,6 +17,17 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 
 using IPA.DN.CoreUtil.Helper.Basic;
+using IPA.DN.CoreUtil.Helper.SlackApi;
+
+namespace IPA.DN.CoreUtil.Helper.SlackApi
+{
+    public static class SlackApiHelper
+    {
+        public static DateTime ToDateTimeOfSlack(this decimal value) => Util.UnixTimeToDateTime((uint)value);
+        public static DateTime ToDateTimeOfSlack(this long value) => Util.UnixTimeToDateTime((uint)value);
+        public static long ToLongDateTimeOfSlack(this DateTime dt) => Util.DateTimeToUnixTime(dt);
+    }
+}
 
 namespace IPA.DN.CoreUtil
 {
@@ -106,7 +117,7 @@ namespace IPA.DN.CoreUtil
             public string id;
             public string name;
             public bool is_channel;
-            public long created;
+            public decimal created;
             public string creator;
             public string name_normalized;
             public Value purpose;
