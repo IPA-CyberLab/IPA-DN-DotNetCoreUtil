@@ -40,10 +40,7 @@ namespace IPA.DN.CoreUtil
 
             public override void CheckError()
             {
-                if (ok == false)
-                {
-                    throw new WebResponseException(error);
-                }
+                if (this.ok == false) throw new WebResponseException(error);
             }
         }
 
