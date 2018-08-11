@@ -663,20 +663,25 @@ namespace DotNetCoreUtilTestApp
 
         static void async_test()
         {
-            TaskScheduler ts = TaskScheduler.FromCurrentSynchronizationContext();
+            //Task.Run(async_task1);
 
-            var t = Task.Factory.StartNew(() => task_race_main().Wait(),
-                CancellationToken.None, TaskCreationOptions.DenyChildAttach, _concurrentPair.ConcurrentScheduler);
+            //Func<Task> x = async_task1;
+            //Task.Factory.StartNew(async_task1);
 
-            t.Wait();
+            TaskVm tt = new TaskVm(async_task1, null);
 
-            /*
-            var t = task_race_main();
-
-            t.Wait();
-
-            Con.WriteLine(t.Result);*/
+            tt.ThreadObj.WaitForEnd();
         }
+
+        static async Task<object> async_task1()
+        {
+            Dbg.WriteCurrentThreadId("a");
+            throw new ApplicationException("zzz");
+            await Task.Delay(500);
+            Dbg.WriteCurrentThreadId("b");
+            return "aho";
+        }
+
 
         static int race_test_int = 0;
 

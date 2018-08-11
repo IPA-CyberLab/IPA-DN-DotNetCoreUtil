@@ -38,6 +38,20 @@ namespace IPA.DN.CoreUtil
             is_debug_mode = b;
         }
 
+        public static void WriteCurrentThreadId(string str = "")
+        {
+            if (Dbg.IsDebugMode == false) return;
+
+            string a = $"Thread[{ThreadObj.CurrentThreadId}]";
+
+            if (Str.IsFilledStr(str))
+            {
+                a += ": " + str;
+            }
+
+            WriteLine(a);
+        }
+
         public static string WriteLine()
         {
             WriteLine("");
