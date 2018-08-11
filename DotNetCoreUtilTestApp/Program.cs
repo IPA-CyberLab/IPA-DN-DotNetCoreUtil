@@ -52,7 +52,9 @@ namespace DotNetCoreUtilTestApp
 
             //twitter_test();
 
-            slack_test();
+            //slack_test();
+
+            async_test();
         }
 
         [Serializable]
@@ -87,7 +89,7 @@ namespace DotNetCoreUtilTestApp
                     }
                 }
 
-                a.PostMessage(channel_id, $"こんにちは！ {Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true);
+                a.PostMessage(channel_id, $"こんにちは！ \t{Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true);
             }
         }
 
@@ -652,6 +654,38 @@ namespace DotNetCoreUtilTestApp
             //Debug.PrintObjectInnerString(typeof(System.Runtime.InteropServices.RuntimeInformation));
 
             Util.DoNothing();
+        }
+
+        static void async_test()
+        {
+            string ret = async1().Result;
+            ThreadObj.Sleep(3000);
+            Con.WriteLine(ret);
+        }
+
+        static async Task<string> async1()
+        {
+            await Task.WhenAny(Task.Run(async2), Task.Run(async3));
+
+            //await Task.Delay(1000);
+
+            return "";
+        }
+
+        static async Task<string> async2()
+        {
+            await Task.Delay(500);
+            //ThreadObj.Sleep(500);
+            Con.WriteLine("b");
+            return "b";
+        }
+
+        static async Task<string> async3()
+        {
+            await Task.Delay(1000);
+            //ThreadObj.Sleep(1000);
+            Con.WriteLine("c");
+            return "c";
         }
     }
 }
