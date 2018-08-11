@@ -18,6 +18,8 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
+using System.Web;
+
 using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.BigInt;
 
@@ -656,36 +658,95 @@ namespace DotNetCoreUtilTestApp
             Util.DoNothing();
         }
 
+        private static readonly ConcurrentExclusiveSchedulerPair _concurrentPair
+    = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Default, 2);
+
         static void async_test()
         {
-            string ret = async1().Result;
-            ThreadObj.Sleep(3000);
-            Con.WriteLine(ret);
+            TaskScheduler ts = TaskScheduler.FromCurrentSynchronizationContext();
+
+            var t = Task.Factory.StartNew(() => task_race_main().Wait(),
+                CancellationToken.None, TaskCreationOptions.DenyChildAttach, _concurrentPair.ConcurrentScheduler);
+
+            t.Wait();
+
+            /*
+            var t = task_race_main();
+
+            t.Wait();
+
+            Con.WriteLine(t.Result);*/
+        }
+
+        static int race_test_int = 0;
+
+        static async Task<int> task_race_main()
+        {
+            int num = 10;
+            List<Task<int>> tasks = new List<Task<int>>();
+            for (int i = 0; i < num; i++)
+            {
+                tasks.Add(task_race_worker());
+            }
+
+            var t = Task.WhenAny(tasks.ToArray());
+
+            await t;
+
+            int a = t.Result.Result;
+
+            return 0;
+        }
+
+        static async Task<int> task_race_worker()
+        {
+            while (true)
+            {
+                if ((race_test_int % 2) != 0)
+                {
+                    throw new ApplicationException("race_test_int != 0");
+                }
+
+                race_test_int++;
+
+                Thread.Sleep(Secure.Rand31i() % 100);
+
+                race_test_int++;
+
+                await Task.Delay(Secure.Rand31i() % 1000);
+
+                Con.WriteLine(race_test_int);
+            }
         }
 
         static async Task<string> async1()
         {
-            await Task.WhenAny(Task.Run(async2), Task.Run(async3));
-
-            //await Task.Delay(1000);
-
+            //await Task.WhenAny(Task.Run(async2), Task.Run(async3));
+            await Task.WhenAny(async2(), async3());
+            //await async2();
             return "";
         }
 
         static async Task<string> async2()
         {
-            await Task.Delay(500);
-            //ThreadObj.Sleep(500);
-            Con.WriteLine("b");
-            return "b";
+            while (true)
+            {
+                Console.WriteLine("async2 start ID=" + ThreadObj.CurrentThreadId);
+                Thread.Sleep(Secure.Rand31i() % 1000);
+                Console.WriteLine("async2 stop ID=" + ThreadObj.CurrentThreadId);
+                await Task.Delay(Secure.Rand31i() % 1000);
+            }
         }
 
         static async Task<string> async3()
         {
-            await Task.Delay(1000);
-            //ThreadObj.Sleep(1000);
-            Con.WriteLine("c");
-            return "c";
+            while (true)
+            {
+                Console.WriteLine("async3 start ID=" + ThreadObj.CurrentThreadId);
+                Thread.Sleep(Secure.Rand31i() % 1000);
+                Console.WriteLine("async3 stop ID=" + ThreadObj.CurrentThreadId);
+                await Task.Delay(Secure.Rand31i() % 1000);
+            }
         }
     }
 }

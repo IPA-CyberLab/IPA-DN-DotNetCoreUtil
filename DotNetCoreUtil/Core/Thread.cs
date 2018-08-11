@@ -750,7 +750,7 @@ namespace IPA.DN.CoreUtil
         }
 
         public static ThreadObj Current => GetCurrentThreadObj();
-        public static int CurrentThreadId => Current.Thread.ManagedThreadId;
+        public static int CurrentThreadId => Thread.CurrentThread.ManagedThreadId;
 
         public static ThreadObj GetCurrentThreadObj()
         {
