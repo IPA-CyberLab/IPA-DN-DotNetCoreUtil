@@ -22,6 +22,28 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {
+    public static class TaskUtil
+    {
+        public static Task WhenCanceledOrTimeouted(CancellationToken cancel, int timeout)
+        {
+            if (timeout == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            return Task.WhenAny(WhenCanceled(cancel), Task.Delay(timeout));
+        }
+
+        public static Task WhenCanceled(CancellationToken cancel)
+        {
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+            cancel.Register((s) => ((TaskCompletionSource<bool>)s).SetResult(true), tcs);
+
+            return tcs.Task;
+        }
+    }
+
     public class TaskVmAbortException : Exception
     {
         public TaskVmAbortException(string message) : base(message) { }
@@ -263,25 +285,25 @@ namespace IPA.DN.CoreUtil
 
             public override SynchronizationContext CreateCopy()
             {
-                Dbg.WriteCurrentThreadId("CreateCopy");
+                // Dbg.WriteCurrentThreadId("CreateCopy");
                 return base.CreateCopy();
             }
 
             public override void OperationCompleted()
             {
-                Dbg.WriteCurrentThreadId("OperationCompleted");
+                // Dbg.WriteCurrentThreadId("OperationCompleted");
                 base.OperationCompleted();
             }
 
             public override void OperationStarted()
             {
-                Dbg.WriteCurrentThreadId("OperationStarted");
+                // Dbg.WriteCurrentThreadId("OperationStarted");
                 base.OperationStarted();
             }
 
             public override void Post(SendOrPostCallback d, object state)
             {
-                Dbg.WriteCurrentThreadId("Post");
+                //Dbg.WriteCurrentThreadId("Post");
                 //base.Post(d, state);
                 //d(state);
                 lock (Vm.dispatch_queue)
@@ -294,13 +316,13 @@ namespace IPA.DN.CoreUtil
 
             public override void Send(SendOrPostCallback d, object state)
             {
-                Dbg.WriteCurrentThreadId("Send");
+                //Dbg.WriteCurrentThreadId("Send");
                 base.Send(d, state);
             }
 
             public override int Wait(IntPtr[] waitHandles, bool waitAll, int millisecondsTimeout)
             {
-                Dbg.WriteCurrentThreadId("Wait");
+                // Dbg.WriteCurrentThreadId("Wait");
                 return base.Wait(waitHandles, waitAll, millisecondsTimeout);
             }
         }

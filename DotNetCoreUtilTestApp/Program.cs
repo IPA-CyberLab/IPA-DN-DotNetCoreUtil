@@ -692,14 +692,41 @@ namespace DotNetCoreUtilTestApp
         static async Task<string> async_task1(int arg)
         {
             Dbg.WriteCurrentThreadId("a " + arg.ToString());
+
             //throw new ApplicationException("zzz");
-            await Task.Delay(200); 
-            //throw new ApplicationException("zzz");
-            //await Task.Yield();
-                await async_task2();
+            await Task.Delay(200);
+
+            Dbg.WriteCurrentThreadId("u");
+
+            await Task.Yield();
+
+            Dbg.WriteCurrentThreadId("v");
+
+            await async_task2();
             Dbg.WriteCurrentThreadId("b");
-            
+
+            CancellationTokenSource tsc = new CancellationTokenSource();
+
+            Dbg.WriteCurrentThreadId("cancel test start");
+
+            async_task_cancel_fire_test(tsc);
+
+            Dbg.WriteCurrentThreadId("cancel test c");
+
+            await TaskUtil.WhenCanceledOrTimeouted(tsc.Token, 1000);
+
+            Dbg.WriteCurrentThreadId("cancel test end");
+
             return "aho";
+        }
+
+        static async void async_task_cancel_fire_test(CancellationTokenSource tsc)
+        {
+            Dbg.WriteCurrentThreadId("async_task_cancel_fire_test a");
+            await Task.Delay(200);
+            Dbg.WriteCurrentThreadId("async_task_cancel_fire_test b");
+
+            tsc.Cancel();
         }
 
         static async Task async_task2()
