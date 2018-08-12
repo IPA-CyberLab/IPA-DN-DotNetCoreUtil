@@ -4592,7 +4592,7 @@ namespace IPA.DN.CoreUtil
         {
             return GetFirstToken(str, new char[] { ' ', '\t', '　', });
         }
-        public static string GetFirstToken(string str, char[] sps)
+        public static string GetFirstToken(string str, params char[] sps)
         {
             try
             {
@@ -4608,6 +4608,26 @@ namespace IPA.DN.CoreUtil
             return "";
         }
 
+        // 最後のトークンを取得
+        public static string GetLastToken(string str)
+        {
+            return GetLastToken(str, new char[] { ' ', '\t', '　', });
+        }
+        public static string GetLastToken(string str, params char[] sps)
+        {
+            try
+            {
+                string[] tokens = str.Split(sps, StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length >= 1)
+                {
+                    return tokens[tokens.Length - 1];
+                }
+            }
+            catch
+            {
+            }
+            return "";
+        }
         // 空かどうか調べる
         public static bool IsEmptyStr(string str)
         {
