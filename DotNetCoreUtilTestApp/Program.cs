@@ -668,18 +668,46 @@ namespace DotNetCoreUtilTestApp
             //Func<Task> x = async_task1;
             //Task.Factory.StartNew(async_task1);
 
-            TaskVm tt = new TaskVm(async_task1, null);
+            /*TaskVm<string, int> tt = new TaskVm<string, int>(async_task1, 12345);
 
-            tt.ThreadObj.WaitForEnd();
+            Dbg.WriteCurrentThreadId("abort");
+            string str = tt.GetResult();
+            Con.WriteLine("ret = " + str);*/
+
+            string s = async_test_x().Result;
+            Dbg.WriteCurrentThreadId("ret = " + s);
         }
 
-        static async Task<object> async_task1()
+        static async Task<string> async_test_x()
         {
-            Dbg.WriteCurrentThreadId("a");
-            throw new ApplicationException("zzz");
-            await Task.Delay(500);
+            Task<string> task1 = TaskVm<string, int>.NewTask(async_task1, 123);
+
+            Dbg.WriteCurrentThreadId("async_test_x: before await");
+            string ret = await task1;
+            Dbg.WriteCurrentThreadId("async_test_x: after await");
+
+            return ret;
+        }
+
+        static async Task<string> async_task1(int arg)
+        {
+            Dbg.WriteCurrentThreadId("a " + arg.ToString());
+            //throw new ApplicationException("zzz");
+            await Task.Delay(200); 
+            //throw new ApplicationException("zzz");
+            //await Task.Yield();
+                await async_task2();
             Dbg.WriteCurrentThreadId("b");
+            
             return "aho";
+        }
+
+        static async Task async_task2()
+        {
+            Dbg.WriteCurrentThreadId("c");
+            await Task.Delay(200);
+            //throw new ApplicationException("aho");
+            Dbg.WriteCurrentThreadId("d");
         }
 
 

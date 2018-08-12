@@ -22,20 +22,119 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {
-    public class TaskVm
+    public class TaskVmAbortException : Exception
+    {
+        public TaskVmAbortException(string message) : base(message) { }
+    }
+
+    public class TaskVm<TResult, TIn>
     {
         readonly ThreadObj thread;
         public ThreadObj ThreadObj => this.thread;
 
-        Func<Task<object>> root_function;
+        Func<TIn, Task<TResult>> root_function;
         Task root_task;
 
-        Queue<Tuple<SendOrPostCallback, object>> dispatch_queue = new Queue<Tuple<SendOrPostCallback, object>>();
+        Queue<ValueTuple<SendOrPostCallback, object>> dispatch_queue = new Queue<ValueTuple<SendOrPostCallback, object>>();
         AutoResetEvent dispatch_queue_event = new AutoResetEvent(false);
+
+        public TIn InputParameter { get; }
 
         bool halt = false;
 
+        CancellationToken cancel_token;
+
+        object ResultLock = new object();
+        public Exception Error { get; private set; } = null;
+        public TResult Result => this.GetResult(out _);
+        TResult result = default(TResult);
+        public bool IsCompleted { get; private set; } = false;
+        public bool IsAborted { get; private set; } = false;
+        public bool HasError => this.Error != null;
+        public bool Ok => !HasError;
+
+        public ManualResetEventSlim CompletedEvent { get; } = new ManualResetEventSlim();
+
+        bool abort_flag = false;
+
         TaskVmSynchronizationContext sync_ctx;
+
+        public TaskVm(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken cancel = default(CancellationToken))
+        {
+            this.InputParameter = input_parameter;
+            this.root_function = root_action;
+            this.cancel_token = cancel;
+            this.cancel_token.Register(() =>
+            {
+                this.Abort();
+            });
+
+            this.thread = new ThreadObj(this.thread_proc);
+            this.thread.WaitForInit();
+        }
+
+        public static Task<TResult> NewTask(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken cancel = default(CancellationToken))
+        {
+            TaskVm<TResult, TIn> vm = new TaskVm<TResult, TIn>(root_action, input_parameter, cancel);
+
+            return Task<TResult>.Run(new Func<TResult>(vm.get_result_simple));
+        }
+
+        TResult get_result_simple()
+        {
+            return this.GetResult();
+        }
+
+        public bool Abort(bool no_wait = false)
+        {
+            this.abort_flag = true;
+
+            this.dispatch_queue_event.Set();
+
+            if (no_wait)
+            {
+                return this.IsAborted;
+            }
+
+            this.thread.WaitForEnd();
+
+            return this.IsAborted;
+        }
+
+        public bool Wait(bool ignore_error = false, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken))
+        {
+            TResult ret = GetResult(out bool timeouted, ignore_error, timeout, cancel);
+
+            return !timeouted;
+        }
+
+        public TResult GetResult(bool ignore_error = false, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken)) => GetResult(out _, ignore_error, timeout, cancel);
+        public TResult GetResult(out bool timeouted, bool ignore_error = false, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken))
+        {
+            CompletedEvent.Wait(timeout, cancel);
+
+            if (this.IsCompleted == false)
+            {
+                timeouted = true;
+                return default(TResult);
+            }
+
+            timeouted = false;
+
+            if (this.Error != null)
+            {
+                if (ignore_error == false)
+                {
+                    throw this.Error;
+                }
+                else
+                {
+                    return default(TResult);
+                }
+            }
+
+            return this.result;
+        }
 
         void thread_proc(object param)
         {
@@ -46,62 +145,118 @@ namespace IPA.DN.CoreUtil
 
             this.root_task = task_proc();
 
-            ThreadObj.NoticeInited();
-
             dispatcher_loop();
         }
 
-        async Task task_proc()
+        void set_result(Exception ex = null, TResult result = default(TResult))
         {
-            Dbg.WriteCurrentThreadId("task_proc: before await");
-
-            await this.root_function();
-
-            Dbg.WriteCurrentThreadId("task_proc: after await");
-            halt = true;
-            this.dispatch_queue_event.Set();
-        }
-
-        void dispatcher_loop()
-        {
-            while (halt == false)
+            lock (this.ResultLock)
             {
-                this.dispatch_queue_event.WaitOne();
-
-                while (true)
+                if (this.IsCompleted == false)
                 {
-                    Tuple<SendOrPostCallback, object> queued_item = null;
+                    this.IsCompleted = true;
 
-                    lock (this.dispatch_queue)
+                    if (ex == null)
                     {
-                        if (this.dispatch_queue.Count >= 1)
+                        this.result = result;
+                    }
+                    else
+                    {
+                        this.Error = ex;
+
+                        if (ex is TaskVmAbortException)
                         {
-                            queued_item = this.dispatch_queue.Dequeue();
+                            this.IsAborted = true;
                         }
                     }
 
-                    if (queued_item == null)
-                    {
-                        break;
-                    }
-
-                    queued_item.Item1(queued_item.Item2);
+                    this.halt = true;
+                    this.dispatch_queue_event.Set();
+                    this.CompletedEvent.Set();
                 }
             }
         }
 
-        public TaskVm(Func<Task<object>> root_action, object param)
+        async Task task_proc()
         {
-            this.root_function = root_action;
-            this.thread = new ThreadObj(this.thread_proc);
-            this.thread.WaitForInit();
+            Dbg.WriteCurrentThreadId("task_proc: before yield");
+
+            await Task.Yield();
+            
+            Dbg.WriteCurrentThreadId("task_proc: before await");
+
+            TResult ret = default(TResult);
+
+            try
+            {
+                ret = await this.root_function(this.InputParameter);
+
+                Dbg.WriteCurrentThreadId("task_proc: after await");
+                set_result(null, ret);
+            }
+            catch (Exception ex)
+            {
+                set_result(ex);
+            }
+        }
+
+        void dispatcher_loop()
+        {
+            int num_executed_tasks = 0;
+
+            while (halt == false)
+            {
+                this.dispatch_queue_event.WaitOne();
+
+                if (this.abort_flag)
+                {
+                    set_result(new TaskVmAbortException("aborted."));
+                    break;
+                }
+
+                while (true)
+                {
+                    ValueTuple<SendOrPostCallback, object> queued_item;
+
+                    lock (this.dispatch_queue)
+                    {
+                        if (this.dispatch_queue.Count == 0)
+                        {
+                            break;
+                        }
+                        queued_item = this.dispatch_queue.Dequeue();
+                    }
+
+                    if (num_executed_tasks == 0)
+                    {
+                        ThreadObj.NoticeInited();
+                    }
+                    num_executed_tasks++;
+
+                    if (this.abort_flag)
+                    {
+                        set_result(new TaskVmAbortException("aborted."));
+                        break;
+                    }
+
+                    try
+                    {
+                        queued_item.Item1(queued_item.Item2);
+                    }
+                    catch (Exception ex)
+                    {
+                        set_result(ex);
+                        break;
+                    }
+                }
+            }
         }
 
         public class TaskVmSynchronizationContext : SynchronizationContext
         {
-            public readonly TaskVm Vm;
+            public readonly TaskVm<TResult, TIn> Vm;
 
-            public TaskVmSynchronizationContext(TaskVm vm)
+            public TaskVmSynchronizationContext(TaskVm<TResult, TIn> vm)
             {
                 this.Vm = vm;
             }
@@ -131,7 +286,7 @@ namespace IPA.DN.CoreUtil
                 //d(state);
                 lock (Vm.dispatch_queue)
                 {
-                    Vm.dispatch_queue.Enqueue(new Tuple<SendOrPostCallback, object>(d, state));
+                    Vm.dispatch_queue.Enqueue((d, state));
                 }
 
                 Vm.dispatch_queue_event.Set();
