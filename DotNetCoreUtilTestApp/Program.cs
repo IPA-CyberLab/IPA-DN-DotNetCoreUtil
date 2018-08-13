@@ -680,13 +680,48 @@ namespace DotNetCoreUtilTestApp
 
         static async Task<string> async_test_x()
         {
-            Task<string> task1 = TaskVm<string, int>.NewTask(async_task1, 123);
+            Task<string> task1 = TaskVm<string, int>.NewTask(async_task2, 123);
 
             Dbg.WriteCurrentThreadId("async_test_x: before await");
             string ret = await task1;
-            Dbg.WriteCurrentThreadId("async_test_x: after await");
+            Dbg.WriteCurrentThreadId("async_test_x: after await. ret = " + ret);
 
             return ret;
+        }
+
+        static async Task<string> async_task2(int arg)
+        {
+            long last = Time.Tick64;
+            long start = Time.Tick64;
+            while (true)
+            {
+                long now = Time.Tick64;
+                long diff = now - last;
+                last = now;
+
+                Dbg.WriteCurrentThreadId("tick = " + diff);
+
+                AsyncEvent e = new AsyncManualResetEvent();
+
+                fire_test(e);
+
+                //await Task.Delay(5);
+                //await AsyncWaiter.Sleep(5);
+                await e.Wait();
+                await e.Wait();
+
+                if ((now - start) >= 5000)
+                {
+                //    break;
+                }
+            }
+            return "Hello";
+        }
+
+        static async void fire_test(AsyncEvent e)
+        {
+            await AsyncWaiter.Sleep(1);
+            e.Set();
         }
 
         static async Task<string> async_task1(int arg)

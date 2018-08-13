@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -22,8 +23,287 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil
 {
+    public static class AsyncWaiter
+    {
+        static SortedList<long, List<TaskCompletionSource<int>>> wait_list = new SortedList<long, List<TaskCompletionSource<int>>>();
+
+        static Stopwatch w;
+
+        static Thread background_thread;
+
+        static AutoResetEvent ev = new AutoResetEvent(false);
+
+        static List<Thread> worker_thread_list = new List<Thread>();
+
+        static Queue<TaskCompletionSource<int>> queued_tcs = new Queue<TaskCompletionSource<int>>();
+
+        static AutoResetEvent queued_tcs_signal = new AutoResetEvent(false);
+
+        static AsyncWaiter()
+        {
+            w = new Stopwatch();
+            w.Start();
+
+            background_thread = new Thread(background_thread_proc);
+            background_thread.IsBackground = true;
+            background_thread.Start();
+        }
+
+        static volatile int num_busy_worker_threads = 0;
+        static volatile int num_worker_threads = 0;
+
+        static void worker_thread_proc()
+        {
+            while (true)
+            {
+                Interlocked.Increment(ref num_busy_worker_threads);
+                while (true)
+                {
+                    TaskCompletionSource<int> tcs = null;
+                    lock (queued_tcs)
+                    {
+                        if (queued_tcs.Count != 0)
+                        {
+                            tcs = queued_tcs.Dequeue();
+                        }
+                    }
+
+                    if (tcs != null)
+                    {
+                        tcs.TrySetResult(0);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                Interlocked.Decrement(ref num_busy_worker_threads);
+
+                queued_tcs_signal.WaitOne();
+            }
+        }
+
+        static void FireWorkerThread(TaskCompletionSource<int> tc)
+        {
+            if (num_busy_worker_threads == num_worker_threads)
+            {
+                Interlocked.Increment(ref num_worker_threads);
+                Thread t = new Thread(worker_thread_proc);
+                t.IsBackground = true;
+                t.Start();
+                //Console.WriteLine($"num_worker_threads = {num_worker_threads}");
+            }
+
+            lock (queued_tcs)
+            {
+                queued_tcs.Enqueue(tc);
+            }
+            queued_tcs_signal.Set();
+        }
+
+        static void background_thread_proc()
+        {
+            while (true)
+            {
+                long now = Tick;
+                long next_wait_target = -1;
+
+                List<TaskCompletionSource<int>> tc_list = new List<TaskCompletionSource<int>>();
+
+                lock (wait_list)
+                {
+                    List<long> past_target_list = new List<long>();
+
+                    foreach (long target in wait_list.Keys)
+                    {
+                        if (now >= target)
+                        {
+                            past_target_list.Add(target);
+                            next_wait_target = 0;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    foreach (long target in past_target_list)
+                    {
+                        List<TaskCompletionSource<int>> tcl = wait_list[target];
+
+                        wait_list.Remove(target);
+
+                        foreach (TaskCompletionSource<int> tc in tcl)
+                        {
+                            tc_list.Add(tc);
+                        }
+                    }
+
+                    if (next_wait_target == -1)
+                    {
+                        if (wait_list.Count >= 1)
+                        {
+                            next_wait_target = wait_list.Keys[0];
+                        }
+                    }
+                }
+
+                foreach (TaskCompletionSource<int> tc in tc_list)
+                {
+                    //tc.TrySetResult(0);
+                    //Task.Factory.StartNew(() => tc.TrySetResult(0));
+                    FireWorkerThread(tc);
+                }
+
+                now = Tick;
+                long next_wait_tick = (Math.Max(next_wait_target - now, 0));
+                if (next_wait_target == -1)
+                {
+                    next_wait_tick = -1;
+                }
+                if (next_wait_tick >= 1 || next_wait_tick == -1)
+                {
+                    if (next_wait_tick == -1 || next_wait_tick >= 100)
+                    {
+                        //next_wait_tick = 100;
+                    }
+                    ev.WaitOne((int)next_wait_tick);
+                }
+            }
+        }
+
+        public static long Tick
+        {
+            get
+            {
+                lock (w)
+                {
+                    return w.ElapsedMilliseconds + 1L;
+                }
+            }
+        }
+
+        public static Task Sleep(long msec)
+        {
+            if (msec <= 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            long target_time = Tick + msec;
+
+            TaskCompletionSource<int> tc = new TaskCompletionSource<int>();
+            List<TaskCompletionSource<int>> o;
+
+            bool set_event = false;
+
+            lock (wait_list)
+            {
+                long first_target_before = -1;
+                long first_target_after = -1;
+
+                if (wait_list.Count >= 1)
+                {
+                    first_target_before = wait_list.Keys[0];
+                }
+
+                if (wait_list.ContainsKey(target_time) == false)
+                {
+                    o = new List<TaskCompletionSource<int>>();
+                    wait_list.Add(target_time, o);
+                }
+                else
+                {
+                    o = wait_list[target_time];
+                }
+
+                o.Add(tc);
+
+                first_target_after = wait_list.Keys[0];
+
+                if (first_target_before != first_target_after)
+                {
+                    set_event = true;
+                }
+            }
+
+            if (set_event)
+            {
+                ev.Set();
+            }
+
+            return tc.Task;
+        }
+    }
+
+    public abstract class AsyncEvent
+    {
+        public abstract Task Wait();
+        public abstract void Set();
+    }
+
+    public class AsyncAutoResetEvent : AsyncEvent
+    {
+        volatile Queue<TaskCompletionSource<object>> waiters = new Queue<TaskCompletionSource<object>>();
+        volatile bool set;
+
+        public override Task Wait()
+        {
+            lock (waiters)
+            {
+                var tcs = new TaskCompletionSource<object>();
+                if (waiters.Count > 0 || !set)
+                {
+                    waiters.Enqueue(tcs);
+                }
+                else
+                {
+                    //tcs.SetCanceled();
+                    tcs.SetResult(null);
+                    set = false;
+                }
+                return tcs.Task;
+            }
+        }
+
+        public override void Set()
+        {
+            TaskCompletionSource<object> toSet = null;
+            lock (waiters)
+            {
+                if (waiters.Count > 0) toSet = waiters.Dequeue();
+                else set = true;
+            }
+            if (toSet != null)
+            {
+                toSet.SetResult(null);
+                //toSet.SetCanceled();
+            }
+        }
+    }
+
+    public class AsyncManualResetEvent : AsyncEvent
+    {
+        volatile TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+        public override Task Wait()
+        {
+            return tcs.Task;
+        }
+
+        public override void Set()
+        {
+            tcs.TrySetResult(true);
+        }
+    }
+
     public static class TaskUtil
     {
+        public static Task Sleep(long msec)
+        {
+            return AsyncWaiter.Sleep(msec);
+        }
+
         public static Task WhenCanceledOrTimeouted(CancellationToken cancel, int timeout)
         {
             if (timeout == 0)
@@ -41,6 +321,13 @@ namespace IPA.DN.CoreUtil
             cancel.Register((s) => ((TaskCompletionSource<bool>)s).SetResult(true), tcs);
 
             return tcs.Task;
+        }
+
+        public static TaskVm<TResult, TIn> GetCurrentTaskVm<TResult, TIn>()
+        {
+            TaskVm<TResult, TIn>.TaskVmSynchronizationContext ctx = (TaskVm<TResult, TIn>.TaskVmSynchronizationContext)SynchronizationContext.Current;
+
+            return ctx.Vm;
         }
     }
 
