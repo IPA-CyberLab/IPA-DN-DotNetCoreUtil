@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -84,9 +85,9 @@ namespace IPA.DN.CoreUtil
             public string team_id;
         }
 
-        public AccessToken AuthGetAccessToken(string client_secret, string code, string redirect_url)
+        public async Task<AccessToken> AuthGetAccessTokenAsync(string client_secret, string code, string redirect_url)
         {
-            WebRet ret = this.RequestWithQuery(WebApiMethods.POST, "https://slack.com/api/oauth.access",
+            WebRet ret = await this.RequestWithQuery(WebApiMethods.POST, "https://slack.com/api/oauth.access",
                 ("client_id", this.ClientId),
                 ("client_secret", client_secret),
                 ("redirect_uri", redirect_url),
@@ -127,12 +128,12 @@ namespace IPA.DN.CoreUtil
             public bool as_user;
         }
 
-        public ChannelsList GetChannelsList()
+        public async Task<ChannelsList> GetChannelsListAsync()
         {
-            return RequestWithQuery(WebApiMethods.POST, "https://slack.com/api/channels.list").DeserializeAndCheckError<ChannelsList>();
+            return (await RequestWithQuery(WebApiMethods.POST, "https://slack.com/api/channels.list")).DeserializeAndCheckError<ChannelsList>();
         }
 
-        public void PostMessage(string channel_id, string text, bool as_user)
+        public async Task PostMessageAsync(string channel_id, string text, bool as_user)
         {
             PostMessageData m = new PostMessageData()
             {
@@ -141,12 +142,12 @@ namespace IPA.DN.CoreUtil
                 as_user = as_user,
             };
 
-            PostMessage(m);
+            await PostMessageAsync(m);
         }
 
-        public void PostMessage(PostMessageData m)
+        public async Task PostMessageAsync(PostMessageData m)
         {
-            RequestWithJsonObject(WebApiMethods.POST, "https://slack.com/api/chat.postMessage", m).DeserializeAndCheckError<Response>();
+            (await RequestWithJsonObject(WebApiMethods.POST, "https://slack.com/api/chat.postMessage", m)).DeserializeAndCheckError<Response>();
         }
     }
 }

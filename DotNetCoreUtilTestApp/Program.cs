@@ -80,7 +80,7 @@ namespace DotNetCoreUtilTestApp
                 //var at = a.AuthGetAccessToken(secret.ConfigSafe.ClientSecret, "47656437648.414467157330.e53934f3cd8a1d28c64b2e17b2f97422f609bf702fd6eb5267765e7ddfbd7011", "https://tools.sehosts.com/");
                 //at.InnerDebug();
 
-                var cl = a.GetChannelsList();
+                var cl = a.GetChannelsListAsync().Result;
                 string channel_id = "";
                 foreach (var c in cl.Channels)
                 {
@@ -91,7 +91,7 @@ namespace DotNetCoreUtilTestApp
                     }
                 }
 
-                a.PostMessage(channel_id, $"こんにちは！ \t{Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true);
+                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
             }
         }
 

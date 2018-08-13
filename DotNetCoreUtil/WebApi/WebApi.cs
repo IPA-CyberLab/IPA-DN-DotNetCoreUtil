@@ -190,7 +190,7 @@ namespace IPA.DN.CoreUtil
             
         }
 
-        public WebRet RequestWithQuery(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
+        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
         {
             HttpWebRequest r = CreateWebRequest(method, url, query_list);
 
@@ -199,18 +199,18 @@ namespace IPA.DN.CoreUtil
                 string qs = BuildQueryString(query_list);
                 byte[] qs_byte = qs.GetBytes(this.RequestEncoding);
 
-                Stream upload = r.GetRequestStream();
-                upload.Write(qs_byte, 0, qs_byte.Length);
+                Stream upload = await r.GetRequestStreamAsync();
+                await upload.WriteAsync(qs_byte, 0, qs_byte.Length);
             }
 
-            using (HttpWebResponse res = (HttpWebResponse)r.GetResponse())
+            using (HttpWebResponse res = (HttpWebResponse)await r.GetResponseAsync())
             {
-                byte[] data = res.GetResponseStream().ReadToEnd(this.MaxRecvSize);
+                byte[] data = await res.GetResponseStream().ReadToEndAsync(this.MaxRecvSize);
                 return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
             }
         }
 
-        public virtual WebRet RequestWithJson(WebApiMethods method, string url, string json_string)
+        public virtual async Task<WebRet> RequestWithJson(WebApiMethods method, string url, string json_string)
         {
             if (!(method == WebApiMethods.POST || method == WebApiMethods.PUT)) throw new ArgumentException("method");
 
@@ -222,12 +222,12 @@ namespace IPA.DN.CoreUtil
 
             byte[] upload_data = json_string.GetBytes(this.RequestEncoding);
 
-            Stream upload = r.GetRequestStream();
-            upload.Write(upload_data, 0, upload_data.Length);
+            Stream upload = await r.GetRequestStreamAsync();
+            await upload.WriteAsync(upload_data, 0, upload_data.Length);
 
-            using (HttpWebResponse res = (HttpWebResponse)r.GetResponse())
+            using (HttpWebResponse res = (HttpWebResponse)await r.GetResponseAsync())
             {
-                byte[] data = res.GetResponseStream().ReadToEnd(this.MaxRecvSize);
+                byte[] data = await res.GetResponseStream().ReadToEndAsync(this.MaxRecvSize);
                 return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
             }
         }
@@ -237,14 +237,14 @@ namespace IPA.DN.CoreUtil
             return Json.Serialize(obj, this.Json_IncludeNull, this.Json_EscapeHtml, this.MaxDepth);
         }
 
-        public virtual WebRet RequestWithJsonObject(WebApiMethods method, string url, object json_object)
+        public virtual async Task<WebRet> RequestWithJsonObject(WebApiMethods method, string url, object json_object)
         {
-            return RequestWithJson(method, url, this.JsonSerialize(json_object));
+            return await RequestWithJson(method, url, this.JsonSerialize(json_object));
         }
 
-        public virtual WebRet RequestWithJsonDynamic(WebApiMethods method, string url, dynamic json_dynamic)
+        public virtual async Task<WebRet> RequestWithJsonDynamic(WebApiMethods method, string url, dynamic json_dynamic)
         {
-            return RequestWithJson(method, url, Json.SerializeDynamic(json_dynamic));
+            return await RequestWithJson(method, url, Json.SerializeDynamic(json_dynamic));
         }
     }
 }
