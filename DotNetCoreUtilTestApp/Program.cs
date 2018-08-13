@@ -54,9 +54,9 @@ namespace DotNetCoreUtilTestApp
 
             //twitter_test();
 
-            //slack_test();
+            slack_test();
 
-            async_test();
+            //async_test();
         }
 
         [Serializable]

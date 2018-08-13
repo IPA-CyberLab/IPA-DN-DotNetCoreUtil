@@ -53,7 +53,7 @@ namespace IPA.DN.CoreUtil
             this.AccessTokenStr = access_token;
         }
 
-        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params Tuple<string, string>[] query_list)
+        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
         {
             HttpWebRequest r = base.CreateWebRequest(method, url, query_list);
 
@@ -69,10 +69,10 @@ namespace IPA.DN.CoreUtil
         {
             return "https://slack.com/oauth/authorize?" +
                 BuildQueryString(
-                    new Tuple<string, string>("client_id", this.ClientId),
-                    new Tuple<string, string>("scope", scope),
-                    new Tuple<string, string>("redirect_uri", redirect_url),
-                    new Tuple<string, string>("state", state));
+                    ("client_id", this.ClientId),
+                    ("scope", scope),
+                    ("redirect_uri", redirect_url),
+                    ("state", state));
         }
 
         public class AccessToken : Response
@@ -87,10 +87,10 @@ namespace IPA.DN.CoreUtil
         public AccessToken AuthGetAccessToken(string client_secret, string code, string redirect_url)
         {
             WebRet ret = this.RequestWithQuery(WebApiMethods.POST, "https://slack.com/api/oauth.access",
-                new Tuple<string, string>("client_id", this.ClientId),
-                new Tuple<string, string>("client_secret", client_secret),
-                new Tuple<string, string>("redirect_uri", redirect_url),
-                new Tuple<string, string>("code", code));
+                ("client_id", this.ClientId),
+                ("client_secret", client_secret),
+                ("redirect_uri", redirect_url),
+                ("code", code));
 
             AccessToken a = ret.DeserializeAndCheckError<AccessToken>();
 

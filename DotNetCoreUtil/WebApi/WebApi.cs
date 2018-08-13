@@ -128,7 +128,7 @@ namespace IPA.DN.CoreUtil
 
         public bool DebugPrintResponse { get; set; } = false;
 
-        public string BuildQueryString(params Tuple<string, string>[] query_list)
+        public string BuildQueryString(params ValueTuple<string, string>[] query_list)
         {
             StringWriter w = new StringWriter();
             int count = 0;
@@ -147,7 +147,7 @@ namespace IPA.DN.CoreUtil
             return w.ToString();
         }
 
-        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params Tuple<string, string>[] query_list)
+        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
         {
             string qs = "";
 
@@ -189,7 +189,7 @@ namespace IPA.DN.CoreUtil
             
         }
 
-        public WebRet RequestWithQuery(WebApiMethods method, string url, params Tuple<string, string>[] query_list)
+        public WebRet RequestWithQuery(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
         {
             HttpWebRequest r = CreateWebRequest(method, url, query_list);
 
