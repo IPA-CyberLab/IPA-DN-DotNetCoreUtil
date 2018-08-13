@@ -1323,7 +1323,7 @@ namespace IPA.DN.CoreUtil
             try
             {
                 // download
-                HttpClient hc = new HttpClient();
+                DnHttpClient hc = new DnHttpClient();
                 Buf buf = hc.Get(new Uri(url));
 
                 fs = new FullRouteSet(Buf.ReadFromBufWithHash(buf));
@@ -1601,7 +1601,7 @@ namespace IPA.DN.CoreUtil
 
         AsList load_ad_list_from_url(string url)
         {
-            HttpClient hc = new HttpClient();
+            DnHttpClient hc = new DnHttpClient();
             Buf buf = hc.Get(new Uri(url));
             string body = Str.AsciiEncoding.GetString(buf.ByteData);
 
@@ -1613,7 +1613,7 @@ namespace IPA.DN.CoreUtil
 
         FullRoute load_full_route_from_url(string url, AddressFamily family)
         {
-            HttpClient hc = new HttpClient();
+            DnHttpClient hc = new DnHttpClient();
 
             Buf buf = hc.Get(new Uri(url));
             byte[] data = GZipUtil.Decompress(buf.ByteData);

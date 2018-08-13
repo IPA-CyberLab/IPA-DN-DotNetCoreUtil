@@ -548,7 +548,7 @@ namespace DotNetCoreUtilTestApp
 
         static void httpclient_test()
         {
-            HttpClient c = new HttpClient();
+            DnHttpClient c = new DnHttpClient();
             Buf b = c.Get(new Uri("https://www.vpngate.net/ja/"));
             WriteLine(Str.Utf8Encoding.GetString(b.ByteData));
         }

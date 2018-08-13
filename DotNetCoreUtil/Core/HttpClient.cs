@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 
 namespace IPA.DN.CoreUtil
 {
-    public class HttpPostData
+    public class DnHttpPostData
     {
         NameValueCollection nv = new NameValueCollection();
 
@@ -65,7 +65,7 @@ namespace IPA.DN.CoreUtil
         }
     }
 
-    public class HttpClient
+    public class DnHttpClient
     {
         CookieContainer cc = new CookieContainer();
         public CookieContainer CookieContainer
@@ -108,7 +108,7 @@ namespace IPA.DN.CoreUtil
             return true;
         }
 
-        static HttpClient()
+        static DnHttpClient()
         {
             ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(OnRemoteCertificateValidationCallback);
         }
@@ -154,11 +154,11 @@ namespace IPA.DN.CoreUtil
             return Buf.ReadFromStream(st);
         }
 
-        public Buf Post(Uri uri, HttpPostData postData, Encoding postEncoding)
+        public Buf Post(Uri uri, DnHttpPostData postData, Encoding postEncoding)
         {
             return Post(uri, postData, postEncoding, null);
         }
-        public Buf Post(Uri uri, HttpPostData postData, Encoding postEncoding, string referer)
+        public Buf Post(Uri uri, DnHttpPostData postData, Encoding postEncoding, string referer)
         {
             return Post(uri, postData.GetData(postEncoding).ByteData, referer);
         }
