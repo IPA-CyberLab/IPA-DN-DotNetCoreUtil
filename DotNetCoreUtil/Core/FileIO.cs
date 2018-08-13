@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -2055,6 +2056,25 @@ namespace IPA.DN.CoreUtil
             while (true)
             {
                 int r = s.Read(tmp, 0, tmp.Length);
+                if (r == 0)
+                {
+                    break;
+                }
+                ms.Write(tmp, 0, r);
+            }
+
+            return ms.ToArray();
+        }
+
+        public static async Task<byte[]> ReadStreamToEndAsync(Stream s, int max_size = 0)
+        {
+            if (max_size <= 0) max_size = int.MaxValue;
+            MemoryStream ms = new MemoryStream();
+
+            byte[] tmp = new byte[200000];
+            while (true)
+            {
+                int r = await s.ReadAsync(tmp, 0, tmp.Length);
                 if (r == 0)
                 {
                     break;

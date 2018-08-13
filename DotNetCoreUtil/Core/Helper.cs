@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -176,6 +177,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static T YamlToObject<T>(this string str) => Yaml.Deserialize<T>(str);
 
         public static byte[] ReadToEnd(this Stream s, int max_size = 0) => IO.ReadStreamToEnd(s, max_size);
+        public static async Task<byte[]> ReadToEndAsync(this Stream s, int max_size = 0) => await IO.ReadStreamToEndAsync(s, max_size);
     }
 }
 
