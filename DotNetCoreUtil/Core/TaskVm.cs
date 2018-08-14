@@ -329,6 +329,24 @@ namespace IPA.DN.CoreUtil
 
             return ctx.Vm;
         }
+
+        public static CancellationToken CombineCancellationTokens(params CancellationToken[] tokens)
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            foreach (CancellationToken t in tokens)
+            {
+                t.Register(() =>
+                {
+                    cts.Cancel(
+                });
+            }
+        }
+
+        public static CancellationToken GetCurrentTaskVmCancelToken()
+        {
+            return (CancellationToken)ThreadData.CurrentThreadData.DataList["taskvm_current_cancel"];
+        }
     }
 
     public class TaskVmAbortException : Exception
@@ -351,7 +369,8 @@ namespace IPA.DN.CoreUtil
 
         bool halt = false;
 
-        CancellationToken cancel_token;
+        CancellationToken GracefulCancel { get; }
+        CancellationToken AbortCancel { get; }
 
         object ResultLock = new object();
         public Exception Error { get; private set; } = null;
@@ -368,12 +387,12 @@ namespace IPA.DN.CoreUtil
 
         TaskVmSynchronizationContext sync_ctx;
 
-        public TaskVm(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken cancel = default(CancellationToken))
+        public TaskVm(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken graceful_cancel = default(CancellationToken))
         {
             this.InputParameter = input_parameter;
             this.root_function = root_action;
-            this.cancel_token = cancel;
-            this.cancel_token.Register(() =>
+            this.GracefulCancel = graceful_cancel;
+            this.GracefulCancel.Register(() =>
             {
                 this.Abort();
             });
@@ -382,9 +401,9 @@ namespace IPA.DN.CoreUtil
             this.thread.WaitForInit();
         }
 
-        public static Task<TResult> NewTask(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken cancel = default(CancellationToken))
+        public static Task<TResult> NewTask(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken graceful_cancel = default(CancellationToken))
         {
-            TaskVm<TResult, TIn> vm = new TaskVm<TResult, TIn>(root_action, input_parameter, cancel);
+            TaskVm<TResult, TIn> vm = new TaskVm<TResult, TIn>(root_action, input_parameter, graceful_cancel);
 
             return Task<TResult>.Run(new Func<TResult>(vm.get_result_simple));
         }
@@ -396,18 +415,19 @@ namespace IPA.DN.CoreUtil
 
         public bool Abort(bool no_wait = false)
         {
-            this.abort_flag = true;
-
-            this.dispatch_queue_event.Set();
-
-            if (no_wait)
-            {
-                return this.IsAborted;
-            }
-
-            this.thread.WaitForEnd();
-
-            return this.IsAborted;
+            //             this.abort_flag = true;
+            // 
+            //             this.dispatch_queue_event.Set();
+            // 
+            //             if (no_wait)
+            //             {
+            //                 return this.IsAborted;
+            //             }
+            // 
+            //             this.thread.WaitForEnd();
+            // 
+            //             return this.IsAborted;
+            return false;
         }
 
         public bool Wait(bool ignore_error = false, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken))
@@ -449,6 +469,8 @@ namespace IPA.DN.CoreUtil
         {
             sync_ctx = new TaskVmSynchronizationContext(this);
             SynchronizationContext.SetSynchronizationContext(sync_ctx);
+
+            ThreadData.CurrentThreadData.DataList["taskvm_current_cancel"] = this.GracefulCancel;
 
             Dbg.WriteCurrentThreadId("before task_proc()");
 
@@ -513,15 +535,14 @@ namespace IPA.DN.CoreUtil
         {
             int num_executed_tasks = 0;
 
-            while (halt == false)
+            while (this.IsCompleted == false)
             {
                 this.dispatch_queue_event.WaitOne();
 
-                if (this.abort_flag)
-                {
-                    set_result(new TaskVmAbortException("aborted."));
-                    break;
-                }
+//                 if (this.abort_flag)
+//                 {
+//                     set_result(new TaskVmAbortException("aborted."));
+//                 }
 
                 while (true)
                 {
@@ -542,11 +563,10 @@ namespace IPA.DN.CoreUtil
                     }
                     num_executed_tasks++;
 
-                    if (this.abort_flag)
-                    {
-                        set_result(new TaskVmAbortException("aborted."));
-                        break;
-                    }
+//                     if (this.abort_flag)
+//                     {
+//                         set_result(new TaskVmAbortException("aborted."));
+//                     }
 
                     try
                     {
@@ -554,8 +574,7 @@ namespace IPA.DN.CoreUtil
                     }
                     catch (Exception ex)
                     {
-                        set_result(ex);
-                        break;
+                        ex.ToString().Debug();
                     }
                 }
             }
@@ -564,6 +583,11 @@ namespace IPA.DN.CoreUtil
         public class TaskVmSynchronizationContext : SynchronizationContext
         {
             public readonly TaskVm<TResult, TIn> Vm;
+            volatile int num_operations = 0;
+            volatile int num_operations_total = 0;
+
+
+            public bool IsAllOperationsCompleted => (num_operations_total >= 1 && num_operations == 0);
 
             public TaskVmSynchronizationContext(TaskVm<TResult, TIn> vm)
             {
@@ -572,25 +596,32 @@ namespace IPA.DN.CoreUtil
 
             public override SynchronizationContext CreateCopy()
             {
-                // Dbg.WriteCurrentThreadId("CreateCopy");
+                Dbg.WriteCurrentThreadId("CreateCopy");
                 return base.CreateCopy();
             }
 
             public override void OperationCompleted()
             {
-                // Dbg.WriteCurrentThreadId("OperationCompleted");
                 base.OperationCompleted();
+
+                Interlocked.Decrement(ref num_operations);
+                Dbg.WriteCurrentThreadId("OperationCompleted. num_operations = " + num_operations);
+                Vm.dispatch_queue_event.Set();
             }
 
             public override void OperationStarted()
             {
-                // Dbg.WriteCurrentThreadId("OperationStarted");
                 base.OperationStarted();
+
+                Interlocked.Increment(ref num_operations);
+                Interlocked.Increment(ref num_operations_total);
+                Dbg.WriteCurrentThreadId("OperationStarted. num_operations = " + num_operations);
+                Vm.dispatch_queue_event.Set();
             }
 
             public override void Post(SendOrPostCallback d, object state)
             {
-                //Dbg.WriteCurrentThreadId("Post");
+                Dbg.WriteCurrentThreadId("Post: " + this.Vm.halt);
                 //base.Post(d, state);
                 //d(state);
                 lock (Vm.dispatch_queue)
@@ -603,13 +634,13 @@ namespace IPA.DN.CoreUtil
 
             public override void Send(SendOrPostCallback d, object state)
             {
-                //Dbg.WriteCurrentThreadId("Send");
+                Dbg.WriteCurrentThreadId("Send");
                 base.Send(d, state);
             }
 
             public override int Wait(IntPtr[] waitHandles, bool waitAll, int millisecondsTimeout)
             {
-                // Dbg.WriteCurrentThreadId("Wait");
+                Dbg.WriteCurrentThreadId("Wait");
                 return base.Wait(waitHandles, waitAll, millisecondsTimeout);
             }
         }

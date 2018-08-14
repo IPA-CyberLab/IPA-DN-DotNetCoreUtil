@@ -617,7 +617,7 @@ namespace IPA.DN.CoreUtil
     {
         static LocalDataStoreSlot slot = Thread.AllocateDataSlot();
 
-        public readonly SortedDictionary<string, object> DataList = new SortedDictionary<string, object>();
+        public readonly Dictionary<string, object> DataList = new Dictionary<string, object>();
 
         public static ThreadData CurrentThreadData
         {

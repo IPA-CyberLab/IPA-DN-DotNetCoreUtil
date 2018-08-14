@@ -44,6 +44,8 @@ using IPA.DN.CoreUtil.Helper.SlackApi;
 
 using YamlDotNet.Core;
 
+#pragma warning disable 162
+
 namespace DotNetCoreUtilTestApp
 {
     class Program
@@ -54,9 +56,9 @@ namespace DotNetCoreUtilTestApp
 
             //twitter_test();
 
-            slack_test();
+            //slack_test();
 
-            //async_test();
+            async_test();
         }
 
         [Serializable]
@@ -674,13 +676,28 @@ namespace DotNetCoreUtilTestApp
             string str = tt.GetResult();
             Con.WriteLine("ret = " + str);*/
 
-            string s = async_test_x().Result;
-            Dbg.WriteCurrentThreadId("ret = " + s);
+            //string s = async_test_x().Result;
+            //Dbg.WriteCurrentThreadId("ret = " + s);
+
+            try
+            {
+                var x = async_test_x().Result;
+                //Task<string> t = async_task_main_proc(123);
+                //CancellationTokenSource tsc = new CancellationTokenSource(2000);
+                //t.Wait(tsc.Token);
+            }
+            catch (Exception ex)
+            {
+                ex.ToString().Print();
+            }
+
+            Con.ReadLine(">");
         }
 
         static async Task<string> async_test_x()
         {
-            Task<string> task1 = TaskVm<string, int>.NewTask(async_task2, 123);
+            CancellationTokenSource tsc = new CancellationTokenSource(2000);
+            Task<string> task1 = TaskVm<string, int>.NewTask(async_task_main_proc_2, 123, tsc.Token);
 
             Dbg.WriteCurrentThreadId("async_test_x: before await");
             string ret = await task1;
@@ -689,38 +706,80 @@ namespace DotNetCoreUtilTestApp
             return ret;
         }
 
-        static async Task<string> async_task2(int arg)
+        static async Task<string> async_task_main_proc_2(int arg)
         {
-            long last = Time.Tick64;
-            long start = Time.Tick64;
-            while (true)
+            await Task.Delay(100);
+
+            try
             {
-                long now = Time.Tick64;
-                long diff = now - last;
-                last = now;
+                string s = await async_task_main_proc(arg);
 
-                Dbg.WriteCurrentThreadId("tick = " + diff);
-
-                AsyncEvent e = new AsyncManualResetEvent();
-
-                fire_test(e);
-
-                //await Task.Delay(5);
-                //await AsyncWaiter.Sleep(5);
-                await e.Wait();
-                await e.Wait();
-
-                if ((now - start) >= 5000)
-                {
-                //    break;
-                }
+                return s;
             }
-            return "Hello";
+            finally
+            {
+//                 Dbg.WriteCurrentThreadId("Finally2 start");
+//                 try
+//                 {
+//                     string s = await async_task_main_proc(arg);
+//                 }
+//                 finally
+//                 {
+//                     Dbg.WriteCurrentThreadId("Finally2 end");
+//                 }
+            }
+        }
+
+        static async Task<string> async_task_main_proc(int arg)
+        {
+            CancellationTokenSource tsc = new CancellationTokenSource(500);
+            try
+            {
+                long last = Time.Tick64;
+                long start = Time.Tick64;
+                while (true)
+                {
+                    long now = Time.Tick64;
+                    long diff = now - last;
+                    last = now;
+
+                    Dbg.WriteCurrentThreadId("tick = " + diff);
+
+                    AsyncEvent e = new AsyncManualResetEvent();
+
+                    if (true)
+                    {
+                        fire_test(e);
+
+                        //await Task.Delay(5);
+                        //await AsyncWaiter.Sleep(5);
+                        await e.Wait();
+                        await e.Wait();
+                    }
+                    else
+                    {
+                        ThreadObj.Sleep(100);
+                    }
+
+                    //await Task.Delay(100, tsc.Token);
+
+                    if ((now - start) >= 1000)
+                    {
+                        //break;
+                        throw new ApplicationException("ねこ");
+                    }
+                }
+                return "Hello";
+            }
+            finally
+            {
+                Dbg.WriteCurrentThreadId("Finally1");
+            }
         }
 
         static async void fire_test(AsyncEvent e)
         {
-            await AsyncWaiter.Sleep(1);
+            await AsyncWaiter.Sleep(200);
             e.Set();
         }
 
