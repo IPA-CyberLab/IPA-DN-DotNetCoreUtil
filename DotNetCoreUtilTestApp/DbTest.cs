@@ -26,6 +26,8 @@ using System.Drawing;
 using IPA.DN.CoreUtil;
 using IPA.DN.CoreUtil.Helper.Basic;
 
+#pragma warning disable 162
+
 namespace DotNetCoreUtilTestApp
 {
     static class DbTest
@@ -60,12 +62,29 @@ namespace DotNetCoreUtilTestApp
             using (TESTDB2 db = new TESTDB2(cfg.ConfigSafe.DBConnectStr))
             {
                 Con.WriteLine("x");
-                db.EnableConsoleDebug.Set(false);
+                db.EnableConsoleDebug.Set(true);
                 var test = db.TestList;
 
-                foreach (var t in test)
+                if (false)
                 {
-                    t.InnerDebug();
+                    test.Add(new TESTDB2.Test()
+                    {
+                        test_dt = DateTime.Now,
+                        test_str = "Nekosan",
+                    });
+
+                    db.SaveChanges();
+                }
+
+                if (true)
+                {
+                    var items = db.TestList.Where(x => x.test_id == 3);
+                    foreach (var item in items)
+                    {
+                        item.test_dt = Time.NowDateTime;
+                    }
+
+                    db.SaveChanges();
                 }
             }
         }
