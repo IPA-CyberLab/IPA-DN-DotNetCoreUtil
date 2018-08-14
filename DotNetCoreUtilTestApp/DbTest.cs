@@ -60,7 +60,6 @@ namespace DotNetCoreUtilTestApp
             using (TESTDB2 db = new TESTDB2(cfg.ConfigSafe.DBConnectStr))
             {
                 Con.WriteLine("x");
-                return;
                 db.EnableConsoleDebug.Set(false);
                 var test = db.TestList;
 
