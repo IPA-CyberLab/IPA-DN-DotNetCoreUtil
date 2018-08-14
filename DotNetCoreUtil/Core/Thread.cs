@@ -343,7 +343,7 @@ namespace IPA.DN.CoreUtil
                         raised_exception = ex;
                     }
 
-                    Console.WriteLine(ex.Message);
+                    Dbg.WriteLine(ex.Message);
                 }
             }
         }

@@ -178,6 +178,11 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
         public static byte[] ReadToEnd(this Stream s, int max_size = 0) => IO.ReadStreamToEnd(s, max_size);
         public static async Task<byte[]> ReadToEndAsync(this Stream s, int max_size = 0) => await IO.ReadStreamToEndAsync(s, max_size);
+
+        public static void TryCancelNoBlock(this CancellationTokenSource cts) => TaskUtil.TryCancelNoBlock(cts);
+        public static void TryCancel(this CancellationTokenSource cts) => TaskUtil.TryCancel(cts);
+        public static async Task CancelAsync(this CancellationTokenSource cts, bool throwOnFirstException = false) => await TaskUtil.CancelAsync(cts, throwOnFirstException);
+        public static async Task TryCancelAsync(this CancellationTokenSource cts) => await TaskUtil.TryCancelAsync(cts);
     }
 }
 

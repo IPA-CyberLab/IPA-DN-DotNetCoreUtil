@@ -696,8 +696,9 @@ namespace DotNetCoreUtilTestApp
 
         static async Task<string> async_test_x()
         {
-            CancellationTokenSource tsc = new CancellationTokenSource(2000);
-            Task<string> task1 = TaskVm<string, int>.NewTask(async_task_main_proc_2, 123, tsc.Token);
+            CancellationTokenSource glaceful = new CancellationTokenSource(100);
+            CancellationTokenSource abort = new CancellationTokenSource(1000);
+            Task<string> task1 = TaskVm<string, int>.NewTask(async_task_main_proc_2, 123, glaceful.Token, abort.Token);
 
             Dbg.WriteCurrentThreadId("async_test_x: before await");
             string ret = await task1;
@@ -718,21 +719,20 @@ namespace DotNetCoreUtilTestApp
             }
             finally
             {
-//                 Dbg.WriteCurrentThreadId("Finally2 start");
-//                 try
-//                 {
-//                     string s = await async_task_main_proc(arg);
-//                 }
-//                 finally
-//                 {
-//                     Dbg.WriteCurrentThreadId("Finally2 end");
-//                 }
+                Dbg.WriteCurrentThreadId("Finally2 start");
+                try
+                {
+                    string s = await async_task_main_proc(arg);
+                }
+                finally
+                {
+                    Dbg.WriteCurrentThreadId("Finally2 end");
+                }
             }
         }
 
         static async Task<string> async_task_main_proc(int arg)
         {
-            CancellationTokenSource tsc = new CancellationTokenSource(500);
             try
             {
                 long last = Time.Tick64;
@@ -747,14 +747,19 @@ namespace DotNetCoreUtilTestApp
 
                     AsyncEvent e = new AsyncManualResetEvent();
 
+                    //if (TaskUtil.CurrentTaskVmGracefulCancel.IsCancellationRequested)
+                    //{
+                    //    throw new TaskCanceledException();
+                    //}
+
                     if (true)
                     {
-                        fire_test(e);
+                        await fire_test(e);
 
                         //await Task.Delay(5);
                         //await AsyncWaiter.Sleep(5);
-                        await e.Wait();
-                        await e.Wait();
+                        //await e.Wait();
+                        //await e.Wait();
                     }
                     else
                     {
@@ -763,7 +768,7 @@ namespace DotNetCoreUtilTestApp
 
                     //await Task.Delay(100, tsc.Token);
 
-                    if ((now - start) >= 1000)
+                    if ((now - start) >= 3000)
                     {
                         //break;
                         throw new ApplicationException("ねこ");
@@ -777,7 +782,7 @@ namespace DotNetCoreUtilTestApp
             }
         }
 
-        static async void fire_test(AsyncEvent e)
+        static async Task fire_test(AsyncEvent e)
         {
             await AsyncWaiter.Sleep(200);
             e.Set();
