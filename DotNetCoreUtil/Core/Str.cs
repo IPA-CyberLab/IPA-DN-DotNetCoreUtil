@@ -2595,33 +2595,7 @@ namespace IPA.DN.CoreUtil
         // 末尾の \r \n を削除
         public static string TrimCrlf(string str)
         {
-            int len;
-            // 引数チェック
-            if (str == null)
-            {
-                return "";
-            }
-            len = str.Length;
-            if (len == 0)
-            {
-                return "";
-            }
-
-            if (str[len - 1] == '\n')
-            {
-                if (len >= 2 && str[len - 2] == '\r')
-                {
-                    str = str.Substring(0, len - 2);
-                }
-
-                str = str.Substring(0, len - 1);
-            }
-            else if (str[len - 1] == '\r')
-            {
-                str = str.Substring(0, len - 1);
-            }
-
-            return str;
+            return str.NonNull().TrimEnd('\r', '\n');
         }
 
         // 指定した文字列がすべて大文字かどうかチェックする

@@ -48,6 +48,13 @@ using YamlDotNet.Core;
 
 namespace DotNetCoreUtilTestApp
 {
+
+    [Serializable]
+    public class DBTestSettings
+    {
+        public string DBConnectStr { get; set; }
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -58,7 +65,29 @@ namespace DotNetCoreUtilTestApp
 
             //slack_test();
 
-            async_test();
+            //async_test();
+
+            //db_test();
+
+            DbTest.db_test();
+        }
+
+        public static void db_test()
+        {
+            Cfg<DBTestSettings> cfg = new Cfg<DBTestSettings>();
+
+            Database db = new Database(cfg.ConfigSafe.DBConnectStr);
+
+            db.Tran(() =>
+            {
+                db.Query("select * from test");
+
+                Data d = db.ReadAllData();
+
+                Json.Serialize(d).Print();
+
+                return true;
+            });
         }
 
         [Serializable]

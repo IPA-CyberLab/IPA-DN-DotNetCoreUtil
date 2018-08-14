@@ -169,6 +169,52 @@ namespace IPA.DN.CoreUtil
         }
     }
 
+    // Ref クラス
+    public class Ref<T>
+    {
+        public Ref() : this(default(T)) { }
+        public Ref(T value)
+        {
+            Value = value;
+        }
+
+        public T Value { get; set; }
+        public void Set(T value) => this.Value = value;
+        public T Get() => this.Value;
+        public bool IsTrue()
+        {
+            switch (this.Value)
+            {
+                case bool b:
+                    return b;
+                case int i:
+                    return (i != 0);
+                case string s:
+                    return Str.StrToBool(s);
+            }
+            return Str.StrToBool(this.Value.ToString());
+        }
+        public override string ToString() => Value?.ToString() ?? null;
+
+        public override bool Equals(object obj)
+        {
+            var @ref = obj as Ref<T>;
+            return @ref != null &&
+                   EqualityComparer<T>.Default.Equals(Value, @ref.Value);
+        }
+
+        public override int GetHashCode()
+        {
+            return -1937169414 + EqualityComparer<T>.Default.GetHashCode(Value);
+        }
+
+        public static bool operator true(Ref<T> r) { return r.IsTrue();  }
+        public static bool operator false(Ref<T> r) { return !r.IsTrue(); }
+        public static bool operator ==(Ref<T> r, bool b) { return r.IsTrue() == b; }
+        public static bool operator !=(Ref<T> r, bool b) { return r.IsTrue() != b; }
+        public static bool operator !(Ref<T> r) { return !r.IsTrue();  }
+    }
+
     // ユーティリティクラス
     public static class Util
     {
