@@ -63,6 +63,11 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode();
 
+            string str = System.AppContext.BaseDirectory;
+            str.Print();
+            return;
+
+
             //twitter_test();
 
             //slack_test();

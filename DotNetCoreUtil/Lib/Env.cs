@@ -110,8 +110,8 @@ namespace IPA.DN.CoreUtil.Lib
             ExeFileName = IO.RemoveLastEnMark(getMyExeFileName());
             if (Str.IsEmptyStr(ExeFileName) == false)
             {
-                AppRootDir = ExeFileDir = IO.RemoveLastEnMark(Path.GetDirectoryName(ExeFileName));
-                // 現在のディレクトリから 1 つずつ遡ってアプリケーションの root ディレクトリを取得する
+                AppRootDir = ExeFileDir = IO.RemoveLastEnMark(System.AppContext.BaseDirectory);
+                // プログラムのあるディレクトリから 1 つずつ遡ってアプリケーションの root ディレクトリを取得する
                 string tmp = ExeFileDir;
                 while (true)
                 {
