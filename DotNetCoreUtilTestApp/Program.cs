@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using System.Text;
 using System.IO;
@@ -59,24 +60,22 @@ namespace DotNetCoreUtilTestApp
 
     class Program
     {
+        [DllImport("MyLib.dll", CallingConvention = CallingConvention.StdCall)]
+        internal static extern long NativeMethod();
+
         static void Main(string[] args)
         {
             Dbg.SetDebugMode();
 
-            string str = System.AppContext.BaseDirectory;
-            str.Print();
-            return;
-
-
             //twitter_test();
 
-            //slack_test();
+            slack_test();
 
             //async_test();
 
             //db_test();
 
-            DbTest.db_test();
+            //DbTest.db_test();
         }
 
         public static void db_test()

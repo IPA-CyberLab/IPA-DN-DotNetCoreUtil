@@ -118,7 +118,7 @@ namespace IPA.DN.CoreUtil.Lib
                     try
                     {
                         tmp = Path.GetDirectoryName(tmp);
-                        if (File.Exists(Path.Combine(tmp, "approot")))
+                        if (File.Exists(Path.Combine(tmp, "approot")) || File.Exists(Path.Combine(tmp, "appsettings.json")) || File.Exists(Path.Combine(tmp, "appsettings.Development.json")))
                         {
                             AppRootDir = tmp;
                             break;
