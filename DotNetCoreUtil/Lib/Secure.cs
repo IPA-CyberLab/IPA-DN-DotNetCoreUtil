@@ -26,7 +26,7 @@ using Org.BouncyCastle.X509;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // Rsa アルゴリズム
     public class Rsa

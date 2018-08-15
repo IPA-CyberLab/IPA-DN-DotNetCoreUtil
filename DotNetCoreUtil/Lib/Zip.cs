@@ -14,7 +14,7 @@ using System.IO;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct ZipDataHeader
@@ -160,7 +160,7 @@ namespace IPA.DN.CoreUtil
             public uint HeaderPos;
             public Encoding Encoding;
             public bool Compress;
-            public CoreUtil.Internal.ZStream ZStream;
+            public CoreUtil.Lib.Internal.ZStream ZStream;
 
             public void WriteZipDataHeader(ref ZipDataHeader h, bool writeSizes)
             {
@@ -276,7 +276,7 @@ namespace IPA.DN.CoreUtil
 
             if (compress)
             {
-                f.ZStream = new CoreUtil.Internal.ZStream();
+                f.ZStream = new CoreUtil.Lib.Internal.ZStream();
                 f.ZStream.deflateInit(-1, -15);
             }
 
@@ -298,7 +298,7 @@ namespace IPA.DN.CoreUtil
             }
             else
             {
-                CoreUtil.Internal.ZStream zs = currentFile.ZStream;
+                CoreUtil.Lib.Internal.ZStream zs = currentFile.ZStream;
 
                 byte[] srcData = Util.ExtractByteArray(data, pos, len);
                 byte[] dstData = new byte[srcData.Length * 2 + 100];
@@ -313,11 +313,11 @@ namespace IPA.DN.CoreUtil
 
                 if (currentFile.Size == (currentFile.CurrentSize + len))
                 {
-                    zs.deflate(CoreUtil.Internal.zlibConst.Z_FINISH);
+                    zs.deflate(CoreUtil.Lib.Internal.zlibConst.Z_FINISH);
                 }
                 else
                 {
-                    zs.deflate(CoreUtil.Internal.zlibConst.Z_SYNC_FLUSH);
+                    zs.deflate(CoreUtil.Lib.Internal.zlibConst.Z_SYNC_FLUSH);
                 }
 
                 fifo.Write(dstData, 0, dstData.Length - zs.avail_out);

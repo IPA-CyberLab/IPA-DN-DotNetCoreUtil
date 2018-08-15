@@ -57,7 +57,7 @@ using static System.Console;
 
 #pragma warning disable 162
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public class Class1
     {

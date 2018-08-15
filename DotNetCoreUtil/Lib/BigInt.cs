@@ -133,7 +133,7 @@
 
 using System;
 
-namespace IPA.DN.CoreUtil.BigInt
+namespace IPA.DN.CoreUtil.Lib.BigInt
 {
 
     public class BigInteger

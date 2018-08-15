@@ -21,7 +21,7 @@ using System.Net.Mime;
 
 #pragma warning disable 0618
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public enum SendMailVersion
     {

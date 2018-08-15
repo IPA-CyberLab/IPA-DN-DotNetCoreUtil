@@ -22,7 +22,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Net.Mail;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public class IPInfoEntry : IComparable<IPInfoEntry>
     {

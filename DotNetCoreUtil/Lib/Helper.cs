@@ -16,7 +16,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 
-using IPA.DN.CoreUtil;
+using IPA.DN.CoreUtil.Lib;
 
 namespace IPA.DN.CoreUtil.Helper.Basic
 {

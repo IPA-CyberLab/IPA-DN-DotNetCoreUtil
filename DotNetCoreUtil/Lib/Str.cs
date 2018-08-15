@@ -22,11 +22,11 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.Runtime.InteropServices;
 using System.Reflection;
-using IPA.DN.CoreUtil.BigInt;
+using IPA.DN.CoreUtil.Lib.BigInt;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // DateTime をシンブル文字列に変換
     public enum DtstrOption

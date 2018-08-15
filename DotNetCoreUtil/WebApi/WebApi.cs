@@ -17,9 +17,10 @@ using System.Net.Cache;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
+using IPA.DN.CoreUtil.Lib;
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.WebApi
 {
     public class WebResponseException : Exception
     {

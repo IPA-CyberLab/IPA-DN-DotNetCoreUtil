@@ -20,7 +20,7 @@ using System.Net.Mail;
 using System.Net.Mime;
 using System.Reflection;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public class Stb
     {

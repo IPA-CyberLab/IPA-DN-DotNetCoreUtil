@@ -22,9 +22,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
-using IPA.DN.CoreUtil.BigInt;
+using IPA.DN.CoreUtil.Lib.BigInt;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // ソケットの種類
     public enum SockType

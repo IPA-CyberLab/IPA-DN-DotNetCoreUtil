@@ -22,7 +22,7 @@ using System.Net.Mime;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public static class Env
     {

@@ -23,7 +23,7 @@ using System.Xml.Serialization;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // 言語一覧
     public enum CoreLanguage

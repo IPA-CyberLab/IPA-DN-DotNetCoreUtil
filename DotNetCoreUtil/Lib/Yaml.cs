@@ -19,7 +19,7 @@ using YamlDotNet.Serialization;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public static class Yaml
     {

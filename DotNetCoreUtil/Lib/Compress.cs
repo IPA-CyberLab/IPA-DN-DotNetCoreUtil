@@ -14,9 +14,9 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
-using IPA.DN.CoreUtil.Internal;
+using IPA.DN.CoreUtil.Lib.Internal;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public static class ZLib
     {

@@ -17,7 +17,7 @@ using System.Net.NetworkInformation;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public class Cfg<T> : IDisposable
         where T : class, new()

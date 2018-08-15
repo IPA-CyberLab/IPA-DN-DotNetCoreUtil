@@ -19,7 +19,7 @@ using Newtonsoft.Json.Linq;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public static class Json
     {

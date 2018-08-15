@@ -19,7 +19,7 @@ using System.IO;
 using System.Drawing;
 using System.Diagnostics;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     class TimeHelper
     {

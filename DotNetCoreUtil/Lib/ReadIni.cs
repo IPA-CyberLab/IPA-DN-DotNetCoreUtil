@@ -14,7 +14,7 @@ using System.Web;
 using System.IO;
 using System.Drawing;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // Ini ファイルの読み込み
     public class ReadIni

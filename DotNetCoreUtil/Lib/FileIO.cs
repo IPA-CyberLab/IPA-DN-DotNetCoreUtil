@@ -18,7 +18,7 @@ using System.Net.NetworkInformation;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // 古いファイルから順番に削除する
     public class OldFileEraser

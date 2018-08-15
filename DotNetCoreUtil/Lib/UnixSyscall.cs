@@ -23,7 +23,7 @@ using Microsoft.Win32.SafeHandles;
 
 #pragma warning disable 0618
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public static class Unisys
     {

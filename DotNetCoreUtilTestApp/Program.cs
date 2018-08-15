@@ -20,8 +20,9 @@ using System.Net.Sockets;
 
 using System.Web;
 
-using IPA.DN.CoreUtil;
-using IPA.DN.CoreUtil.BigInt;
+using IPA.DN.CoreUtil.Lib;
+using IPA.DN.CoreUtil.Lib.BigInt;
+using IPA.DN.CoreUtil.WebApi;
 
 using Org.BouncyCastle;
 using Org.BouncyCastle.Crypto;
@@ -39,6 +40,7 @@ using YamlDotNet.Serialization;
 
 
 using static System.Console;
+
 using IPA.DN.CoreUtil.Helper.Basic;
 using IPA.DN.CoreUtil.Helper.SlackApi;
 

@@ -15,9 +15,9 @@ using System.IO.Compression;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-using IPA.DN.CoreUtil.Internal;
+using IPA.DN.CoreUtil.Lib.Internal;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct GZipHeader

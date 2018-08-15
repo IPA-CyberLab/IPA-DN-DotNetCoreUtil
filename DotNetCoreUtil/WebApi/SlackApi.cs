@@ -17,6 +17,7 @@ using System.Net.Cache;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
+using IPA.DN.CoreUtil.Lib;
 using IPA.DN.CoreUtil.Helper.Basic;
 using IPA.DN.CoreUtil.Helper.SlackApi;
 
@@ -30,7 +31,7 @@ namespace IPA.DN.CoreUtil.Helper.SlackApi
     }
 }
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.WebApi
 {
     public class SlackApi : WebApi
     {

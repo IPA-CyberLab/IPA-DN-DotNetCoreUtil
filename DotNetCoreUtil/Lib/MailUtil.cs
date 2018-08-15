@@ -18,7 +18,7 @@ using System.Xml.Serialization;
 using System.Net.Mail;
 
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public class MailUser : IComparable<MailUser>
     {

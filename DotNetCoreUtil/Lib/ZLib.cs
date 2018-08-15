@@ -46,7 +46,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using System;
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class Adler32
@@ -151,7 +151,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     internal sealed class Deflate
@@ -1949,7 +1949,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class InfBlocks
@@ -2668,7 +2668,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class InfCodes
@@ -3383,7 +3383,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class Inflate
@@ -3832,7 +3832,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class InfTree
@@ -4208,7 +4208,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class StaticTree
@@ -4260,7 +4260,7 @@ namespace IPA.DN.CoreUtil.Internal
 
 
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     internal class SupportClass
     {
@@ -4470,7 +4470,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed class Tree
@@ -4818,7 +4818,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     internal class ZInputStream : System.IO.BinaryReader
@@ -4998,7 +4998,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed internal class zlibConst
@@ -5081,7 +5081,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     internal class ZOutputStream : System.IO.Stream
@@ -5361,7 +5361,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
     sealed internal class ZStream
@@ -5593,7 +5593,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * and contributors of zlib.
 */
 
-namespace IPA.DN.CoreUtil.Internal
+namespace IPA.DN.CoreUtil.Lib.Internal
 {
 
 

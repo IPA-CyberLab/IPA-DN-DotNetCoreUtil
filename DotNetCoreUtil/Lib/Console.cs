@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     // コンソール入出力
     public static class Con

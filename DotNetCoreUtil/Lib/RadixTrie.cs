@@ -27,7 +27,7 @@ using System.Net.Mail;
 // http://paratechnical.blogspot.com/2011/03/radix-tree-implementation-in-c.html
 // https://gist.githubusercontent.com/paratechnical/2869170/raw/79a8a56c04f5a3183b8ffe1f50dd200c4d6b68ef/C%23%20radix%20tree
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     /// <summary>
     /// represents a node in the radix tree

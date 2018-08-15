@@ -14,11 +14,11 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
-using IPA.DN.CoreUtil.BigInt;
+using IPA.DN.CoreUtil.Lib.BigInt;
 
 #pragma warning disable 162
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public abstract class IPAddr : IComparable<IPAddr>, IEquatable<IPAddr>
     {

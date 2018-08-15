@@ -20,7 +20,7 @@ using System.Drawing;
 using System.Net.Mail;
 using System.Net.Mime;
 
-namespace IPA.DN.CoreUtil
+namespace IPA.DN.CoreUtil.Lib
 {
     public enum SmtpLanguage
     {
