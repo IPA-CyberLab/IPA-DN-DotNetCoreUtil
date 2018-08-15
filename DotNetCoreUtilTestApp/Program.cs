@@ -69,13 +69,30 @@ namespace DotNetCoreUtilTestApp
 
             //twitter_test();
 
-            slack_test();
+            //slack_test();
 
             //async_test();
 
             //db_test();
 
             //DbTest.db_test();
+
+            //json_test();
+        }
+
+        public static void json_test()
+        {
+            List<DBTestSettings> o = new List<DBTestSettings>();
+            o.Add(new DBTestSettings() { DBConnectStr = "Hello" });
+            o.Add(new DBTestSettings() { DBConnectStr = "Neko" });
+            o.Add(new DBTestSettings() { DBConnectStr = "Cat" });
+            o.Add(new DBTestSettings() { DBConnectStr = "Dog\ncat\"z" });
+            o.Add(null);
+            string json = Json.SerializeLog(o.ToArray());
+            json.Print();
+
+            StringReader r = new StringReader(json.ReplaceStr("}",""));
+            Json.DeserializeLargeArrayAsync<DBTestSettings>(r, item => { item.ObjectToJson().Print(); return true; }, (str, exc) => { exc.ToString().Print(); return true; }).Wait();
         }
 
         public static void db_test()

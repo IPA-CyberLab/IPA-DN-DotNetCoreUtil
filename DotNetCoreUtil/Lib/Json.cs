@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -25,7 +26,22 @@ namespace IPA.DN.CoreUtil.Lib
     {
         public const int DefaultMaxDepth = 8;
 
-        public static string Serialize(object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth)
+        public static string SerializeLog(IEnumerable item_array, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth)
+        {
+            StringWriter w = new StringWriter();
+            SerializeLogToTextWriterAsync(w, item_array, include_null, escape_html, max_depth).Wait();
+            return w.ToString();
+        }
+
+        public static async Task SerializeLogToTextWriterAsync(TextWriter w, IEnumerable item_array, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth)
+        {
+            foreach (var item in item_array)
+            {
+                await w.WriteLineAsync(Serialize(item, include_null, escape_html, max_depth, true));
+            }
+        }
+
+        public static string Serialize(object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth, bool compact = false)
         {
             JsonSerializerSettings setting = new JsonSerializerSettings()
             {
@@ -35,7 +51,7 @@ namespace IPA.DN.CoreUtil.Lib
                 StringEscapeHandling = escape_html ? StringEscapeHandling.EscapeHtml : StringEscapeHandling.Default,
                 
             };
-            return JsonConvert.SerializeObject(obj, Formatting.Indented, setting);
+            return JsonConvert.SerializeObject(obj, compact ? Formatting.None : Formatting.Indented, setting);
         }
 
         public static T Deserialize<T>(string str, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
@@ -48,6 +64,38 @@ namespace IPA.DN.CoreUtil.Lib
                 ReferenceLoopHandling = ReferenceLoopHandling.Error,
             };
             return JsonConvert.DeserializeObject<T>(str, setting);
+        }
+
+        public static async Task<bool> DeserializeLargeArrayAsync<T>(TextReader txt, Func<T, bool> item_read_callback, Func<string, Exception, bool> parse_error_callback = null, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
+        {
+            while (true)
+            {
+                string line = await txt.ReadLineAsync();
+                if (line == null)
+                {
+                    return true;
+                }
+                if (line.IsFilled())
+                {
+                    object obj = null;
+                    try
+                    {
+                        obj = (object)Deserialize<T>(line, include_null, max_depth);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (parse_error_callback(line, ex) == false)
+                        {
+                            return false;
+                        }
+                    }
+
+                    if (item_read_callback((T)obj) == false)
+                    {
+                        return false;
+                    }
+                }
+            }
         }
 
         public static string SerializeDynamic(dynamic d)
