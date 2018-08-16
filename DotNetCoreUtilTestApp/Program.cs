@@ -84,12 +84,6 @@ namespace DotNetCoreUtilTestApp
 
             //json_test();
 
-            STTEST t = new STTEST()
-            {
-                A = "Hello",
-            };
-            t.ObjectToJson().Print();
-            //t.ObjectToYaml().Print();
         }
 
         public static void json_test()

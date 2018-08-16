@@ -3,6 +3,18 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>IPA.DN.CoreUtil</RootNamespace>
+    <PackageId>IPA-DN-DotNetCoreUtil</PackageId>
+    <Version>1.0.2018.0816</Version>
+    <Authors>Daiyuu Nobori</Authors>
+    <Company>IPA-CyberLab</Company>
+    <Description>Daiyuu Nobori's .NET Library</Description>
+    <IncludeSymbols>true</IncludeSymbols>
+    <RepositoryUrl>https://github.com/IPA-CyberLab/IPA-DN-DotNetCoreUtil/</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <SignAssembly>false</SignAssembly>
+    <AssemblyVersion>1.0.2018.0816</AssemblyVersion>
+    <FileVersion>1.0.2018.0816</FileVersion>
+    
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
