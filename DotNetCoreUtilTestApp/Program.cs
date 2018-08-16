@@ -58,6 +58,11 @@ namespace DotNetCoreUtilTestApp
         public string DBConnectStr { get; set; }
     }
 
+    public struct STTEST
+    {
+        public string A;
+    }
+
     class Program
     {
         [DllImport("MyLib.dll", CallingConvention = CallingConvention.StdCall)]
@@ -78,6 +83,13 @@ namespace DotNetCoreUtilTestApp
             //DbTest.db_test();
 
             //json_test();
+
+            STTEST t = new STTEST()
+            {
+                A = "Hello",
+            };
+            t.ObjectToJson().Print();
+            //t.ObjectToYaml().Print();
         }
 
         public static void json_test()

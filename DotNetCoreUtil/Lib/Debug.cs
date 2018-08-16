@@ -40,8 +40,6 @@ namespace IPA.DN.CoreUtil.Lib
 
         public static void WriteCurrentThreadId(string str = "")
         {
-            if (Dbg.IsDebugMode == false) return;
-
             string a = $"Thread[{ThreadObj.CurrentThreadId}]";
 
             if (Str.IsFilledStr(str))
@@ -64,6 +62,7 @@ namespace IPA.DN.CoreUtil.Lib
             {
                 Console.WriteLine(str);
             }
+            Debug.WriteLine(str);
             return str;
         }
         public static void WriteLine(string str, params object[] args)
@@ -72,6 +71,7 @@ namespace IPA.DN.CoreUtil.Lib
             {
                 Console.WriteLine(str, args);
             }
+            Debug.WriteLine(str);
         }
 
         public static string GetObjectInnerString(object obj, string instance_base_name = "")
