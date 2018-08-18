@@ -118,7 +118,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class WebApi
     {
-        public int TimeoutSecs { get; set; } = 5;
+        public int TimeoutSecs { get; set; } = 10;
         public int MaxRecvSize { get; set; } = 100 * 1024 * 1024;
         public bool SslAccentAnyCerts { get; set; } = false;
         public List<string> SslAcceptCertSHA1HashList { get; set; } = new List<string>();
