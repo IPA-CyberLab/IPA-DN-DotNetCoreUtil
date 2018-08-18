@@ -21,8 +21,8 @@ using System.Net.Sockets;
 
 using System.Web;
 
-using IPA.DN.CoreUtil.Lib;
-using IPA.DN.CoreUtil.Lib.BigInt;
+using IPA.DN.CoreUtil.Basic;
+using IPA.DN.CoreUtil.Basic.BigInt;
 using IPA.DN.CoreUtil.WebApi;
 
 using Org.BouncyCastle;

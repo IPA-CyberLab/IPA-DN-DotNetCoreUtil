@@ -17,7 +17,7 @@ using System.Net.Cache;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-using IPA.DN.CoreUtil.Lib;
+using IPA.DN.CoreUtil.Basic;
 using IPA.DN.CoreUtil.Helper.Basic;
 using IPA.DN.CoreUtil.Helper.SlackApi;
 

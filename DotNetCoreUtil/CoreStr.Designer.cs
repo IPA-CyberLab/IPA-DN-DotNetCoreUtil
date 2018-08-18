@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace IPA.DN.CoreUtil.Lib {
+namespace IPA.DN.CoreUtil.Basic {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace IPA.DN.CoreUtil.Lib {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("IPA.DN.CoreUtil.Lib.CoreStr", typeof(CoreStr).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("IPA.DN.CoreUtil.Basic.CoreStr", typeof(CoreStr).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

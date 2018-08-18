@@ -23,7 +23,7 @@ using System.Web;
 using System.IO;
 using System.Drawing;
 
-using IPA.DN.CoreUtil.Lib;
+using IPA.DN.CoreUtil.Basic;
 using IPA.DN.CoreUtil.Helper.Basic;
 
 #pragma warning disable 162
