@@ -291,12 +291,12 @@ namespace IPA.DN.CoreUtil.Basic
     {
         public string BaseName = "";
 
-        public List<ValueTuple<MemberInfo, object>> Vars = new List<(MemberInfo, object)>();
+        public List<(MemberInfo member_info, object data)> Vars = new List<(MemberInfo, object)>();
         public List<DebugVars> Childlen = new List<DebugVars>();
 
         public void WriteToString(StringWriter w, ImmutableList<string> parents)
         {
-            this.Vars.Sort((a, b) => string.Compare(a.Item1.Name, b.Item1.Name));
+            this.Vars.Sort((a, b) => string.Compare(a.member_info.Name, b.member_info.Name));
             this.Childlen.Sort((a, b) => string.Compare(a.BaseName, b.BaseName));
 
             foreach (DebugVars var in Childlen)
@@ -306,8 +306,8 @@ namespace IPA.DN.CoreUtil.Basic
 
             foreach (var data in Vars)
             {
-                MemberInfo p = data.Item1;
-                object o = data.Item2;
+                MemberInfo p = data.member_info;
+                object o = data.data;
                 string print_str = "null";
                 string closure = "'";
                 if ((o?.GetType().IsPrimitive ?? true) || (o?.GetType().IsEnum ?? false)) closure = "";

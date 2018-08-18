@@ -22,6 +22,59 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil.Basic
 {
+    public class JsonRpcRequest
+    {
+        [JsonProperty("version")]
+        public string Version { get; set; } = "2.0";
+
+        [JsonProperty("method")]
+        public string Method { get; set; } = "";
+
+        [JsonProperty("params")]
+        public object Params { get; set; } = null;
+
+        [JsonProperty("id")]
+        public string Id { get; set; } = null;
+    }
+
+    public class JsonRpcResponse
+    {
+        [JsonProperty("version")]
+        public string Version { get; set; } = "2.0";
+
+        [JsonProperty("result")]
+        public object Result { get; set; } = null;
+
+        [JsonProperty("error")]
+        public JsonRpcError Error { get; set; } = null;
+
+        [JsonProperty("id")]
+        public string Id { get; set; } = null;
+    }
+
+    public class JsonRpcError
+    {
+        [JsonProperty("code")]
+        public int Code { get; set; } = 0;
+
+        [JsonProperty("message")]
+        public string Message { get; set; } = null;
+
+        [JsonProperty("data")]
+        public object Data { get; set; } = null;
+    }
+
+    public static class JsonRpc
+    {
+        public static string ClientCallsBuild((string method, object @params, string id)[] calls)
+        {
+            foreach (var v in calls)
+            {
+            }
+            return "";
+        }
+    }
+
     public static class Json
     {
         public const int DefaultMaxDepth = 8;

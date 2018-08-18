@@ -130,7 +130,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public bool DebugPrintResponse { get; set; } = false;
 
-        public string BuildQueryString(params ValueTuple<string, string>[] query_list)
+        public string BuildQueryString(params (string name, string value)[] query_list)
         {
             StringWriter w = new StringWriter();
             int count = 0;
@@ -142,14 +142,14 @@ namespace IPA.DN.CoreUtil.WebApi
                     {
                         w.Write("&");
                     }
-                    w.Write($"{t.Item1.EncodeUrl(this.RequestEncoding)}={t.Item2.EncodeUrl(this.RequestEncoding)}");
+                    w.Write($"{t.name.EncodeUrl(this.RequestEncoding)}={t.value.EncodeUrl(this.RequestEncoding)}");
                     count++;
                 }
             }
             return w.ToString();
         }
 
-        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
+        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params (string name, string value)[] query_list)
         {
             string qs = "";
 
@@ -191,7 +191,7 @@ namespace IPA.DN.CoreUtil.WebApi
             
         }
 
-        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
+        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, params (string name, string value)[] query_list)
         {
             HttpWebRequest r = CreateWebRequest(method, url, query_list);
 

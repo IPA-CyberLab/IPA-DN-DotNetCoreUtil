@@ -55,7 +55,7 @@ namespace IPA.DN.CoreUtil.WebApi
             this.AccessTokenStr = access_token;
         }
 
-        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params ValueTuple<string, string>[] query_list)
+        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params (string name, string value)[] query_list)
         {
             HttpWebRequest r = base.CreateWebRequest(method, url, query_list);
 

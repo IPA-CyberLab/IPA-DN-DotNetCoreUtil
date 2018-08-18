@@ -452,7 +452,7 @@ namespace IPA.DN.CoreUtil.Basic
     static class AbortedTaskExecuteThreadPrivate
     {
         static object LockObj = new object();
-        static Dictionary<object, Queue<ValueTuple<SendOrPostCallback, object>>> dispatch_queue_list = new Dictionary<object, Queue<(SendOrPostCallback, object)>>();
+        static Dictionary<object, Queue<(SendOrPostCallback callback, object args)>> dispatch_queue_list = new Dictionary<object, Queue<(SendOrPostCallback, object)>>();
         static object dummy_orphants = new object();
         static AutoResetEvent ev = new AutoResetEvent(true);
 
@@ -469,13 +469,13 @@ namespace IPA.DN.CoreUtil.Basic
 
             while (true)
             {
-                List<ValueTuple<SendOrPostCallback, object>> actions = new List<(SendOrPostCallback, object)>();
+                var actions = new List<(SendOrPostCallback callback, object args)>();
 
                 lock (LockObj)
                 {
                     foreach (object ctx in dispatch_queue_list.Keys)
                     {
-                        Queue<ValueTuple<SendOrPostCallback, object>> queue = dispatch_queue_list[ctx];
+                        var queue = dispatch_queue_list[ctx];
 
                         while (queue.Count >= 1)
                         {
@@ -484,12 +484,12 @@ namespace IPA.DN.CoreUtil.Basic
                     }
                 }
 
-                foreach (ValueTuple<SendOrPostCallback, object> action in actions)
+                foreach (var action in actions)
                 {
                     try
                     {
                         //Dbg.WriteCurrentThreadId("aborted_call");
-                        action.Item1(action.Item2);
+                        action.callback(action.args);
                     }
                     catch (Exception ex)
                     {
@@ -522,12 +522,12 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 if (dispatch_queue_list.ContainsKey(ctx))
                 {
-                    Queue<ValueTuple<SendOrPostCallback, object>> queue = dispatch_queue_list[ctx];
+                    var queue = dispatch_queue_list[ctx];
 
                     while (queue.Count >= 1)
                     {
                         var q = queue.Dequeue();
-                        PostAction(dummy_orphants, q.Item1, q.Item2);
+                        PostAction(dummy_orphants, q.callback, q.args);
                     }
 
                     dispatch_queue_list.Remove(ctx);
@@ -560,7 +560,7 @@ namespace IPA.DN.CoreUtil.Basic
         Func<TIn, Task<TResult>> root_function;
         Task root_task;
 
-        Queue<ValueTuple<SendOrPostCallback, object>> dispatch_queue = new Queue<ValueTuple<SendOrPostCallback, object>>();
+        Queue<(SendOrPostCallback callback, object args)> dispatch_queue = new Queue<(SendOrPostCallback callback, object args)>();
         AutoResetEvent dispatch_queue_event = new AutoResetEvent(false);
 
         public TIn InputParameter { get; }
@@ -743,7 +743,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                 while (true)
                 {
-                    ValueTuple<SendOrPostCallback, object> queued_item;
+                    (SendOrPostCallback callback, object args) queued_item;
 
                     lock (this.dispatch_queue)
                     {
@@ -767,7 +767,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                     try
                     {
-                        queued_item.Item1(queued_item.Item2);
+                        queued_item.callback(queued_item.args);
                     }
                     catch (Exception ex)
                     {
@@ -778,7 +778,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             no_more_enqueue = true;
 
-            List<ValueTuple<SendOrPostCallback, object>> remaining_tasks = new List<(SendOrPostCallback, object)>();
+            List<(SendOrPostCallback callback, object args)> remaining_tasks = new List<(SendOrPostCallback callback, object args)>();
             lock (this.dispatch_queue)
             {
                 while (true)
@@ -791,7 +791,7 @@ namespace IPA.DN.CoreUtil.Basic
                 }
                 foreach (var x in remaining_tasks)
                 {
-                    AbortedTaskExecuteThreadPrivate.PostAction(this.sync_ctx, x.Item1, x.Item2);
+                    AbortedTaskExecuteThreadPrivate.PostAction(this.sync_ctx, x.callback, x.args);
                 }
             }
         }

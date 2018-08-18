@@ -82,13 +82,13 @@ namespace DotNetCoreUtilTestApp
 
             //DbTest.db_test();
 
-            //json_test();
+            json_test();
 
         }
 
         public static void json_test()
         {
-            List<DBTestSettings> o = new List<DBTestSettings>();
+            /*List<DBTestSettings> o = new List<DBTestSettings>();
             o.Add(new DBTestSettings() { DBConnectStr = "Hello" });
             o.Add(new DBTestSettings() { DBConnectStr = "Neko" });
             o.Add(new DBTestSettings() { DBConnectStr = "Cat" });
@@ -98,7 +98,16 @@ namespace DotNetCoreUtilTestApp
             json.Print();
 
             StringReader r = new StringReader(json.ReplaceStr("}",""));
-            Json.DeserializeLargeArrayAsync<DBTestSettings>(r, item => { item.ObjectToJson().Print(); return true; }, (str, exc) => { exc.ToString().Print(); return true; }).Wait();
+            Json.DeserializeLargeArrayAsync<DBTestSettings>(r, item => { item.ObjectToJson().Print(); return true; }, (str, exc) => { exc.ToString().Print(); return true; }).Wait();*/
+
+            DBTestSettings db1 = new DBTestSettings();
+            DBTestSettings db2 = new DBTestSettings();
+            DBTestSettings db3 = new DBTestSettings();
+
+            DBTestSettings[] dbs = new DBTestSettings[] { db1, db2, db3, };
+            List<DBTestSettings> o = new List<DBTestSettings>(dbs);
+
+            o.ObjectToJson(true).Print();
         }
 
         public static void db_test()
