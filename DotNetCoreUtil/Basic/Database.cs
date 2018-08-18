@@ -81,26 +81,6 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
-    // 使いやすい DbContext
-    public class DbProject : DbContext
-    {
-        public string ConnectionString { get; }
-        public Ref<bool> EnableConsoleDebug { get; } = new Ref<bool>(false);
-
-        public DbProject(string connection_string, bool enable_console_debug = false)
-        {
-            this.ConnectionString = connection_string;
-            this.EnableConsoleDebug.Set(enable_console_debug);
-
-            this.GetService<ILoggerFactory>().AddProvider(new DbConsoleDebugPrinterProvider(this.EnableConsoleDebug));
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlServer(this.ConnectionString);
-        }
-    }
-
     // データベース値
     public class DatabaseValue
     {

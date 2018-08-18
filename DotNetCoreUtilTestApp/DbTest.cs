@@ -32,61 +32,8 @@ namespace DotNetCoreUtilTestApp
 {
     static class DbTest
     {
-        public class TESTDB2 : DbProject
-        {
-            public TESTDB2(string connection_string) : base(connection_string)
-            {
-            }
-
-            // テーブルの一覧
-            public DbSet<Test> TestList { get; set; }
-
-            // テーブルの定義
-            [Table("test")]
-            public class Test
-            {
-                [Key]
-                public int test_id { get; set; }
-
-                public DateTime test_dt { get; set; }
-                [MaxLength(50)]
-                public string test_str { get; set; }
-            }
-        }
-
         public static void db_test()
         {
-            Cfg<DBTestSettings> cfg = new Cfg<DBTestSettings>();
-
-            Con.WriteLine("a");
-            using (TESTDB2 db = new TESTDB2(cfg.ConfigSafe.DBConnectStr))
-            {
-                Con.WriteLine("x");
-                db.EnableConsoleDebug.Set(true);
-                var test = db.TestList;
-
-                if (false)
-                {
-                    test.Add(new TESTDB2.Test()
-                    {
-                        test_dt = DateTime.Now,
-                        test_str = "Nekosan",
-                    });
-
-                    db.SaveChanges();
-                }
-
-                if (true)
-                {
-                    var items = db.TestList.Where(x => x.test_id == 3);
-                    foreach (var item in items)
-                    {
-                        item.test_dt = Time.NowDateTime;
-                    }
-
-                    db.SaveChanges();
-                }
-            }
         }
     }
 }
