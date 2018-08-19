@@ -70,6 +70,8 @@ namespace DotNetCoreUtilTestApp
 
         static void Main(string[] args)
         {
+            "Test Program".Print();
+
             Dbg.SetDebugMode();
 
             //twitter_test();
@@ -84,7 +86,9 @@ namespace DotNetCoreUtilTestApp
 
             //json_test();
 
-            jsonrpc_test();
+            //jsonrpc_test_with_random_api();
+
+            jsonrpc_http_server_test();
         }
 
         public class genstr_params
@@ -109,7 +113,12 @@ namespace DotNetCoreUtilTestApp
             public int advisoryDelay { get; set; }
         }
 
-        public static void jsonrpc_test()
+        public static void jsonrpc_http_server_test()
+        {
+            HttpServer s = new HttpServer();
+        }
+
+        public static void jsonrpc_test_with_random_api()
         {
             string key = "193ede53-7bd8-44b1-9662-40bd17ff0e67";
             string url = "https://api.random.org/json-rpc/1/invoke";

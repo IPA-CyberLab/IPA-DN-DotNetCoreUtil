@@ -14,6 +14,14 @@ using System.Web;
 using System.IO;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Net;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -111,8 +119,14 @@ namespace IPA.DN.CoreUtil.WebApi
         public object Data { get; set; } = null;
     }
 
-    // 193ede53-7bd8-44b1-9662-40bd17ff0e67
-    // https://api.random.org/json-rpc/1/invoke
+    public abstract class JsonRpcServer
+    {
+    }
+
+    public class JsonHttpRpcServer : JsonRpcServer
+    {
+    }
+
     public abstract class JsonRpcClient
     {
         List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> call_queue = new List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
