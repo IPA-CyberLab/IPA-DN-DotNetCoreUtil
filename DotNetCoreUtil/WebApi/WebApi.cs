@@ -149,9 +149,11 @@ namespace IPA.DN.CoreUtil.WebApi
             return w.ToString();
         }
 
-        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params (string name, string value)[] query_list)
+        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
         {
             string qs = "";
+
+            if (post_content_type.IsEmpty()) post_content_type = "application/x-www-form-urlencoded";
 
             if (method == WebApiMethods.GET || method == WebApiMethods.DELETE)
             {
@@ -184,16 +186,16 @@ namespace IPA.DN.CoreUtil.WebApi
 
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
             {
-                r.ContentType = "application/x-www-form-urlencoded";
+                r.ContentType = post_content_type;
             }
 
             return r;
             
         }
 
-        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, params (string name, string value)[] query_list)
+        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
         {
-            HttpWebRequest r = CreateWebRequest(method, url, query_list);
+            HttpWebRequest r = CreateWebRequest(method, url, null, query_list);
 
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
             {
@@ -211,11 +213,26 @@ namespace IPA.DN.CoreUtil.WebApi
             }
         }
 
+        public async Task<WebRet> RequestWithPostData(string url, byte[] post_data, string post_contents_type = "application/json")
+        {
+            if (post_contents_type.IsEmpty()) post_contents_type = "application/json";
+            HttpWebRequest r = CreateWebRequest(WebApiMethods.POST, url, post_contents_type, null);
+
+            Stream upload = await r.GetRequestStreamAsync();
+            await upload.WriteAsync(post_data, 0, post_data.Length);
+
+            using (HttpWebResponse res = (HttpWebResponse)await r.GetResponseAsync())
+            {
+                byte[] data = await res.GetResponseStream().ReadToEndAsync(this.MaxRecvSize);
+                return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
+            }
+        }
+
         public virtual async Task<WebRet> RequestWithJson(WebApiMethods method, string url, string json_string)
         {
             if (!(method == WebApiMethods.POST || method == WebApiMethods.PUT)) throw new ArgumentException("method");
 
-            HttpWebRequest r = CreateWebRequest(method, url);
+            HttpWebRequest r = CreateWebRequest(method, url, null);
 
             r.ContentType = "application/json";
 

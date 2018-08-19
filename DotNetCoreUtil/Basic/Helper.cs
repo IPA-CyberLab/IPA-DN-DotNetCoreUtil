@@ -170,8 +170,9 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static bool IsZeroDateTime(this DateTime dt) => Util.IsZero(dt);
         public static DateTime NormalizeDateTime(this DateTime dt) => Util.NormalizeDateTime(dt);
 
-        public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth) => Json.Serialize(obj, include_null, escape_html, max_depth);
+        public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth, bool compact = false) => Json.Serialize(obj, include_null, escape_html, max_depth, compact);
         public static T JsonToObject<T>(this string str, bool include_null = false, int? max_depth = Json.DefaultMaxDepth) => Json.Deserialize<T>(str, include_null, max_depth);
+        public static T ConvertJsonObject<T>(this object obj, bool include_null = false, int? max_depth = Json.DefaultMaxDepth) => Json.ConvertObject<T>(obj, include_null, max_depth);
         public static dynamic JsonToDynamic(this string str) => Json.DeserializeDynamic(str);
         public static string ObjectToYaml(this object obj) => Yaml.Serialize(obj);
         public static T YamlToObject<T>(this string str) => Yaml.Deserialize<T>(str);
@@ -183,6 +184,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static void TryCancel(this CancellationTokenSource cts) => TaskUtil.TryCancel(cts);
         public static async Task CancelAsync(this CancellationTokenSource cts, bool throwOnFirstException = false) => await TaskUtil.CancelAsync(cts, throwOnFirstException);
         public static async Task TryCancelAsync(this CancellationTokenSource cts) => await TaskUtil.TryCancelAsync(cts);
+
+        public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
     }
 }
 

@@ -55,9 +55,9 @@ namespace IPA.DN.CoreUtil.WebApi
             this.AccessTokenStr = access_token;
         }
 
-        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, params (string name, string value)[] query_list)
+        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
         {
-            HttpWebRequest r = base.CreateWebRequest(method, url, query_list);
+            HttpWebRequest r = base.CreateWebRequest(method, url, post_content_type, query_list);
 
             if (this.AccessTokenStr.IsFilled())
             {
@@ -89,6 +89,7 @@ namespace IPA.DN.CoreUtil.WebApi
         public async Task<AccessToken> AuthGetAccessTokenAsync(string client_secret, string code, string redirect_url)
         {
             WebRet ret = await this.RequestWithQuery(WebApiMethods.POST, "https://slack.com/api/oauth.access",
+                null,
                 ("client_id", this.ClientId),
                 ("client_secret", client_secret),
                 ("redirect_uri", redirect_url),

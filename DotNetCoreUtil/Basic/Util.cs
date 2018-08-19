@@ -300,6 +300,17 @@ namespace IPA.DN.CoreUtil.Basic
             return BitConverter.ToInt64(c, 0);
         }
 
+        // IEnumerable から Array List を作成
+        public static T[] IEnumerableToArrayList<T>(IEnumerable<T> i)
+        {
+            List<T> ret = new List<T>();
+            foreach (var o in i)
+            {
+                ret.Add(o);
+            }
+            return ret.ToArray();
+        }
+
         // オブジェクトのハッシュ値を計算
         public static ulong GetObjectHash(object o)
         {

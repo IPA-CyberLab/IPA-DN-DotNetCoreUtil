@@ -82,8 +82,58 @@ namespace DotNetCoreUtilTestApp
 
             //DbTest.db_test();
 
-            json_test();
+            //json_test();
 
+            jsonrpc_test();
+        }
+
+        public class genstr_params
+        {
+            public string apiKey;
+            public int n, length;
+            public string characters;
+        }
+
+        public class genstr_response
+        {
+            public class random_t
+            {
+                public string[] data { get; set; }
+                public DateTime completionTime { get; set; }
+            }
+
+            public random_t random { get; set; }
+            public int bitsUsed { get; set; }
+            public int bitsLeft { get; set; }
+            public int requestsLeft { get; set; }
+            public int advisoryDelay { get; set; }
+        }
+
+        public static void jsonrpc_test()
+        {
+            string key = "193ede53-7bd8-44b1-9662-40bd17ff0e67";
+            string url = "https://api.random.org/json-rpc/1/invoke";
+
+            JsonRpcHttpClient c = new JsonRpcHttpClient(url);
+
+            genstr_params p = new genstr_params()
+            {
+                apiKey = key,
+                n = 8,
+                length = 8,
+                characters = "0123456789",
+            };
+
+            /*
+            var res = c.CallAdd<genstr_response>("generateStrings", p);
+            var res2 = c.CallAdd<genstr_response>("generateStrings", p);
+            c.CallAll(false).Wait();
+
+            Con.WriteLine(res.ToString());
+            Con.WriteLine(res2.ToString());*/
+
+            var res3 = c.CallOne<genstr_response>("generateStrings", p, true).Result;
+            Con.WriteLine(res3.ToString());
         }
 
         public static void json_test()
