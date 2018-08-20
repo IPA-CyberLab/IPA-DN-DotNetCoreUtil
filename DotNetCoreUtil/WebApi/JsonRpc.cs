@@ -16,6 +16,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Net;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -28,6 +29,7 @@ using Newtonsoft.Json.Linq;
 
 using IPA.DN.CoreUtil.Basic;
 using IPA.DN.CoreUtil.Helper.Basic;
+using Microsoft.AspNetCore.Routing;
 
 namespace IPA.DN.CoreUtil.WebApi
 {
@@ -125,6 +127,43 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class JsonHttpRpcServer : JsonRpcServer
     {
+        public JsonHttpRpcServer()
+        {
+        }
+
+        public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
+        {
+            await response.WriteAsync("This is a JSON-RPC server.\r\nCurrent time : " + DateTime.Now.ToDtStr(true, DtstrOption.All, true));
+        }
+
+        public void RegisterToHttpServer(IApplicationBuilder app, string template = "rpc")
+        {
+            RouteBuilder rb = new RouteBuilder(app);
+            rb.MapGet(template, GetRequestHandler);
+
+            IRouter router = rb.Build();
+            app.UseRouter(router);
+        }
+    }
+
+    public class JsonHttpRpcListener : HttpServerImplementation
+    {
+        public JsonHttpRpcServer JsonServer { get; }
+
+        public JsonHttpRpcListener(IConfiguration configuration) : base(configuration)
+        {
+            JsonServer = new JsonHttpRpcServer();
+        }
+
+        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig cfg, object param)
+        {
+            return new HttpServer<JsonHttpRpcListener>(cfg, param);
+        }
+
+        public override void SetupStartupConfig(HttpServerStartupConfig cfg, IApplicationBuilder app, IHostingEnvironment env)
+        {
+            this.JsonServer.RegisterToHttpServer(app);
+        }
     }
 
     public abstract class JsonRpcClient

@@ -16,6 +16,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.IO;
 
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+
 using System.Net;
 using System.Net.Sockets;
 
@@ -46,11 +52,49 @@ using IPA.DN.CoreUtil.Helper.Basic;
 using IPA.DN.CoreUtil.Helper.SlackApi;
 
 using YamlDotNet.Core;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Routing;
 
 #pragma warning disable 162
 
 namespace DotNetCoreUtilTestApp
 {
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ValuesController : ControllerBase
+    {
+        // GET api/values
+        [HttpGet]
+        public ActionResult<IEnumerable<string>> Get()
+        {
+            return new string[] { "value1", "value2 " + DateTime.Now.ToString() };
+        }
+
+        // GET api/values/5
+        [HttpGet("{id}")]
+        public ActionResult<string> Get(int id)
+        {
+            return "value";
+        }
+
+        // POST api/values
+        [HttpPost]
+        public void Post([FromBody] string value)
+        {
+        }
+
+        // PUT api/values/5
+        [HttpPut("{id}")]
+        public void Put(int id, [FromBody] string value)
+        {
+        }
+
+        // DELETE api/values/5
+        [HttpDelete("{id}")]
+        public void Delete(int id)
+        {
+        }
+    }
 
     [Serializable]
     public class DBTestSettings
@@ -62,6 +106,7 @@ namespace DotNetCoreUtilTestApp
     {
         public string A;
     }
+
 
     class Program
     {
@@ -115,7 +160,14 @@ namespace DotNetCoreUtilTestApp
 
         public static void jsonrpc_http_server_test()
         {
-            HttpServer s = new HttpServer();
+            HttpServerBuilderConfig cfg = new HttpServerBuilderConfig()
+            {
+            };
+            var s = JsonHttpRpcListener.StartServer(cfg, "neko");
+
+            Con.ReadLine("Enter>");
+
+            s.StopAsync().Wait();
         }
 
         public static void jsonrpc_test_with_random_api()

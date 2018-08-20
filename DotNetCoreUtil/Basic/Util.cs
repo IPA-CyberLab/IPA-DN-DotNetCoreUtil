@@ -1097,4 +1097,10 @@ namespace IPA.DN.CoreUtil.Basic
         public string XmlFileName;
         public string XsdFileName;
     }
+
+    public struct Once
+    {
+        private int flag;
+        public bool IsFirstCall => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
+    }
 }
