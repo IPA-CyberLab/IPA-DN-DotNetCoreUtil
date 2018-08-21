@@ -1098,9 +1098,33 @@ namespace IPA.DN.CoreUtil.Basic
         public string XsdFileName;
     }
 
+    // 1 度しか実行しない処理を実行しやすくするための構造体
     public struct Once
     {
-        private int flag;
+        volatile private int flag;
         public bool IsFirstCall => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
+    }
+
+    public static class GlobalObjectExchange
+    {
+        static Dictionary<string, object> table = new Dictionary<string, object>();
+
+        public static object Withdraw(string token)
+        {
+            if (Str.IsEmptyStr(token)) throw new ArgumentException("token");
+            lock (table)
+            {
+                object ret = table[token];
+                table.Remove(token);
+                return ret;
+            }
+        }
+
+        public static string Deposit(object o)
+        {
+            string id = Str.NewGuid();
+            lock (table) table.Add(id, o);
+            return id;
+        }
     }
 }

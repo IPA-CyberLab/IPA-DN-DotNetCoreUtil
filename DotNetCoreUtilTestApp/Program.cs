@@ -158,12 +158,41 @@ namespace DotNetCoreUtilTestApp
             public int advisoryDelay { get; set; }
         }
 
+        public class rpc_handler_test : JsonRpcServerHandler
+        {
+            [JsonRpcMethod]
+            public string Test(int a)
+            {
+                return "Hello " + a.ToString();
+            }
+
+            [JsonRpcMethod]
+            public async Task<string> Test2(int a)
+            {
+                await TaskUtil.Sleep(1000);
+                return "Hello " + a.ToString();
+            }
+
+            [JsonRpcMethod]
+            public async Task Test3(int a)
+            {
+                await TaskUtil.Sleep(1000);
+            }
+        }
+
         public static void jsonrpc_http_server_test()
         {
+            rpc_handler_test x = new rpc_handler_test();
+            object o = x.InvokeMethod("Test3", 3).Result;
+            string r = (string)o;
+            r.Print();
+            return;
+
             HttpServerBuilderConfig cfg = new HttpServerBuilderConfig()
             {
             };
-            var s = JsonHttpRpcListener.StartServer(cfg, "neko");
+            rpc_handler_test h = new rpc_handler_test();
+            var s = JsonHttpRpcListener.StartServer(cfg, h);
 
             Con.ReadLine("Enter>");
 

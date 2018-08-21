@@ -43,10 +43,14 @@ namespace IPA.DN.CoreUtil.WebApi
         public IConfiguration Configuration { get; }
         HttpServerBuilderConfig builder_config;
         HttpServerStartupConfig startup_config;
+        protected object Param;
 
         public HttpServerImplementation(IConfiguration configuration)
         {
             this.Configuration = configuration;
+
+            string param_token = this.Configuration["coreutil_param_token"];
+            this.Param = GlobalObjectExchange.Withdraw(param_token);
 
             this.builder_config = this.Configuration["coreutil_ServerBuilderConfig"].JsonToObject<HttpServerBuilderConfig>();
             this.startup_config = new HttpServerStartupConfig();
@@ -91,42 +95,52 @@ namespace IPA.DN.CoreUtil.WebApi
 
             IO.MakeDirIfNotExists(config.ContentsRoot);
 
-            var dict = new Dictionary<string, string>
+            string param_token = GlobalObjectExchange.Deposit(param);
+            try
             {
-                {"coreutil_ServerBuilderConfig", this.config.ObjectToJson() },
-            };
-
-            IConfiguration iconf = new ConfigurationBuilder()
-                .AddInMemoryCollection(dict)
-                .Build();
-
-            var h = new WebHostBuilder()
-                .UseKestrel(opt =>
+                var dict = new Dictionary<string, string>
                 {
-                    if (config.LocalHostOnly)
-                        foreach (int port in config.ports_list) opt.ListenLocalhost(port);
-                    else
-                        foreach (int port in config.ports_list) opt.ListenAnyIP(port);
-                })
-                .UseWebRoot(config.ContentsRoot)
-                .UseContentRoot(config.ContentsRoot)
-                .ConfigureAppConfiguration((hostingContext, config) =>
-                {
+                    {"coreutil_ServerBuilderConfig", this.config.ObjectToJson() },
+                    {"coreutil_param_token", param_token },
+                };
 
-                })
-                .ConfigureLogging((hostingContext, logging) =>
-                {
-                    if (config.DebugToConsole)
+                IConfiguration iconf = new ConfigurationBuilder()
+                    .AddInMemoryCollection(dict)
+                    .Build();
+
+                var h = new WebHostBuilder()
+                    .UseKestrel(opt =>
                     {
-                        logging.AddConsole();
-                        logging.AddDebug();
-                    }
-                })
-                .UseConfiguration(iconf)
-                .UseStartup<THttpServerStartup>()
-                .Build();
+                        if (config.LocalHostOnly)
+                            foreach (int port in config.ports_list) opt.ListenLocalhost(port);
+                        else
+                            foreach (int port in config.ports_list) opt.ListenAnyIP(port);
+                    })
+                    .UseWebRoot(config.ContentsRoot)
+                    .UseContentRoot(config.ContentsRoot)
+                    .ConfigureAppConfiguration((hostingContext, config) =>
+                    {
 
-            hosttask = h.RunAsync(cancel.Token);
+                    })
+                    .ConfigureLogging((hostingContext, logging) =>
+                    {
+                        if (config.DebugToConsole)
+                        {
+                            logging.AddConsole();
+                            logging.AddDebug();
+                        }
+                    })
+                    .UseConfiguration(iconf)
+                    .UseStartup<THttpServerStartup>()
+                    .Build();
+
+                hosttask = h.RunAsync(cancel.Token);
+            }
+            catch
+            {
+                GlobalObjectExchange.Withdraw(param_token);
+                throw;
+            }
         }
 
         Once stop_flag;

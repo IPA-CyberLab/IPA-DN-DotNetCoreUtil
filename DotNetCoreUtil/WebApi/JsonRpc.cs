@@ -15,6 +15,7 @@ using System.IO;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Net;
+using System.Reflection;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
@@ -111,6 +112,15 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class JsonRpcError
     {
+        public JsonRpcError() { }
+        public JsonRpcError(int code, string message, object data = null)
+        {
+            this.Code = code;
+            this.Message = message.NonNull();
+            if (this.Message.IsEmpty()) this.Message = $"JSON-RPC Error {code}";
+            this.Data = data;
+        }
+
         [JsonProperty("code")]
         public int Code { get; set; } = 0;
 
@@ -121,25 +131,93 @@ namespace IPA.DN.CoreUtil.WebApi
         public object Data { get; set; } = null;
     }
 
+    public class JsonRpcMethodAttribute : Attribute { }
+
+    public abstract class JsonRpcServerHandler
+    {
+        public virtual Task<object> InvokeMethod(string method_name, object param)
+        {
+            Type t = this.GetType();
+
+            bool ok = false;
+            MethodInfo method_info = t.GetMethod(method_name);
+            if (method_info != null)
+            {
+                foreach (var a in method_info.CustomAttributes)
+                    if (a.AttributeType == typeof(JsonRpcMethodAttribute))
+                        ok = true;
+            }
+
+            if (ok == false) throw new JsonRpcException(new JsonRpcError(-32601, "Method not found"));
+
+            var method_params = method_info.GetParameters();
+            if (method_params.Length != 1) throw new JsonRpcException(new JsonRpcError(-32603, "Internal error"));
+            var p = method_params[0];
+            var r = method_info.ReturnParameter;
+//            bool is_void = false;
+            bool is_task = false;
+//            if (r.ParameterType == typeof(void)) is_void = true;
+            if (r.ParameterType == typeof(Task) || r.ParameterType.IsSubclassOf(typeof(Task))) is_task = true;
+
+            object retobj = method_info.Invoke(this, new object[] { param });
+
+            if (is_task == false)
+            {
+                return Task.FromResult<object>(retobj);
+            }
+            else
+            {
+                if (retobj is Task)
+                {
+                    return Task.Run<object>(() =>
+                    {
+                        //((Task)retobj).Wait();
+                        return null;
+                    });
+                }
+                else
+                {
+                    dynamic td = retobj;
+
+                    return Task.Run<object>(() =>
+                    {
+                        return td.Result;
+                    });
+                }
+            }
+        }
+    }
+
     public abstract class JsonRpcServer
     {
+        public JsonRpcServerHandler Handler { get; }
+
+        public JsonRpcServer(JsonRpcServerHandler handler)
+        {
+            this.Handler = handler;
+        }
     }
 
     public class JsonHttpRpcServer : JsonRpcServer
     {
-        public JsonHttpRpcServer()
-        {
-        }
+        public JsonHttpRpcServer(JsonRpcServerHandler handler) : base(handler) { }
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
             await response.WriteAsync("This is a JSON-RPC server.\r\nCurrent time : " + DateTime.Now.ToDtStr(true, DtstrOption.All, true));
         }
 
+        public virtual async Task PostRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
+        {
+            await Task.CompletedTask;
+        }
+
         public void RegisterToHttpServer(IApplicationBuilder app, string template = "rpc")
         {
             RouteBuilder rb = new RouteBuilder(app);
+
             rb.MapGet(template, GetRequestHandler);
+            rb.MapPost(template, PostRequestHandler);
 
             IRouter router = rb.Build();
             app.UseRouter(router);
@@ -152,12 +230,14 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public JsonHttpRpcListener(IConfiguration configuration) : base(configuration)
         {
-            JsonServer = new JsonHttpRpcServer();
+            JsonRpcServerHandler handler = (JsonRpcServerHandler)this.Param;
+
+            JsonServer = new JsonHttpRpcServer(handler);
         }
 
-        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig cfg, object param)
+        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig cfg, JsonRpcServerHandler handler)
         {
-            return new HttpServer<JsonHttpRpcListener>(cfg, param);
+            return new HttpServer<JsonHttpRpcListener>(cfg, handler);
         }
 
         public override void SetupStartupConfig(HttpServerStartupConfig cfg, IApplicationBuilder app, IHostingEnvironment env)
