@@ -55,6 +55,9 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         public static T Deserialize<T>(string str, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
+            => (T)Deserialize(str, typeof(T), include_null, max_depth);
+
+        public static object Deserialize(string str, Type type, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
         {
             JsonSerializerSettings setting = new JsonSerializerSettings()
             {
@@ -63,14 +66,16 @@ namespace IPA.DN.CoreUtil.Basic
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
                 ReferenceLoopHandling = ReferenceLoopHandling.Error,
             };
-            return JsonConvert.DeserializeObject<T>(str, setting);
+            return JsonConvert.DeserializeObject(str, type, setting);
         }
 
         public static T ConvertObject<T>(object src, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
+            => (T)ConvertObject(src, typeof(T), include_null, max_depth);
+
+        public static object ConvertObject(object src, Type type, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
         {
             string str = Serialize(src, include_null, false, max_depth, true);
-            //str.Debug();
-            return Deserialize<T>(str, max_depth: max_depth);
+            return Deserialize(str, type, max_depth: max_depth);
         }
 
         public static async Task<bool> DeserializeLargeArrayAsync<T>(TextReader txt, Func<T, bool> item_read_callback, Func<string, Exception, bool> parse_error_callback = null, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)

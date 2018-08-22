@@ -21,6 +21,7 @@ using System.Xml.Schema;
 using System.Xml.Serialization;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Net;
 using System.Net.Sockets;
@@ -72,6 +73,12 @@ namespace IPA.DN.CoreUtil.Basic
                 Console.WriteLine(str, args);
             }
             Debug.WriteLine(str);
+        }
+
+        public static void Where(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
+        {
+            if (Dbg.IsDebugMode)
+                WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
         }
 
         public static string GetObjectInnerString(object obj, string instance_base_name = "")

@@ -163,36 +163,59 @@ namespace DotNetCoreUtilTestApp
             [JsonRpcMethod]
             public string Test(int a)
             {
+                Dbg.Where("こんにちは");
                 return "Hello " + a.ToString();
             }
 
             [JsonRpcMethod]
             public async Task<string> Test2(int a)
             {
-                await TaskUtil.Sleep(1000);
+                await TaskUtil.Sleep(500);
                 return "Hello " + a.ToString();
             }
 
             [JsonRpcMethod]
             public async Task Test3(int a)
             {
-                await TaskUtil.Sleep(1000);
+                await TaskUtil.Sleep(500);
+            }
+
+            [JsonRpcMethod]
+            public string Ping()
+            {
+                return "Hello";
+            }
+
+            [JsonRpcMethod]
+            public void Ping2()
+            {
+                throw new ApplicationException("ha");
+            }
+
+            [JsonRpcMethod]
+            public async Task Ping3()
+            {
+                await TaskUtil.Sleep(500);
+                //throw new ApplicationException("ha");
             }
         }
 
         public static void jsonrpc_http_server_test()
         {
-            rpc_handler_test x = new rpc_handler_test();
-            object o = x.InvokeMethod("Test3", 3).Result;
+            /*rpc_handler_test x = new rpc_handler_test();
+            object o = x.InvokeMethod("Test", 3).Result;
             string r = (string)o;
             r.Print();
-            return;
+            return;*/
 
-            HttpServerBuilderConfig cfg = new HttpServerBuilderConfig()
+            HttpServerBuilderConfig http_cfg = new HttpServerBuilderConfig()
+            {
+            };
+            JsonRpcServerConfig rpc_cfg = new JsonRpcServerConfig()
             {
             };
             rpc_handler_test h = new rpc_handler_test();
-            var s = JsonHttpRpcListener.StartServer(cfg, h);
+            var s = JsonHttpRpcListener.StartServer(http_cfg, rpc_cfg, h);
 
             Con.ReadLine("Enter>");
 

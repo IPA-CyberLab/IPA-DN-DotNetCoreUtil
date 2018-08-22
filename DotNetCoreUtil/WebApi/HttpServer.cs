@@ -138,7 +138,7 @@ namespace IPA.DN.CoreUtil.WebApi
             }
             catch
             {
-                GlobalObjectExchange.Withdraw(param_token);
+                GlobalObjectExchange.TryWithdraw(param_token);
                 throw;
             }
         }

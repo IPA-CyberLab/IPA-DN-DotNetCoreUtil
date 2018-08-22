@@ -2061,6 +2061,7 @@ namespace IPA.DN.CoreUtil.Basic
                     break;
                 }
                 ms.Write(tmp, 0, r);
+                if (ms.Length > max_size) throw new OverflowException();
             }
 
             return ms.ToArray();
@@ -2080,6 +2081,7 @@ namespace IPA.DN.CoreUtil.Basic
                     break;
                 }
                 ms.Write(tmp, 0, r);
+                if (ms.Length > max_size) throw new OverflowException();
             }
 
             return ms.ToArray();

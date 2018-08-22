@@ -1109,15 +1109,25 @@ namespace IPA.DN.CoreUtil.Basic
     {
         static Dictionary<string, object> table = new Dictionary<string, object>();
 
-        public static object Withdraw(string token)
+        public static object TryWithdraw(string token)
         {
-            if (Str.IsEmptyStr(token)) throw new ArgumentException("token");
             lock (table)
             {
-                object ret = table[token];
-                table.Remove(token);
-                return ret;
+                if (table.ContainsKey(token))
+                {
+                    object ret = table[token];
+                    table.Remove(token);
+                    return ret;
+                }
             }
+            return null;
+        }
+
+        public static object Withdraw(string token)
+        {
+            object ret = TryWithdraw(token);
+            if (ret == null) throw new ApplicationException("invalid token");
+            return ret;
         }
 
         public static string Deposit(object o)

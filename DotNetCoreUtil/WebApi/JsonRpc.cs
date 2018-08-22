@@ -79,27 +79,45 @@ namespace IPA.DN.CoreUtil.WebApi
         }
     }
 
+    public class JsonRpcResponseOk : JsonRpcResponse
+    {
+        [JsonIgnore]
+        public override JsonRpcError Error { get => null; set { } }
+
+        [JsonProperty("result", NullValueHandling = NullValueHandling.Include)]
+        public override object Result { get; set; } = null;
+    }
+
+    public class JsonRpcResponseError : JsonRpcResponse
+    {
+        [JsonIgnore]
+        public override object Result { get => null; set { } }
+
+        [JsonProperty("error", NullValueHandling = NullValueHandling.Include)]
+        public override JsonRpcError Error { get; set; } = null;
+    }
+
     public class JsonRpcResponse
     {
         [JsonProperty("jsonrpc")]
-        public string Version { get; set; } = "2.0";
+        public virtual string Version { get; set; } = "2.0";
 
         [JsonProperty("result")]
-        public object Result { get; set; } = null;
+        public virtual object Result { get; set; } = null;
 
         [JsonProperty("error")]
-        public JsonRpcError Error { get; set; } = null;
+        public virtual JsonRpcError Error { get; set; } = null;
 
-        [JsonProperty("id")]
-        public string Id { get; set; } = null;
-
-        [JsonIgnore]
-        public bool IsError => this.Error != null;
+        [JsonProperty("id", NullValueHandling = NullValueHandling.Include)]
+        public virtual string Id { get; set; } = null;
 
         [JsonIgnore]
-        public bool IsOk => !IsError;
+        public virtual bool IsError => this.Error != null;
 
-        public void CheckError()
+        [JsonIgnore]
+        public virtual bool IsOk => !IsError;
+
+        public virtual void CheckError()
         {
             if (this.IsError) throw new JsonRpcException(this.Error);
         }
@@ -133,9 +151,31 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class JsonRpcMethodAttribute : Attribute { }
 
+    public class JsonRpcMethodInfo
+    {
+        public string Name;
+        public MethodInfo Method;
+        public ParameterInfo Parameter;
+        public ParameterInfo ReturnParameter;
+        public bool IsTask;
+    }
+
     public abstract class JsonRpcServerHandler
     {
-        public virtual Task<object> InvokeMethod(string method_name, object param)
+        Dictionary<string, JsonRpcMethodInfo> method_info_cache = new Dictionary<string, JsonRpcMethodInfo>();
+        public JsonRpcMethodInfo GetMethodInfo(string method_name)
+        {
+            JsonRpcMethodInfo m = null;
+            lock (method_info_cache)
+            {
+                if (method_info_cache.ContainsKey(method_name) == false)
+                    m = get_method_info_main(method_name);
+                else
+                    m = method_info_cache[method_name];
+            }
+            return m;
+        }
+        JsonRpcMethodInfo get_method_info_main(string method_name)
         {
             Type t = this.GetType();
 
@@ -151,39 +191,52 @@ namespace IPA.DN.CoreUtil.WebApi
             if (ok == false) throw new JsonRpcException(new JsonRpcError(-32601, "Method not found"));
 
             var method_params = method_info.GetParameters();
-            if (method_params.Length != 1) throw new JsonRpcException(new JsonRpcError(-32603, "Internal error"));
-            var p = method_params[0];
+            if (method_params.Length >= 2) throw new JsonRpcException(new JsonRpcError(-32603, "Internal error"));
+            var p = (method_params.Length == 0 ? null : method_params[0]);
             var r = method_info.ReturnParameter;
-//            bool is_void = false;
             bool is_task = false;
-//            if (r.ParameterType == typeof(void)) is_void = true;
             if (r.ParameterType == typeof(Task) || r.ParameterType.IsSubclassOf(typeof(Task))) is_task = true;
 
-            object retobj = method_info.Invoke(this, new object[] { param });
-
-            if (is_task == false)
+            JsonRpcMethodInfo m = new JsonRpcMethodInfo()
             {
+                IsTask = is_task,
+                Method = method_info,
+                Name = method_name,
+                Parameter = p,
+                ReturnParameter = r,
+            };
+            return m;
+        }
+
+        public Task<object> InvokeMethod(string method_name, object param)
+        {
+            JsonRpcMethodInfo info = GetMethodInfo(method_name);
+
+            object retobj;
+            
+            if (info.Parameter != null)
+                retobj = info.Method.Invoke(this, new object[] { param });
+            else
+                retobj = info.Method.Invoke(this, new object[0]);
+
+            if (info.IsTask == false)
                 return Task.FromResult<object>(retobj);
-            }
             else
             {
-                if (retobj is Task)
-                {
-                    return Task.Run<object>(() =>
-                    {
-                        //((Task)retobj).Wait();
-                        return null;
-                    });
-                }
-                else
-                {
-                    dynamic td = retobj;
+                dynamic td = retobj;
 
-                    return Task.Run<object>(() =>
+                return Task.Run<object>(() =>
+                {
+                    try
                     {
                         return td.Result;
-                    });
-                }
+                    }
+                    catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+                    {
+                        td.Wait();
+                        return null;
+                    }
+                });
             }
         }
     }
@@ -191,16 +244,118 @@ namespace IPA.DN.CoreUtil.WebApi
     public abstract class JsonRpcServer
     {
         public JsonRpcServerHandler Handler { get; }
+        public JsonRpcServerConfig Config { get; }
 
-        public JsonRpcServer(JsonRpcServerHandler handler)
+        public JsonRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg)
         {
             this.Handler = handler;
+            this.Config = cfg;
+        }
+
+        public async Task<JsonRpcResponse> CallMethod(JsonRpcRequest req)
+        {
+            try
+            {
+                JsonRpcMethodInfo method = this.Handler.GetMethodInfo(req.Method);
+                object in_obj = (method.Parameter == null ? null : req.Params.ConvertJsonObject(method.Parameter.ParameterType));
+                try
+                {
+                    object ret_obj = await this.Handler.InvokeMethod(req.Method, in_obj);
+                    return new JsonRpcResponseOk()
+                    {
+                        Id = req.Id,
+                        Error = null,
+                        Result = ret_obj,
+                    };
+                }
+                catch (System.Reflection.TargetInvocationException ex)
+                {
+                    throw ex.InnerException;
+                }
+            }
+            catch (JsonRpcException ex)
+            {
+                return new JsonRpcResponseError()
+                {
+                    Id = req.Id,
+                    Error = ex.RpcError,
+                    Result = null,
+                };
+            }
+            catch (Exception ex)
+            {
+                if (ex.InnerException != null) ex = ex.InnerException;
+                return new JsonRpcResponseError()
+                {
+                    Id = req.Id,
+                    Error = new JsonRpcError(-32603, ex.Message, ex.ToString()),
+                    Result = null,
+                };
+            }
+        }
+
+        public async Task<string> CallMethods(string in_str)
+        {
+            bool is_single = false;
+            List<JsonRpcRequest> request_list = new List<JsonRpcRequest>();
+            try
+            {
+                if (in_str.StartsWith("{"))
+                {
+                    is_single = true;
+                    JsonRpcRequest r = in_str.JsonToObject<JsonRpcRequest>();
+                    request_list.Add(r);
+                }
+                else
+                {
+                    JsonRpcRequest[] rr = in_str.JsonToObject<JsonRpcRequest[]>();
+                    request_list = new List<JsonRpcRequest>(rr);
+                }
+            }
+            catch
+            {
+                throw new JsonRpcException(new JsonRpcError(-32700, "Parse error"));
+            }
+
+            List<JsonRpcResponse> response_list = new List<JsonRpcResponse>();
+
+            foreach (JsonRpcRequest req in request_list)
+            {
+                try
+                {
+                    JsonRpcResponse res = await CallMethod(req);
+                    if (req.Id != null) response_list.Add(res);
+                }
+                catch (Exception ex)
+                {
+                    JsonRpcException json_ex;
+                    if (ex is JsonRpcException) json_ex = ex as JsonRpcException;
+                    else json_ex = new JsonRpcException(new JsonRpcError(-32603, ex.Message, ex.ToString()));
+                    JsonRpcResponseError res = new JsonRpcResponseError()
+                    {
+                        Id = req.Id,
+                        Error = json_ex.RpcError,
+                        Result = null,
+                    };
+                    if (req.Id != null) response_list.Add(res);
+                }
+            }
+
+            if (is_single)
+            {
+                if (response_list.Count >= 1)
+                    return response_list[0].ObjectToJson();
+                else
+                    return "";
+            }
+            else
+                return response_list.ObjectToJson();
         }
     }
 
     public class JsonHttpRpcServer : JsonRpcServer
     {
-        public JsonHttpRpcServer(JsonRpcServerHandler handler) : base(handler) { }
+        public JsonHttpRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg) : base(handler, cfg) { }
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
@@ -209,7 +364,31 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public virtual async Task PostRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
-            await Task.CompletedTask;
+            string ret_str = "";
+            try
+            {
+                string in_str = (await request.Body.ReadToEndAsync(this.Config.MaxRequestBodyLen)).GetString_UTF8();
+                Dbg.WriteLine("in_str: " + in_str);
+                ret_str = await this.CallMethods(in_str);
+            }
+            catch (Exception ex)
+            {
+                JsonRpcException json_ex;
+                if (ex is JsonRpcException) json_ex = ex as JsonRpcException;
+                else json_ex = new JsonRpcException(new JsonRpcError(1234, ex.Message, ex.ToString()));
+
+                ret_str = new JsonRpcResponseError()
+                {
+                    Error = json_ex.RpcError,
+                    Id = null,
+                    Result = null,
+                }.ObjectToJson();
+            }
+
+            Dbg.WriteLine("ret_str: " + ret_str);
+
+            byte[] ret_data = ret_str.GetBytes_UTF8();
+            await response.Body.WriteAsync(ret_data, 0, ret_data.Length);
         }
 
         public void RegisterToHttpServer(IApplicationBuilder app, string template = "rpc")
@@ -224,20 +403,25 @@ namespace IPA.DN.CoreUtil.WebApi
         }
     }
 
+    public class JsonRpcServerConfig
+    {
+        public int MaxRequestBodyLen = 100 * 1024 * 1024;
+    }
+
     public class JsonHttpRpcListener : HttpServerImplementation
     {
         public JsonHttpRpcServer JsonServer { get; }
 
         public JsonHttpRpcListener(IConfiguration configuration) : base(configuration)
         {
-            JsonRpcServerHandler handler = (JsonRpcServerHandler)this.Param;
+            (JsonRpcServerConfig rpc_cfg, JsonRpcServerHandler handler) p = ((JsonRpcServerConfig rpc_cfg, JsonRpcServerHandler handler))this.Param;
 
-            JsonServer = new JsonHttpRpcServer(handler);
+            JsonServer = new JsonHttpRpcServer(p.handler, p.rpc_cfg);
         }
 
-        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig cfg, JsonRpcServerHandler handler)
+        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig http_cfg, JsonRpcServerConfig rpc_server_cfg, JsonRpcServerHandler rpc_handler)
         {
-            return new HttpServer<JsonHttpRpcListener>(cfg, handler);
+            return new HttpServer<JsonHttpRpcListener>(http_cfg, (rpc_server_cfg, rpc_handler));
         }
 
         public override void SetupStartupConfig(HttpServerStartupConfig cfg, IApplicationBuilder app, IHostingEnvironment env)
