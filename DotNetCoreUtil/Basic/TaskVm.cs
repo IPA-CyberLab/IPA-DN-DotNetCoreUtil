@@ -170,6 +170,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         static void background_thread_proc()
         {
+            IntevalReporter r = new IntevalReporter();
             while (true)
             {
                 long now = Tick;
@@ -177,6 +178,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                 List<TaskCompletionSource<int>> tc_list = new List<TaskCompletionSource<int>>();
 
+                Dbg.Where();
                 lock (wait_list)
                 {
                     List<long> past_target_list = new List<long>();
@@ -214,14 +216,17 @@ namespace IPA.DN.CoreUtil.Basic
                         }
                     }
                 }
-
+                Dbg.Where();
+                int n = 0;
                 foreach (TaskCompletionSource<int> tc in tc_list)
                 {
                     //tc.TrySetResult(0);
                     //Task.Factory.StartNew(() => tc.TrySetResult(0));
                     FireWorkerThread(tc);
+                    n++;
                 }
-
+                n.Print();
+                Dbg.Where();
                 now = Tick;
                 long next_wait_tick = (Math.Max(next_wait_target - now, 0));
                 if (next_wait_target == -1)
@@ -236,6 +241,7 @@ namespace IPA.DN.CoreUtil.Basic
                     }
                     ev.WaitOne((int)next_wait_tick);
                 }
+                Dbg.Where();
             }
         }
 

@@ -344,5 +344,105 @@ namespace IPA.DN.CoreUtil.Basic
             return w.ToString();
         }
     }
+
+    public class Benchmark : IDisposable
+    {
+        public int Interval { get; }
+        public volatile int IncrementMe = 0;
+        Once d;
+        ThreadObj thread;
+        ManualResetEventSlim halt_event = new ManualResetEventSlim();
+        bool halt_flag = false;
+        public string Name { get; }
+
+        public Benchmark(string name = "Benchmark", int interval = 1000)
+        {
+            this.Interval = interval;
+            this.Name = name;
+            this.thread = new ThreadObj(thread_proc);
+        }
+
+        void thread_proc(object param)
+        {
+            Thread.CurrentThread.IsBackground = true;
+            IntervalManager m = new IntervalManager(this.Interval);
+            int last_value = 0;
+            while (true)
+            {
+                int wait_interval = m.GetNextInterval(out int span);
+                if (halt_flag) break;
+                halt_event.Wait(wait_interval);
+                if (halt_flag) break;
+
+                int now_value = this.IncrementMe;
+                int diff_value = now_value - last_value;
+                last_value = now_value;
+
+                double r = (double)diff_value * 1000.0 / (double)span;
+
+                Console.WriteLine($"{this.Name}: {Str.ToStr3((long)r)} / sec");
+            }
+        }
+
+        public void Dispose()
+        {
+            if (d.IsFirstCall)
+            {
+                halt_flag = true;
+                halt_event.Set();
+                this.thread.WaitForEnd();
+            }
+        }
+    }
+
+    public class IntevalReporter : IDisposable
+    {
+        public int Interval { get; }
+        Once d;
+        ThreadObj thread;
+        ManualResetEventSlim halt_event = new ManualResetEventSlim();
+        bool halt_flag = false;
+        public string Name { get; }
+        public object SetMe = null;
+
+        public IntevalReporter(string name = "Reporter", int interval = 1000)
+        {
+            this.Interval = interval;
+            this.Name = name;
+            this.thread = new ThreadObj(thread_proc);
+        }
+
+        void thread_proc(object param)
+        {
+            Thread.CurrentThread.IsBackground = true;
+            IntervalManager m = new IntervalManager(this.Interval);
+            while (true)
+            {
+                int wait_interval = m.GetNextInterval(out int span);
+                if (halt_flag) break;
+                halt_event.Wait(wait_interval);
+                if (halt_flag) break;
+
+                try
+                {
+                    object obj = this.SetMe;
+                    if (obj != null) Console.WriteLine($"{this.Name}: {SetMe.ToString()}");
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            if (d.IsFirstCall)
+            {
+                halt_flag = true;
+                halt_event.Set();
+                this.thread.WaitForEnd();
+            }
+        }
+    }
 }
 

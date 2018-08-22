@@ -1143,4 +1143,43 @@ namespace IPA.DN.CoreUtil.Basic
             return id;
         }
     }
+
+    public class IntervalManager
+    {
+        long last_tick = 0;
+        public int Interval { get; private set; }
+        int last_interval;
+
+        public IntervalManager(int interval)
+        {
+            last_tick = Time.Tick64;
+            this.last_interval = this.Interval = interval;
+        }
+
+        public int GetNextInterval(int? next_interval = null)
+            => GetNextInterval(out _, next_interval);
+
+        int count = 0;
+
+        public int GetNextInterval(out int last_timediff, int? next_interval = null)
+        {
+            long now = Time.Tick64;
+            last_timediff = (int)(now - last_tick);
+            int over = last_timediff - this.last_interval;
+            if (next_interval != null) this.Interval = (int)next_interval;
+            this.last_interval = this.Interval;
+            int ret = this.Interval;
+            if (over > 0)
+            {
+                ret = this.Interval - over;
+            }
+            last_tick = now;
+            if (ret <= 0) ret = 1;
+            if (this.Interval == Timeout.Infinite) ret = Timeout.Infinite;
+            if (last_timediff <= 0) last_timediff = 1;
+            if (count == 0) last_timediff = this.last_interval;
+            count++;
+            return ret;
+        }
+    }
 }

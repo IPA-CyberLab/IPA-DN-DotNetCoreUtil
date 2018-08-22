@@ -134,6 +134,15 @@ namespace DotNetCoreUtilTestApp
             //jsonrpc_test_with_random_api();
 
             //jsonrpc_http_server_test();
+
+            //Benchmark b = new Benchmark();
+            while (true)
+            {
+                //new genstr_params();
+                //Task.Delay(1000);
+                TaskUtil.Sleep(1000);
+                //b.IncrementMe++;
+            }
         }
 
         public class genstr_params
