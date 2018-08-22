@@ -155,8 +155,7 @@ namespace IPA.DN.CoreUtil.WebApi
     {
         public string Name;
         public MethodInfo Method;
-        public Dictionary<string, (ParameterInfo info, int index)> ParametersByName = new Dictionary<string, (ParameterInfo info, int index)>();
-        public ParameterInfo[] ParametersByIndex;
+        public ParameterInfo Parameter;
         public ParameterInfo ReturnParameter;
         public bool IsTask;
     }
@@ -190,26 +189,23 @@ namespace IPA.DN.CoreUtil.WebApi
             }
 
             if (ok == false) throw new JsonRpcException(new JsonRpcError(-32601, "Method not found"));
+
+            var method_params = method_info.GetParameters();
+            if (method_params.Length >= 2) throw new JsonRpcException(new JsonRpcError(-32603, "Internal error"));
+            var p = (method_params.Length == 0 ? null : method_params[0]);
             var r = method_info.ReturnParameter;
             bool is_task = false;
             if (r.ParameterType == typeof(Task) || r.ParameterType.IsSubclassOf(typeof(Task))) is_task = true;
 
-            JsonRpcMethodInfo ret = new JsonRpcMethodInfo()
+            JsonRpcMethodInfo m = new JsonRpcMethodInfo()
             {
                 IsTask = is_task,
                 Method = method_info,
                 Name = method_name,
+                Parameter = p,
                 ReturnParameter = r,
             };
-
-
-            var method_params = method_info.GetParameters();
-            for (int i = 0; i < method_params.Length; i++)
-            {
-                ret.ParametersByName.Add(method_params[i].Name, (method_params[i], i));
-            }
-
-            return ret;
+            return m;
         }
 
         public Task<object> InvokeMethod(string method_name, object param)
@@ -217,13 +213,11 @@ namespace IPA.DN.CoreUtil.WebApi
             JsonRpcMethodInfo info = GetMethodInfo(method_name);
 
             object retobj;
-
-            /*if (info. != null)
+            
+            if (info.Parameter != null)
                 retobj = info.Method.Invoke(this, new object[] { param });
             else
-                retobj = info.Method.Invoke(this, new object[0]);*/
-
-            retobj = null;
+                retobj = info.Method.Invoke(this, new object[0]);
 
             if (info.IsTask == false)
                 return Task.FromResult<object>(retobj);
@@ -263,7 +257,7 @@ namespace IPA.DN.CoreUtil.WebApi
             try
             {
                 JsonRpcMethodInfo method = this.Handler.GetMethodInfo(req.Method);
-                object in_obj = null;// (method.Parameter == null ? null : req.Params.ConvertJsonObject(method.Parameter.ParameterType));
+                object in_obj = (method.Parameter == null ? null : req.Params.ConvertJsonObject(method.Parameter.ParameterType));
                 try
                 {
                     object ret_obj = await this.Handler.InvokeMethod(req.Method, in_obj);
