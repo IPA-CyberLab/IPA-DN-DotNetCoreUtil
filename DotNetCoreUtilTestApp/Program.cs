@@ -160,39 +160,45 @@ namespace DotNetCoreUtilTestApp
 
         public class rpc_handler_test : JsonRpcServerHandler
         {
-            [JsonRpcMethod]
-            public string Test(int a)
+            [RpcMethod]
+            public string Test(int a, int b, int c, int d=1)
             {
                 Dbg.Where("こんにちは");
-                return "Hello " + a.ToString();
+                return $"Hello {a},{b},{c},{d}";
             }
 
-            [JsonRpcMethod]
+            [RpcMethod]
             public async Task<string> Test2(int a)
             {
                 await TaskUtil.Sleep(500);
                 return "Hello " + a.ToString();
             }
 
-            [JsonRpcMethod]
+            [RpcMethod]
             public async Task Test3(int a)
             {
                 await TaskUtil.Sleep(500);
             }
 
-            [JsonRpcMethod]
+            [RpcMethod]
+            public string Test4(object o)
+            {
+                return ((object)o).ObjectToJson(compact: true);
+            }
+
+            [RpcMethod]
             public string Ping()
             {
                 return "Hello";
             }
 
-            [JsonRpcMethod]
+            [RpcMethod]
             public void Ping2()
             {
                 throw new ApplicationException("ha");
             }
 
-            [JsonRpcMethod]
+            [RpcMethod]
             public async Task Ping3()
             {
                 await TaskUtil.Sleep(500);

@@ -149,43 +149,25 @@ namespace IPA.DN.CoreUtil.WebApi
         public object Data { get; set; } = null;
     }
 
-    public class JsonRpcMethodAttribute : Attribute { }
+    public class RpcMethodAttribute : Attribute { }
 
-    public class JsonRpcMethodInfo
+    public class RpcMethodInfo
     {
-        public string Name;
-        public MethodInfo Method;
-        public Dictionary<string, (ParameterInfo info, int index)> ParametersByName = new Dictionary<string, (ParameterInfo info, int index)>();
-        public ParameterInfo[] ParametersByIndex;
-        public ParameterInfo ReturnParameter;
-        public bool IsTask;
-    }
+        public string Name { get; }
+        public MethodInfo Method { get; }
+        public Dictionary<string, (ParameterInfo info, int index)> ParametersByName { get; } = new Dictionary<string, (ParameterInfo info, int index)>();
+        public ParameterInfo[] ParametersByIndex { get; }
+        public ParameterInfo ReturnParameter { get; }
+        public bool IsTask { get; }
 
-    public abstract class JsonRpcServerHandler
-    {
-        Dictionary<string, JsonRpcMethodInfo> method_info_cache = new Dictionary<string, JsonRpcMethodInfo>();
-        public JsonRpcMethodInfo GetMethodInfo(string method_name)
+        public RpcMethodInfo(Type target_class, string method_name)
         {
-            JsonRpcMethodInfo m = null;
-            lock (method_info_cache)
-            {
-                if (method_info_cache.ContainsKey(method_name) == false)
-                    m = get_method_info_main(method_name);
-                else
-                    m = method_info_cache[method_name];
-            }
-            return m;
-        }
-        JsonRpcMethodInfo get_method_info_main(string method_name)
-        {
-            Type t = this.GetType();
-
             bool ok = false;
-            MethodInfo method_info = t.GetMethod(method_name);
+            MethodInfo method_info = target_class.GetMethod(method_name);
             if (method_info != null)
             {
                 foreach (var a in method_info.CustomAttributes)
-                    if (a.AttributeType == typeof(JsonRpcMethodAttribute))
+                    if (a.AttributeType == typeof(RpcMethodAttribute))
                         ok = true;
             }
 
@@ -194,38 +176,42 @@ namespace IPA.DN.CoreUtil.WebApi
             bool is_task = false;
             if (r.ParameterType == typeof(Task) || r.ParameterType.IsSubclassOf(typeof(Task))) is_task = true;
 
-            JsonRpcMethodInfo ret = new JsonRpcMethodInfo()
-            {
-                IsTask = is_task,
-                Method = method_info,
-                Name = method_name,
-                ReturnParameter = r,
-            };
+            this.IsTask = is_task;
+            this.Method = method_info;
+            this.Name = method_name;
+            this.ReturnParameter = r;
+            this.ParametersByIndex = method_info.GetParameters();
 
-
-            var method_params = method_info.GetParameters();
+            var method_params = ParametersByIndex;
             for (int i = 0; i < method_params.Length; i++)
-            {
-                ret.ParametersByName.Add(method_params[i].Name, (method_params[i], i));
-            }
-
-            return ret;
+                this.ParametersByName.Add(method_params[i].Name, (method_params[i], i));
         }
 
-        public Task<object> InvokeMethod(string method_name, object param)
+        public Task<object> InvokeMethod(object target_instance, string method_name, JObject param)
         {
-            JsonRpcMethodInfo info = GetMethodInfo(method_name);
-
             object retobj;
 
-            /*if (info. != null)
-                retobj = info.Method.Invoke(this, new object[] { param });
+            object[] in_params = new object[this.ParametersByIndex.Length];
+            if (this.ParametersByIndex.Length == 1 && this.ParametersByIndex[0].ParameterType == typeof(System.Object))
+            {
+                in_params = new object[1] { param };
+            }
             else
-                retobj = info.Method.Invoke(this, new object[0]);*/
+            {
+                for (int i = 0; i < this.ParametersByIndex.Length; i++)
+                {
+                    ParameterInfo pi = this.ParametersByIndex[i];
+                    if (param.TryGetValue(pi.Name, out var value))
+                        in_params[i] = value.ToObject(pi.ParameterType);
+                    else if (pi.HasDefaultValue)
+                        in_params[i] = pi.DefaultValue;
+                    else throw new ArgumentException($"The parameter '{pi.Name}' is missing.");
+                }
+            }
 
-            retobj = null;
+            retobj = this.Method.Invoke(target_instance, in_params);
 
-            if (info.IsTask == false)
+            if (this.IsTask == false)
                 return Task.FromResult<object>(retobj);
             else
             {
@@ -247,6 +233,37 @@ namespace IPA.DN.CoreUtil.WebApi
         }
     }
 
+    public abstract class JsonRpcServerHandler
+    {
+        public CancellationTokenSource CancelSource { get; } = new CancellationTokenSource();
+        public CancellationToken CancelToken { get => this.CancelSource.Token; }
+
+        Dictionary<string, RpcMethodInfo> method_info_cache = new Dictionary<string, RpcMethodInfo>();
+        public RpcMethodInfo GetMethodInfo(string method_name)
+        {
+            RpcMethodInfo m = null;
+            lock (method_info_cache)
+            {
+                if (method_info_cache.ContainsKey(method_name) == false)
+                    m = get_method_info_main(method_name);
+                else
+                    m = method_info_cache[method_name];
+            }
+            return m;
+        }
+        RpcMethodInfo get_method_info_main(string method_name)
+        {
+            return new RpcMethodInfo(this.GetType(), method_name);
+        }
+
+        public Task<object> InvokeMethod(string method_name, JObject param)
+        {
+            RpcMethodInfo info = GetMethodInfo(method_name);
+
+            return info.InvokeMethod(this, method_name, param);
+        }
+    }
+
     public abstract class JsonRpcServer
     {
         public JsonRpcServerHandler Handler { get; }
@@ -262,8 +279,8 @@ namespace IPA.DN.CoreUtil.WebApi
         {
             try
             {
-                JsonRpcMethodInfo method = this.Handler.GetMethodInfo(req.Method);
-                object in_obj = null;// (method.Parameter == null ? null : req.Params.ConvertJsonObject(method.Parameter.ParameterType));
+                RpcMethodInfo method = this.Handler.GetMethodInfo(req.Method);
+                JObject in_obj = (JObject)req.Params;
                 try
                 {
                     object ret_obj = await this.Handler.InvokeMethod(req.Method, in_obj);
