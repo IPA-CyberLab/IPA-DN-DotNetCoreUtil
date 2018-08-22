@@ -201,7 +201,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 for (int i = 0; i < this.ParametersByIndex.Length; i++)
                 {
                     ParameterInfo pi = this.ParametersByIndex[i];
-                    if (param.TryGetValue(pi.Name, out var value))
+                    if (param != null && param.TryGetValue(pi.Name, out var value))
                         in_params[i] = value.ToObject(pi.ParameterType);
                     else if (pi.HasDefaultValue)
                         in_params[i] = pi.DefaultValue;
@@ -251,17 +251,9 @@ namespace IPA.DN.CoreUtil.WebApi
             }
             return m;
         }
-        RpcMethodInfo get_method_info_main(string method_name)
-        {
-            return new RpcMethodInfo(this.GetType(), method_name);
-        }
+        RpcMethodInfo get_method_info_main(string method_name) => new RpcMethodInfo(this.GetType(), method_name);
 
-        public Task<object> InvokeMethod(string method_name, JObject param)
-        {
-            RpcMethodInfo info = GetMethodInfo(method_name);
-
-            return info.InvokeMethod(this, method_name, param);
-        }
+        public Task<object> InvokeMethod(string method_name, JObject param) => GetMethodInfo(method_name).InvokeMethod(this, method_name, param);
     }
 
     public abstract class JsonRpcServer
@@ -269,7 +261,7 @@ namespace IPA.DN.CoreUtil.WebApi
         public JsonRpcServerHandler Handler { get; }
         public JsonRpcServerConfig Config { get; }
 
-        public JsonRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg)
+        public JsonRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg, CancellationToken cancel_token)
         {
             this.Handler = handler;
             this.Config = cfg;
@@ -378,7 +370,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class JsonHttpRpcServer : JsonRpcServer
     {
-        public JsonHttpRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg) : base(handler, cfg) { }
+        public JsonHttpRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg, CancellationToken cancel_token) : base(handler, cfg, cancel_token) { }
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
@@ -439,28 +431,21 @@ namespace IPA.DN.CoreUtil.WebApi
         {
             (JsonRpcServerConfig rpc_cfg, JsonRpcServerHandler handler) p = ((JsonRpcServerConfig rpc_cfg, JsonRpcServerHandler handler))this.Param;
 
-            JsonServer = new JsonHttpRpcServer(p.handler, p.rpc_cfg);
+            JsonServer = new JsonHttpRpcServer(p.handler, p.rpc_cfg, this.CancelToken);
         }
 
         public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig http_cfg, JsonRpcServerConfig rpc_server_cfg, JsonRpcServerHandler rpc_handler)
-        {
-            return new HttpServer<JsonHttpRpcListener>(http_cfg, (rpc_server_cfg, rpc_handler));
-        }
+            => new HttpServer<JsonHttpRpcListener>(http_cfg, (rpc_server_cfg, rpc_handler));
 
         public override void SetupStartupConfig(HttpServerStartupConfig cfg, IApplicationBuilder app, IHostingEnvironment env)
-        {
-            this.JsonServer.RegisterToHttpServer(app);
-        }
+            => this.JsonServer.RegisterToHttpServer(app);
     }
 
     public abstract class JsonRpcClient
     {
         List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> call_queue = new List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
 
-        public void CallClear()
-        {
-            call_queue.Clear();
-        }
+        public void CallClear() => call_queue.Clear();
 
         public JsonRpcResponse<TResponse> CallAdd<TResponse>(string method, object param) where TResponse: class
         {
@@ -473,10 +458,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public async Task CallAll(bool throw_each_error = false)
         {
-            if (call_queue.Count == 0)
-            {
-                return;
-            }
+            if (call_queue.Count == 0) return;
 
             string req = "";
             bool is_single = false;
@@ -535,12 +517,10 @@ namespace IPA.DN.CoreUtil.WebApi
             }
 
             if (throw_each_error)
-            {
                 foreach (var r in ret_list)
                 {
                     r.CheckError();
                 }
-            }
         }
 
         public async Task<JsonRpcResponse<TResponse>> CallOne<TResponse>(string method, object param, bool throw_each_error = false) where TResponse : class

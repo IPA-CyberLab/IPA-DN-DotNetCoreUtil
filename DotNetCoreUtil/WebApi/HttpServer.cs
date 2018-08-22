@@ -44,13 +44,14 @@ namespace IPA.DN.CoreUtil.WebApi
         HttpServerBuilderConfig builder_config;
         HttpServerStartupConfig startup_config;
         protected object Param;
+        public CancellationToken CancelToken { get; }
 
         public HttpServerImplementation(IConfiguration configuration)
         {
             this.Configuration = configuration;
 
-            string param_token = this.Configuration["coreutil_param_token"];
-            this.Param = GlobalObjectExchange.Withdraw(param_token);
+            this.Param = GlobalObjectExchange.Withdraw(this.Configuration["coreutil_param_token"]);
+            this.CancelToken = (CancellationToken)GlobalObjectExchange.Withdraw(this.Configuration["coreutil_cancel_token"]);
 
             this.builder_config = this.Configuration["coreutil_ServerBuilderConfig"].JsonToObject<HttpServerBuilderConfig>();
             this.startup_config = new HttpServerStartupConfig();
@@ -96,12 +97,14 @@ namespace IPA.DN.CoreUtil.WebApi
             IO.MakeDirIfNotExists(config.ContentsRoot);
 
             string param_token = GlobalObjectExchange.Deposit(param);
+            string cancel_token = GlobalObjectExchange.Deposit(cancel.Token);
             try
             {
                 var dict = new Dictionary<string, string>
                 {
                     {"coreutil_ServerBuilderConfig", this.config.ObjectToJson() },
                     {"coreutil_param_token", param_token },
+                    {"coreutil_cancel_token", cancel_token },
                 };
 
                 IConfiguration iconf = new ConfigurationBuilder()
@@ -139,6 +142,7 @@ namespace IPA.DN.CoreUtil.WebApi
             catch
             {
                 GlobalObjectExchange.TryWithdraw(param_token);
+                GlobalObjectExchange.TryWithdraw(cancel_token);
                 throw;
             }
         }

@@ -250,19 +250,39 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static Task Sleep(long msec)
+        static List<CancellationToken> watching_cancels = new List<CancellationToken>();
+
+        public static void DoEvents()
         {
+        }
+
+        public static Task Sleep(int msec, CancellationToken[] cancel_list)
+        {
+            if (msec == Timeout.Infinite)
+            {
+                return Task.Delay(Timeout.Infinite);
+            }
             if (msec <= 0)
             {
                 return Task.CompletedTask;
             }
 
-            long target_time = Tick + msec;
+            long target_time = Tick + (long)msec;
 
             TaskCompletionSource<int> tc = new TaskCompletionSource<int>();
             List<TaskCompletionSource<int>> o;
 
             bool set_event = false;
+
+            if (cancel_list != null)
+            {
+                lock (watching_cancels)
+                {
+                    foreach (CancellationToken ct in cancel_list)
+                    {
+                    }
+                }
+            }
 
             lock (wait_list)
             {
@@ -364,12 +384,23 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
+    public class GCTask : Task
+    {
+        public GCTask(Action action) : base(action)
+        {
+        }
+    }
+
     public static class TaskUtil
     {
-        public static Task Sleep(long msec)
+        public static Task Sleep(int msec)
         {
-            return AsyncWaiter.Sleep(msec);
+            return AsyncWaiter.Sleep(msec, null);
         }
+
+        /*public static Task<bool> Sleep(int msec, CancellationToken cancel)
+        {
+        }*/
 
         public static Task WhenCanceledOrTimeouted(CancellationToken cancel, int timeout)
         {
@@ -426,19 +457,27 @@ namespace IPA.DN.CoreUtil.Basic
             }, null);
         }
 
-        public static CancellationToken CombineCancellationTokens(params CancellationToken[] tokens)
+        // いずれかの CancellationToken がキャンセルされたときにキャンセルされる CancellationToken を作成する
+        public static CancellationToken CombineCancellationTokens(bool no_wait, params CancellationToken[] tokens)
         {
             CancellationTokenSource cts = new CancellationTokenSource();
+            ChainCancellationTokensToCancellationTokenSource(cts, no_wait, tokens);
+            return cts.Token;
+        }
 
+        // いずれかの CancellationToken がキャンセルされたときに CancellationTokenSource をキャンセルするように設定する
+        public static void ChainCancellationTokensToCancellationTokenSource(CancellationTokenSource cts, bool no_wait, params CancellationToken[] tokens)
+        {
             foreach (CancellationToken t in tokens)
             {
                 t.Register(() =>
                 {
-                    cts.Cancel(false);
+                    if (no_wait == false)
+                        cts.Cancel(false);
+                    else
+                        cts.TryCancel();
                 });
             }
-
-            return cts.Token;
         }
 
         public static CancellationToken CurrentTaskVmGracefulCancel => (CancellationToken)ThreadData.CurrentThreadData.DataList["taskvm_current_graceful_cancel"];

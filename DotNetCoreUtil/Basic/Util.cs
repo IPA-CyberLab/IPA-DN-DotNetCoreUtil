@@ -22,6 +22,7 @@ using System.Xml.Schema;
 using System.Xml.Serialization;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 
 namespace IPA.DN.CoreUtil.Basic
 {
@@ -298,6 +299,11 @@ namespace IPA.DN.CoreUtil.Basic
             byte[] c = CloneByteArray(b);
             Endian(c);
             return BitConverter.ToInt64(c, 0);
+        }
+
+        public unsafe static long GetObjectAddress(object o)
+        {
+            return (long)(*(void**)System.Runtime.CompilerServices.Unsafe.AsPointer(ref o));
         }
 
         // IEnumerable から Array List を作成

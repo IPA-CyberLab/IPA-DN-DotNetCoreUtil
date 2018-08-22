@@ -133,7 +133,7 @@ namespace DotNetCoreUtilTestApp
 
             //jsonrpc_test_with_random_api();
 
-            jsonrpc_http_server_test();
+            //jsonrpc_http_server_test();
         }
 
         public class genstr_params
@@ -175,9 +175,10 @@ namespace DotNetCoreUtilTestApp
             }
 
             [RpcMethod]
-            public async Task Test3(int a)
+            public async Task<string> Test3(int a)
             {
                 await TaskUtil.Sleep(500);
+                return "! " + a;
             }
 
             [RpcMethod]
@@ -1020,7 +1021,7 @@ namespace DotNetCoreUtilTestApp
 
         static async Task fire_test(AsyncEvent e)
         {
-            await AsyncWaiter.Sleep(200);
+            await AsyncWaiter.Sleep(200, null);
             e.Set();
         }
 
