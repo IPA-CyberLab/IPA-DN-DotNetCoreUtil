@@ -143,25 +143,35 @@ namespace DotNetCoreUtilTestApp
         static void sleep_test()
         {
             long last_tick = 0;
-            string line = Con.ReadLine("interval(msec)>");
-            int msec = line.ToInt();
+            Ref<int> interval = new Ref<int>(100);
+
+            new ThreadObj(param =>
+            {
+                while (true)
+                {
+                    long tick = Time.Tick64;
+
+                    Task.Delay(interval.Value).Wait();
+                    //Thread.Sleep(50);
+                    //new genstr_params();
+                    //Task.Delay(1000);
+                    //TaskUtil.Sleep(1000);
+                    //b.IncrementMe++;
+
+                    long tick2 = Time.Tick64;
+
+                    long diff = tick2 - tick;
+                    Con.WriteLine(diff);
+                }
+            });
 
             while (true)
             {
-                long tick = Time.Tick64;
-
-                Task.Delay(msec).Wait();
-                //Thread.Sleep(50);
-                //new genstr_params();
-                //Task.Delay(1000);
-                //TaskUtil.Sleep(1000);
-                //b.IncrementMe++;
-
-                long tick2 = Time.Tick64;
-
-                long diff = tick2 - tick;
-                Con.WriteLine(diff);
+                string line = Con.ReadLine("interval(msec)>");
+                int msec = line.ToInt();
+                interval.Set(msec);
             }
+
         }
 
         public class genstr_params
