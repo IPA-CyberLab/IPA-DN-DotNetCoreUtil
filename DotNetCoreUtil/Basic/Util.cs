@@ -1119,6 +1119,7 @@ namespace IPA.DN.CoreUtil.Basic
     {
         volatile private int flag;
         public bool IsFirstCall => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
+        public bool IsSet => (this.flag != 0);
     }
 
     public static class GlobalObjectExchange

@@ -261,12 +261,6 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        static List<CancellationToken> watching_cancels = new List<CancellationToken>();
-
-        public static void DoEvents()
-        {
-        }
-
         public static Task Sleep(int msec)
         {
             if (msec == Timeout.Infinite)
@@ -323,13 +317,7 @@ namespace IPA.DN.CoreUtil.Basic
             return tc.Task;
         }
     }
-
-    public abstract class AsyncEvent
-    {
-        public abstract Task Wait();
-        public abstract void Set();
-    }
-
+    /*
     public class AsyncAutoResetEvent : AsyncEvent
     {
         volatile Queue<TaskCompletionSource<object>> waiters = new Queue<TaskCompletionSource<object>>();
@@ -368,25 +356,113 @@ namespace IPA.DN.CoreUtil.Basic
                 //toSet.SetCanceled();
             }
         }
-    }
+    }*/
 
-    public class AsyncManualResetEvent : AsyncEvent
+    public class AsyncEvent
     {
-        volatile TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+        object lockobj = new object();
+        volatile TaskCompletionSource<bool> tcs;
+        bool is_set = false;
+        WeakReference<Task> weak_task = null;
+        bool is_auto_reset = false;
 
-        public override Task Wait()
+        public AsyncEvent(bool auto_reset = false)
         {
-            return tcs.Task;
+            this.is_auto_reset = auto_reset;
+
+            init();
         }
 
-        public override void Set()
+        void init()
         {
-            tcs.TrySetResult(true);
+            this.tcs = new TaskCompletionSource<bool>();
+            weak_task = null;
+        }
+
+        public bool IsSet
+        {
+            get
+            {
+                lock (lockobj)
+                {
+                    return this.is_set;
+                }
+            }
+        }
+
+        public bool IsAbandoned
+        {
+            get
+            {
+                Task ret = null;
+                if (weak_task == null || weak_task.TryGetTarget(out ret) == false)
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        public Task Wait()
+        {
+            lock (lockobj)
+            {
+                if (is_set)
+                {
+                    return Task.CompletedTask;
+                }
+                else
+                {
+                    Task ret = null;
+                    if (weak_task == null || weak_task.TryGetTarget(out ret) == false)
+                    {
+                        ret = TaskUtil.CreateTaskFromTask(tcs.Task);
+                        if (this.is_auto_reset)
+                        {
+                            ret.ContinueWith(t =>
+                            {
+                                Reset();
+                            });
+                        }
+                        weak_task = new WeakReference<Task>(ret);
+                    }
+                    return ret;
+                }
+            }
+        }
+
+        public void Set()
+        {
+            lock (lockobj)
+            {
+                if (is_set == false)
+                {
+                    is_set = true;
+                    tcs.TrySetResult(true);
+                }
+            }
+        }
+
+        public void Reset()
+        {
+            lock (lockobj)
+            {
+                if (is_set)
+                {
+                    is_set = false;
+                    init();
+                }
+            }
         }
     }
 
     public static class TaskUtil
     {
+        public static Task CreateTaskFromTask(Task t)
+        {
+            return Task.WhenAll(t);
+        }
+
         public static Task Sleep(int msec)
         {
             return AsyncWaiter.Sleep(msec);

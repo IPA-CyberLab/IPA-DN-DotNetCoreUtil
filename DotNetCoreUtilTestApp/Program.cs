@@ -139,9 +139,34 @@ namespace DotNetCoreUtilTestApp
 
             // sleep_test();
 
-            sleep_task_gc_test();
+            //sleep_task_gc_test();
 
             //sleep_task_test2();
+
+            event_test();
+        }
+
+        static void event_test()
+        {
+            AsyncEvent ae = new AsyncEvent(false);
+
+            ThreadObj t = new ThreadObj(param =>
+            {
+                while (true)
+                {
+                    Kernel.SleepThread(1000);
+                    //ae.Set();
+                }
+            });
+
+            IntervalDebug id = new IntervalDebug();
+            while (true)
+            {
+                id.Start();
+                ae.Wait();
+                //id.PrintElapsed();
+                //ae.Reset();
+            }
         }
 
         static void sleep_task_test2()
@@ -1071,7 +1096,7 @@ namespace DotNetCoreUtilTestApp
 
                     Dbg.WriteCurrentThreadId("tick = " + diff);
 
-                    AsyncEvent e = new AsyncManualResetEvent();
+                    var e = new AsyncEvent();
 
                     //if (TaskUtil.CurrentTaskVmGracefulCancel.IsCancellationRequested)
                     //{

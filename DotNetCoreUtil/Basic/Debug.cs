@@ -351,6 +351,24 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
+    public class IntervalDebug
+    {
+        public string Name { get; }
+        public IntervalDebug(string name = "Interval") => this.Name = name.NonNullTrim();
+        long start_tick = 0;
+        public void Start() => this.start_tick = Time.Tick64;
+        public int Elapsed => (int)(Time.Tick64 - this.start_tick);
+        public void PrintElapsed()
+        {
+            if (Dbg.IsDebugMode)
+            {
+                int value = this.Elapsed;
+                Dbg.WriteLine($"{this.Name}: {value}");
+            }
+            Start();
+        }
+    }
+
     public class Benchmark : IDisposable
     {
         public int Interval { get; }
