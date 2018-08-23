@@ -140,16 +140,52 @@ namespace DotNetCoreUtilTestApp
             // sleep_test();
 
             sleep_task_gc_test();
+
+            //sleep_task_test2();
+        }
+
+        static void sleep_task_test2()
+        {
+            Task t = TaskUtil.Sleep(1000);
+
+            Dbg.Where();
+            t.Wait();
+            Dbg.Where();
+
+            Kernel.SleepThread(-1);
         }
 
         static void sleep_task_gc_test()
         {
-            Benchmark b = new Benchmark("num");
+            Benchmark b = new Benchmark("num_newtask");
+            while (true)
+            {
+                List<Task> o = new List<Task>();
+                for (int i = 0; i < 100000; i++)
+                {
+                    b.IncrementMe++;
+                    Task t = TaskUtil.Sleep(1000);
+                    o.Add(t);
+                }
+                //t.Wait();
+                //Dbg.Where();
+                //Task.Delay(1000);
+                //Util.AddToBlackhole(t);
+                Dbg.Where();
+                foreach (Task t in o)
+                {
+                    t.Wait();
+                }
+                Dbg.Where();
+            }
             while (true)
             {
                 b.IncrementMe++;
-                TaskUtil.Sleep(1000);
-                //Task.Delay(100000);
+                Task t = TaskUtil.Sleep(1000);
+                //t.Wait();
+                //Dbg.Where();
+                //Task.Delay(1000);
+                Util.AddToBlackhole(t);
             }
         }
 
@@ -157,7 +193,6 @@ namespace DotNetCoreUtilTestApp
         {
             Dbg.SetDebugMode(false);
 
-            long last_tick = 0;
             Ref<int> interval = new Ref<int>(100);
 
             new ThreadObj(param =>
@@ -1075,7 +1110,7 @@ namespace DotNetCoreUtilTestApp
 
         static async Task fire_test(AsyncEvent e)
         {
-            await AsyncWaiter.Sleep(200, null);
+            await AsyncWaiter.Sleep(200);
             e.Set();
         }
 

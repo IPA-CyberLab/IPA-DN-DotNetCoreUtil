@@ -155,7 +155,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string ObjectToXmlPublic(this object o, Type t = null) => Str.ObjectToXMLSimple(o, t ?? o.GetType());
         public static object CloneSerializableObject(this object o) => Str.CloneObject(o);
         public static byte[] ObjectToBinary(this object o) => Str.ObjectToBinary(o);
-        public static object BinaryToObject(byte[] b) => Str.BinaryToObject(b);
+        public static object BinaryToObject(this byte[] b) => Str.BinaryToObject(b);
         public static object Print(this object s, bool newline = true) { Console.Write((s == null ? "null" : s.ToString()) + (newline ? Env.NewLine : "")); return s; }
         public static object Debug(this object s) { Dbg.WriteLine((s == null ? "null" : s.ToString())); return s; }
         public static ulong GetObjectHash(this object o) => Util.GetObjectHash(o);

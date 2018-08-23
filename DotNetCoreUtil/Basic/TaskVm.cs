@@ -92,7 +92,7 @@ namespace IPA.DN.CoreUtil.Basic
 
     public static class AsyncWaiter
     {
-        static SortedList<long, List<TaskCompletionSource<int>>> wait_list = new SortedList<long, List<TaskCompletionSource<int>>>();
+        static SortedList<long, List<WeakReference<TaskCompletionSource<int>>>> wait_list = new SortedList<long, List<WeakReference<TaskCompletionSource<int>>>>();
 
         static Stopwatch w;
 
@@ -170,7 +170,9 @@ namespace IPA.DN.CoreUtil.Basic
 
         static void background_thread_proc()
         {
-            IntevalReporter r = new IntevalReporter();
+            Benchmark b1 = new Benchmark("num_fired");
+            Benchmark b2 = new Benchmark("num_loop");
+            Benchmark b3 = new Benchmark("num_removed");
             while (true)
             {
                 long now = Tick;
@@ -178,7 +180,6 @@ namespace IPA.DN.CoreUtil.Basic
 
                 List<TaskCompletionSource<int>> tc_list = new List<TaskCompletionSource<int>>();
 
-                Dbg.Where();
                 lock (wait_list)
                 {
                     List<long> past_target_list = new List<long>();
@@ -198,13 +199,16 @@ namespace IPA.DN.CoreUtil.Basic
 
                     foreach (long target in past_target_list)
                     {
-                        List<TaskCompletionSource<int>> tcl = wait_list[target];
+                        List<WeakReference<TaskCompletionSource<int>>> tcl = wait_list[target];
 
                         wait_list.Remove(target);
 
-                        foreach (TaskCompletionSource<int> tc in tcl)
+                        foreach (WeakReference<TaskCompletionSource<int>> tc in tcl)
                         {
-                            tc_list.Add(tc);
+                            if (tc.TryGetTarget(out TaskCompletionSource<int> tc2))
+                                tc_list.Add(tc2);
+                            else
+                                b3.IncrementMe++;
                         }
                     }
 
@@ -216,7 +220,7 @@ namespace IPA.DN.CoreUtil.Basic
                         }
                     }
                 }
-                Dbg.Where();
+
                 int n = 0;
                 foreach (TaskCompletionSource<int> tc in tc_list)
                 {
@@ -224,9 +228,11 @@ namespace IPA.DN.CoreUtil.Basic
                     //Task.Factory.StartNew(() => tc.TrySetResult(0));
                     FireWorkerThread(tc);
                     n++;
+                    b1.IncrementMe++;
                 }
                 //n.Print();
-                Dbg.Where();
+                b2.IncrementMe++;
+
                 now = Tick;
                 long next_wait_tick = (Math.Max(next_wait_target - now, 0));
                 if (next_wait_target == -1)
@@ -241,7 +247,6 @@ namespace IPA.DN.CoreUtil.Basic
                     }
                     ev.WaitOne((int)next_wait_tick);
                 }
-                Dbg.Where();
             }
         }
 
@@ -262,7 +267,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
         }
 
-        public static Task Sleep(int msec, CancellationToken[] cancel_list)
+        public static Task Sleep(int msec)
         {
             if (msec == Timeout.Infinite)
             {
@@ -276,19 +281,9 @@ namespace IPA.DN.CoreUtil.Basic
             long target_time = Tick + (long)msec;
 
             TaskCompletionSource<int> tc = new TaskCompletionSource<int>();
-            List<TaskCompletionSource<int>> o;
+            List<WeakReference<TaskCompletionSource<int>>> o;
 
             bool set_event = false;
-
-            if (cancel_list != null)
-            {
-                lock (watching_cancels)
-                {
-                    foreach (CancellationToken ct in cancel_list)
-                    {
-                    }
-                }
-            }
 
             lock (wait_list)
             {
@@ -302,7 +297,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (wait_list.ContainsKey(target_time) == false)
                 {
-                    o = new List<TaskCompletionSource<int>>();
+                    o = new List<WeakReference<TaskCompletionSource<int>>>();
                     wait_list.Add(target_time, o);
                 }
                 else
@@ -310,7 +305,7 @@ namespace IPA.DN.CoreUtil.Basic
                     o = wait_list[target_time];
                 }
 
-                o.Add(tc);
+                o.Add(new WeakReference<TaskCompletionSource<int>>(tc));
 
                 first_target_after = wait_list.Keys[0];
 
@@ -390,18 +385,11 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
-    public class GCTask : Task
-    {
-        public GCTask(Action action) : base(action)
-        {
-        }
-    }
-
     public static class TaskUtil
     {
         public static Task Sleep(int msec)
         {
-            return AsyncWaiter.Sleep(msec, null);
+            return AsyncWaiter.Sleep(msec);
         }
 
         /*public static Task<bool> Sleep(int msec, CancellationToken cancel)
