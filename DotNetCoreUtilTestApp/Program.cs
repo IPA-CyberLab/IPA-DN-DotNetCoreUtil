@@ -151,11 +151,11 @@ namespace DotNetCoreUtilTestApp
                 {
                     long tick = Time.Tick64;
 
-                    Task.Delay(interval.Value).Wait();
+                    //Task.Delay(interval.Value).Wait();
                     //Thread.Sleep(50);
                     //new genstr_params();
                     //Task.Delay(1000);
-                    //TaskUtil.Sleep(1000);
+                    TaskUtil.Sleep(interval.Value);
                     //b.IncrementMe++;
 
                     long tick2 = Time.Tick64;
