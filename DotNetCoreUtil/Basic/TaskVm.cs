@@ -225,7 +225,7 @@ namespace IPA.DN.CoreUtil.Basic
                     FireWorkerThread(tc);
                     n++;
                 }
-                n.Print();
+                //n.Print();
                 Dbg.Where();
                 now = Tick;
                 long next_wait_tick = (Math.Max(next_wait_target - now, 0));
