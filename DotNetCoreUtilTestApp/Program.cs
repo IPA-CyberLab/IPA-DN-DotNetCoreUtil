@@ -136,12 +136,31 @@ namespace DotNetCoreUtilTestApp
             //jsonrpc_http_server_test();
 
             //Benchmark b = new Benchmark();
+
+            sleep_test();
+        }
+
+        static void sleep_test()
+        {
+            long last_tick = 0;
+            string line = Con.ReadLine("interval(msec)>");
+            int msec = line.ToInt();
+
             while (true)
             {
+                long tick = Time.Tick64;
+
+                Task.Delay(msec).Wait();
+                //Thread.Sleep(50);
                 //new genstr_params();
                 //Task.Delay(1000);
-                TaskUtil.Sleep(1000);
+                //TaskUtil.Sleep(1000);
                 //b.IncrementMe++;
+
+                long tick2 = Time.Tick64;
+
+                long diff = tick2 - tick;
+                Con.WriteLine(diff);
             }
         }
 
