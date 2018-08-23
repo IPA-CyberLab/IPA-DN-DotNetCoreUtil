@@ -27,6 +27,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 
+using IPA.DN.CoreUtil.Helper.Basic;
+
 namespace IPA.DN.CoreUtil.Basic
 {
     public static class Dbg
@@ -34,9 +36,13 @@ namespace IPA.DN.CoreUtil.Basic
         static bool is_debug_mode = false;
         public static bool IsDebugMode => is_debug_mode;
 
-        public static void SetDebugMode(bool b = true)
+        public static void SetDebugMode(bool b = true) => is_debug_mode = b;
+
+        public static void Report(string name, object obj) => Report(name, obj.ObjectToJson(compact: true));
+
+        public static void Report(string name, string value)
         {
-            is_debug_mode = b;
+            if (Dbg.IsDebugMode) GlobalIntervalReporter.Singleton.Report(name, value);
         }
 
         public static void WriteCurrentThreadId(string str = "")
@@ -348,7 +354,7 @@ namespace IPA.DN.CoreUtil.Basic
     public class Benchmark : IDisposable
     {
         public int Interval { get; }
-        public volatile int IncrementMe = 0;
+        public long IncrementMe = 0;
         Once d;
         ThreadObj thread;
         ManualResetEventSlim halt_event = new ManualResetEventSlim();
@@ -370,7 +376,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             Thread.CurrentThread.IsBackground = true;
             IntervalManager m = new IntervalManager(this.Interval);
-            int last_value = 0;
+            long last_value = 0;
             while (true)
             {
                 int wait_interval = m.GetNextInterval(out int span);
@@ -378,13 +384,13 @@ namespace IPA.DN.CoreUtil.Basic
                 halt_event.Wait(wait_interval);
                 if (halt_flag) break;
 
-                int now_value = this.IncrementMe;
-                int diff_value = now_value - last_value;
+                long now_value = this.IncrementMe;
+                long diff_value = now_value - last_value;
                 last_value = now_value;
 
                 double r = (double)diff_value * 1000.0 / (double)span;
 
-                Console.WriteLine($"{this.Name}: {Str.ToStr3((long)r)} / sec");
+                Dbg.WriteLine($"{this.Name}: {Str.ToStr3((long)r)} / sec");
             }
         }
 
@@ -395,6 +401,94 @@ namespace IPA.DN.CoreUtil.Basic
                 halt_flag = true;
                 halt_event.Set();
                 this.thread.WaitForEnd();
+            }
+        }
+    }
+
+    public static class SingletonFactory
+    {
+        static Dictionary<string, object> table = new Dictionary<string, object>();
+
+        public static T New<T>() where T : new()
+        {
+            Type t = typeof(T);
+            string name = t.AssemblyQualifiedName;
+            lock (table)
+            {
+                object ret = null;
+                if (table.ContainsKey(name))
+                    ret = table[name];
+                else
+                {
+                    ret = new T();
+                    table[name] = ret;
+                }
+                return (T)ret;
+            }
+        }
+    }
+
+    public class GlobalIntervalReporter
+    {
+        public const int Interval = 1000;
+        SortedList<string, Ref<(int ver, string value)>> table = new SortedList<string, Ref<(int ver, string value)>>();
+        ThreadObj thread;
+
+        public static GlobalIntervalReporter Singleton { get => SingletonFactory.New<GlobalIntervalReporter>(); }
+
+        public GlobalIntervalReporter()
+        {
+            thread = new ThreadObj(main_thread);
+        }
+
+        public void Report(string name, object obj)
+            => Report(name, obj.ObjectToJson(compact: true));
+
+        public void Report(string name, string value)
+        {
+            if (Dbg.IsDebugMode == false) return;
+            name = name.NonNullTrim();
+            lock (table)
+            {
+                Ref<(int ver, string value)> r;
+                if (table.ContainsKey(name))
+                {
+                    if (value.IsEmpty()) table.Remove(name);
+                    r = table[name];
+                }
+                else
+                {
+                    if (value.IsEmpty()) return;
+                    r = new Ref<(int ver, string value)>();
+                    table.Add(name, r);
+                }
+                r.Set((r.Value.ver + 1, value));
+            }
+        }
+
+        void print()
+        {
+            StringWriter w = new StringWriter();
+            w.WriteLine("-----");
+            lock (table)
+            {
+                foreach (string name in table.Keys)
+                {
+                    var r = table[name];
+                    w.WriteLine($"{name}({r.Value.ver}): {r.Value.value}");
+                }
+            }
+            Dbg.WriteLine(w.ToString().TrimCrlf());
+        }
+
+        void main_thread(object param)
+        {
+            Thread.CurrentThread.IsBackground = true;
+            IntervalManager m = new IntervalManager(Interval);
+            while (true)
+            {
+                print();
+                Kernel.SleepThread(m.GetNextInterval());
             }
         }
     }
@@ -434,7 +528,7 @@ namespace IPA.DN.CoreUtil.Basic
                 try
                 {
                     object obj = this.SetMe;
-                    if (obj != null) Console.WriteLine($"{this.Name}: {SetMe.ToString()}");
+                    if (obj != null) Dbg.WriteLine($"{this.Name}: {SetMe.ToString()}");
                 }
                 catch
                 {

@@ -137,7 +137,20 @@ namespace DotNetCoreUtilTestApp
 
             //Benchmark b = new Benchmark();
 
-            sleep_test();
+            // sleep_test();
+
+            sleep_task_gc_test();
+        }
+
+        static void sleep_task_gc_test()
+        {
+            Benchmark b = new Benchmark("num");
+            while (true)
+            {
+                b.IncrementMe++;
+                TaskUtil.Sleep(1000);
+                //Task.Delay(100000);
+            }
         }
 
         static void sleep_test()
@@ -147,24 +160,24 @@ namespace DotNetCoreUtilTestApp
             long last_tick = 0;
             Ref<int> interval = new Ref<int>(100);
 
-
             new ThreadObj(param =>
             {
                 while (true)
                 {
                     long tick = Time.Tick64;
 
-                    //Task.Delay(interval.Value).Wait();
+                    Task.Delay(interval.Value).Wait();
                     //Thread.Sleep(50);
                     //new genstr_params();
                     //Task.Delay(1000);
-                    TaskUtil.Sleep(interval.Value).Wait();
+                    //TaskUtil.Sleep(interval.Value).Wait();
                     //b.IncrementMe++;
 
                     long tick2 = Time.Tick64;
 
                     long diff = tick2 - tick;
                     Con.WriteLine(diff);
+                    //GlobalIntervalReporter.Singleton.Report("diff", diff);
                 }
             });
 

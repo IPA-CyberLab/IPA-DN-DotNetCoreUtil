@@ -14,11 +14,12 @@
     <SignAssembly>false</SignAssembly>
     <AssemblyVersion>1.0.2018.0816</AssemblyVersion>
     <FileVersion>1.0.2018.0816</FileVersion>
+    <LangVersion>7.2</LangVersion>
     
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
