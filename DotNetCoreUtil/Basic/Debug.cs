@@ -359,7 +359,11 @@ namespace IPA.DN.CoreUtil.Basic
         {
             this.Interval = interval;
             this.Name = name;
-            this.thread = new ThreadObj(thread_proc);
+
+            if (Dbg.IsDebugMode)
+            {
+                this.thread = new ThreadObj(thread_proc);
+            }
         }
 
         void thread_proc(object param)
@@ -409,7 +413,11 @@ namespace IPA.DN.CoreUtil.Basic
         {
             this.Interval = interval;
             this.Name = name;
-            this.thread = new ThreadObj(thread_proc);
+
+            if (Dbg.IsDebugMode)
+            {
+                this.thread = new ThreadObj(thread_proc);
+            }
         }
 
         void thread_proc(object param)
