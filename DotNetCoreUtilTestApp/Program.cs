@@ -142,8 +142,11 @@ namespace DotNetCoreUtilTestApp
 
         static void sleep_test()
         {
+            Dbg.SetDebugMode(false);
+
             long last_tick = 0;
             Ref<int> interval = new Ref<int>(100);
+
 
             new ThreadObj(param =>
             {
