@@ -155,7 +155,7 @@ namespace DotNetCoreUtilTestApp
                     //Thread.Sleep(50);
                     //new genstr_params();
                     //Task.Delay(1000);
-                    TaskUtil.Sleep(interval.Value);
+                    TaskUtil.Sleep(interval.Value).Wait();
                     //b.IncrementMe++;
 
                     long tick2 = Time.Tick64;
