@@ -139,11 +139,63 @@ namespace DotNetCoreUtilTestApp
 
             // sleep_test();
 
-            //sleep_task_gc_test();
+            sleep_task_gc_test();
 
             //sleep_task_test2();
 
-            event_test();
+            //event_test();
+
+            //event_gc_test();
+        }
+
+        static void event_gc_test()
+        {
+            Benchmark b = new Benchmark("event_gc_test");
+
+            List<AsyncEvent> events2 = new List<AsyncEvent>();
+
+            while (true)
+            {
+                //b.IncrementMe++;
+
+                int num = 10000;
+                List<AsyncEvent> events = new List<AsyncEvent>();
+                List<Task> tasks = new List<Task>();
+                for (int i = 0; i < num; i++)
+                {
+                    AsyncEvent ae = new AsyncEvent(false);
+                    Task t = ae.WaitAsync();
+
+                    events.Add(ae);
+                    events2.Add(ae);
+
+                    tasks.Add(t);
+                }
+
+                foreach (AsyncEvent e in events)
+                {
+                    e.Set();
+                }
+
+                foreach (Task t in tasks)
+                {
+                    t.Wait();
+                }
+
+                events = null;
+                tasks = null;
+
+                int num_a = 0, num_total = 0;
+                foreach (AsyncEvent ae in events2)
+                {
+                    if (ae.IsAbandoned)
+                    {
+                        num_a++;
+                    }
+                    num_total++;
+                }
+                Con.WriteLine($"{num_a} {num_total}");
+            }
         }
 
         static void event_test()
@@ -154,8 +206,8 @@ namespace DotNetCoreUtilTestApp
             {
                 while (true)
                 {
-                    Kernel.SleepThread(1000);
-                    //ae.Set();
+                    //Kernel.SleepThread(1000);
+                    ae.Set();
                 }
             });
 
@@ -163,9 +215,11 @@ namespace DotNetCoreUtilTestApp
             while (true)
             {
                 id.Start();
-                ae.Wait();
-                //id.PrintElapsed();
-                //ae.Reset();
+                ae.WaitAsync().Wait();
+                id.PrintElapsed();
+                ae.Reset();
+
+                GC.Collect();
             }
         }
 

@@ -403,7 +403,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public Task Wait()
+        public Task WaitAsync()
         {
             lock (lockobj)
             {

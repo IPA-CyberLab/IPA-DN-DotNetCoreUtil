@@ -1096,12 +1096,12 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // 何でも登録するリスト
-        static List<object> blackhole = new List<object>();
+        static LinkedList<object> blackhole = new LinkedList<object>();
         public static void AddToBlackhole(object obj)
         {
             lock (blackhole)
             {
-                blackhole.Add(obj);
+                blackhole.AddLast(obj);
             }
         }
     }
