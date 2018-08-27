@@ -170,9 +170,9 @@ namespace IPA.DN.CoreUtil.Basic
 
         static void background_thread_proc()
         {
-            Benchmark b1 = new Benchmark("num_fired");
-            Benchmark b2 = new Benchmark("num_loop");
-            Benchmark b3 = new Benchmark("num_removed");
+            //Benchmark b1 = new Benchmark("num_fired");
+            //Benchmark b2 = new Benchmark("num_loop");
+            //Benchmark b3 = new Benchmark("num_removed");
             while (true)
             {
                 long now = Tick;
@@ -210,7 +210,7 @@ namespace IPA.DN.CoreUtil.Basic
                                 fire_event_list.Add(e);
                             else
                             {
-                                b3.IncrementMe++;
+                                //b3.IncrementMe++;
                             }
                         }
                     }
@@ -226,7 +226,7 @@ namespace IPA.DN.CoreUtil.Basic
                             if (e.IsAbandoned)
                             {
                                 remove_list.Add(e);
-                                b3.IncrementMe++;
+                                //b3.IncrementMe++;
                                 //Dbg.Where();
                             }
                         }
@@ -258,10 +258,10 @@ namespace IPA.DN.CoreUtil.Basic
                     //Task.Factory.StartNew(() => tc.TrySetResult(0));
                     FireWorkerThread(tc);
                     n++;
-                    b1.IncrementMe++;
+                    //b1.IncrementMe++;
                 }
                 //n.Print();
-                b2.IncrementMe++;
+                //b2.IncrementMe++;
 
                 now = Tick;
                 long next_wait_tick = (Math.Max(next_wait_target - now, 0));
