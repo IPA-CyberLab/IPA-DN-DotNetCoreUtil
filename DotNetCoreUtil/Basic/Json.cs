@@ -130,6 +130,11 @@ namespace IPA.DN.CoreUtil.Basic
             return o;
         }
 
+        public static JObject NewJsonObject()
+        {
+            return new JObject();
+        }
+
         public static string Normalize(string str)
         {
             dynamic d = DeserializeDynamic(str);

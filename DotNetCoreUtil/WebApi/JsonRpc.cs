@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Web;
 using System.IO;
+using System.Dynamic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Net;
@@ -233,7 +234,7 @@ namespace IPA.DN.CoreUtil.WebApi
         }
     }
 
-    public abstract class JsonRpcServerHandler
+    public abstract class JsonRpcServerApi
     {
         public CancellationTokenSource CancelSource { get; } = new CancellationTokenSource();
         public CancellationToken CancelToken { get => this.CancelSource.Token; }
@@ -258,12 +259,12 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public abstract class JsonRpcServer
     {
-        public JsonRpcServerHandler Handler { get; }
+        public JsonRpcServerApi Api { get; }
         public JsonRpcServerConfig Config { get; }
 
-        public JsonRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg, CancellationToken cancel_token)
+        public JsonRpcServer(JsonRpcServerApi api, JsonRpcServerConfig cfg, CancellationToken cancel_token)
         {
-            this.Handler = handler;
+            this.Api = api;
             this.Config = cfg;
         }
 
@@ -271,11 +272,11 @@ namespace IPA.DN.CoreUtil.WebApi
         {
             try
             {
-                RpcMethodInfo method = this.Handler.GetMethodInfo(req.Method);
+                RpcMethodInfo method = this.Api.GetMethodInfo(req.Method);
                 JObject in_obj = (JObject)req.Params;
                 try
                 {
-                    object ret_obj = await this.Handler.InvokeMethod(req.Method, in_obj);
+                    object ret_obj = await this.Api.InvokeMethod(req.Method, in_obj);
                     return new JsonRpcResponseOk()
                     {
                         Id = req.Id,
@@ -370,7 +371,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class JsonHttpRpcServer : JsonRpcServer
     {
-        public JsonHttpRpcServer(JsonRpcServerHandler handler, JsonRpcServerConfig cfg, CancellationToken cancel_token) : base(handler, cfg, cancel_token) { }
+        public JsonHttpRpcServer(JsonRpcServerApi api, JsonRpcServerConfig cfg, CancellationToken cancel_token) : base(api, cfg, cancel_token) { }
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
@@ -429,17 +430,33 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public JsonHttpRpcListener(IConfiguration configuration) : base(configuration)
         {
-            (JsonRpcServerConfig rpc_cfg, JsonRpcServerHandler handler) p = ((JsonRpcServerConfig rpc_cfg, JsonRpcServerHandler handler))this.Param;
+            (JsonRpcServerConfig rpc_cfg, JsonRpcServerApi api) p = ((JsonRpcServerConfig rpc_cfg, JsonRpcServerApi api))this.Param;
 
-            JsonServer = new JsonHttpRpcServer(p.handler, p.rpc_cfg, this.CancelToken);
+            JsonServer = new JsonHttpRpcServer(p.api, p.rpc_cfg, this.CancelToken);
         }
 
-        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig http_cfg, JsonRpcServerConfig rpc_server_cfg, JsonRpcServerHandler rpc_handler)
-            => new HttpServer<JsonHttpRpcListener>(http_cfg, (rpc_server_cfg, rpc_handler));
+        public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig http_cfg, JsonRpcServerConfig rpc_server_cfg, JsonRpcServerApi rpc_api)
+            => new HttpServer<JsonHttpRpcListener>(http_cfg, (rpc_server_cfg, rpc_api));
 
         public override void SetupStartupConfig(HttpServerStartupConfig cfg, IApplicationBuilder app, IHostingEnvironment env)
             => this.JsonServer.RegisterToHttpServer(app);
     }
+
+    public abstract class JsonRpcClientDynamicApi
+    {
+        //public JsonRpcClient Client { get; }
+        //public JsonRpcClientDynamicApi(JsonRpcClient client)
+        //{
+        //    this.Client = client;
+        //}
+
+        public abstract void F1();
+
+        public static void Test()
+        {
+        }
+    }
+
 
     public abstract class JsonRpcClient
     {

@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 
 using System.Text;
 using System.IO;
+using System.Dynamic;
 
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -107,17 +108,42 @@ namespace DotNetCoreUtilTestApp
         public string A;
     }
 
+    public class DT1 : DynamicObject
+    {
+        public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
+        {
+            Dbg.Where();
+            return base.TryInvoke(binder, args, out result);
+        }
+
+        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+        {
+            Dbg.Where();
+            return base.TryInvokeMember(binder, args, out result);
+        }
+
+        public void Hello(string str)
+        {
+            Con.WriteLine(str);
+        }
+    }
 
     class Program
     {
         [DllImport("MyLib.dll", CallingConvention = CallingConvention.StdCall)]
         internal static extern long NativeMethod();
 
+
         static void Main(string[] args)
         {
             "Test Program".Print();
 
             Dbg.SetDebugMode();
+
+            DT1 t = new DT1();
+            dynamic d = t;
+
+            d.Hello("hello");
 
             //twitter_test();
 
@@ -135,6 +161,9 @@ namespace DotNetCoreUtilTestApp
 
             //jsonrpc_http_server_test();
 
+
+            //jsonrpc_client_server_test();
+
             //Benchmark b = new Benchmark();
 
             //sleep_test();
@@ -147,7 +176,7 @@ namespace DotNetCoreUtilTestApp
 
             //auto_reset_event_test();
 
-            sleep_task_gc_test();
+            //sleep_task_gc_test();
 
             //Kernel.SleepThread(-1);
         }
@@ -374,7 +403,13 @@ namespace DotNetCoreUtilTestApp
             public int advisoryDelay { get; set; }
         }
 
-        public class rpc_handler_test : JsonRpcServerHandler
+        public class rpc_t
+        {
+            public string Str1;
+            public int Int1;
+        }
+
+        public class rpc_server_api_test : JsonRpcServerApi
         {
             [RpcMethod]
             public string Test(int a, int b, int c, int d=1)
@@ -404,6 +439,18 @@ namespace DotNetCoreUtilTestApp
             }
 
             [RpcMethod]
+            public rpc_t Test5(rpc_t a)
+            {
+                rpc_t ret = new rpc_t()
+                {
+                    Str1 = a.Str1,
+                    Int1 = a.Int1,
+                };
+                return ret;
+            }
+
+
+            [RpcMethod]
             public string Ping()
             {
                 return "Hello";
@@ -423,6 +470,36 @@ namespace DotNetCoreUtilTestApp
             }
         }
 
+        public static void jsonrpc_client_server_test()
+        {
+            // start server
+            HttpServerBuilderConfig http_cfg = new HttpServerBuilderConfig()
+            {
+            };
+            JsonRpcServerConfig rpc_cfg = new JsonRpcServerConfig()
+            {
+            };
+            rpc_server_api_test h = new rpc_server_api_test();
+            var s = JsonHttpRpcListener.StartServer(http_cfg, rpc_cfg, h);
+
+            // start client
+            ThreadObj client_thread = ThreadObj.Start(param =>
+            {
+                JsonRpcHttpClient c = new JsonRpcHttpClient("http://localhost:88/rpc");
+
+                JsonRpcResponse<object> ret = c.CallOne<object>("Test5", null).Result;
+                Con.WriteLine(ret.ObjectToJson());
+            }, null);
+
+            //Con.ReadLine("Enter>");
+
+            client_thread.WaitForEnd();
+
+            s.StopAsync().Wait();
+
+            
+        }
+
         public static void jsonrpc_http_server_test()
         {
             /*rpc_handler_test x = new rpc_handler_test();
@@ -437,7 +514,7 @@ namespace DotNetCoreUtilTestApp
             JsonRpcServerConfig rpc_cfg = new JsonRpcServerConfig()
             {
             };
-            rpc_handler_test h = new rpc_handler_test();
+            rpc_server_api_test h = new rpc_server_api_test();
             var s = JsonHttpRpcListener.StartServer(http_cfg, rpc_cfg, h);
 
             Con.ReadLine("Enter>");
