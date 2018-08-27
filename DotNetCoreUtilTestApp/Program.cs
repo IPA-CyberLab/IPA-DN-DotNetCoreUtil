@@ -225,7 +225,7 @@ namespace DotNetCoreUtilTestApp
 
         static void sleep_task_test2()
         {
-            Task t = TaskUtil.Sleep(1000);
+            Task t = TaskUtil.PreciseDelay(1000);
 
             Dbg.Where();
             t.Wait();
@@ -243,7 +243,7 @@ namespace DotNetCoreUtilTestApp
                 for (int i = 0; i < 100000; i++)
                 {
                     b.IncrementMe++;
-                    Task t = TaskUtil.Sleep(1000);
+                    Task t = TaskUtil.PreciseDelay(1000);
                     o.Add(t);
                 }
                 //t.Wait();
@@ -260,7 +260,7 @@ namespace DotNetCoreUtilTestApp
             while (true)
             {
                 b.IncrementMe++;
-                Task t = TaskUtil.Sleep(1000);
+                Task t = TaskUtil.PreciseDelay(1000);
                 //t.Wait();
                 //Dbg.Where();
                 //Task.Delay(1000);
@@ -280,11 +280,11 @@ namespace DotNetCoreUtilTestApp
                 {
                     long tick = Time.Tick64;
 
-                    Task.Delay(interval.Value).Wait();
+                    //Task.Delay(interval.Value).Wait();
                     //Thread.Sleep(50);
                     //new genstr_params();
                     //Task.Delay(1000);
-                    //TaskUtil.Sleep(interval.Value).Wait();
+                    TaskUtil.PreciseDelay(interval.Value).Wait();
                     //b.IncrementMe++;
 
                     long tick2 = Time.Tick64;
@@ -338,14 +338,14 @@ namespace DotNetCoreUtilTestApp
             [RpcMethod]
             public async Task<string> Test2(int a)
             {
-                await TaskUtil.Sleep(500);
+                await TaskUtil.PreciseDelay(500);
                 return "Hello " + a.ToString();
             }
 
             [RpcMethod]
             public async Task<string> Test3(int a)
             {
-                await TaskUtil.Sleep(500);
+                await TaskUtil.PreciseDelay(500);
                 return "! " + a;
             }
 
@@ -370,7 +370,7 @@ namespace DotNetCoreUtilTestApp
             [RpcMethod]
             public async Task Ping3()
             {
-                await TaskUtil.Sleep(500);
+                await TaskUtil.PreciseDelay(500);
                 //throw new ApplicationException("ha");
             }
         }
@@ -1189,7 +1189,7 @@ namespace DotNetCoreUtilTestApp
 
         static async Task fire_test(AsyncEvent e)
         {
-            await AsyncWaiter.Sleep(200);
+            await AsyncPreciseDelay.PreciseDelay(200);
             e.Set();
         }
 

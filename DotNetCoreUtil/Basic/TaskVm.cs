@@ -90,9 +90,9 @@ namespace IPA.DN.CoreUtil.Basic
 
     }
 
-    public static class AsyncWaiter
+    public static class AsyncPreciseDelay
     {
-        static SortedList<long, List<WeakReference<TaskCompletionSource<int>>>> wait_list = new SortedList<long, List<WeakReference<TaskCompletionSource<int>>>>();
+        static SortedList<long, List<AsyncEvent>> wait_list = new SortedList<long, List<AsyncEvent>>();
 
         static Stopwatch w;
 
@@ -102,11 +102,11 @@ namespace IPA.DN.CoreUtil.Basic
 
         static List<Thread> worker_thread_list = new List<Thread>();
 
-        static Queue<TaskCompletionSource<int>> queued_tcs = new Queue<TaskCompletionSource<int>>();
+        static Queue<AsyncEvent> queued_tcs = new Queue<AsyncEvent>();
 
         static AutoResetEvent queued_tcs_signal = new AutoResetEvent(false);
 
-        static AsyncWaiter()
+        static AsyncPreciseDelay()
         {
             w = new Stopwatch();
             w.Start();
@@ -126,7 +126,7 @@ namespace IPA.DN.CoreUtil.Basic
                 Interlocked.Increment(ref num_busy_worker_threads);
                 while (true)
                 {
-                    TaskCompletionSource<int> tcs = null;
+                    AsyncEvent tcs = null;
                     lock (queued_tcs)
                     {
                         if (queued_tcs.Count != 0)
@@ -137,7 +137,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                     if (tcs != null)
                     {
-                        tcs.TrySetResult(0);
+                        tcs.Set();
                     }
                     else
                     {
@@ -150,7 +150,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        static void FireWorkerThread(TaskCompletionSource<int> tc)
+        static void FireWorkerThread(AsyncEvent tc)
         {
             if (num_busy_worker_threads == num_worker_threads)
             {
@@ -178,7 +178,7 @@ namespace IPA.DN.CoreUtil.Basic
                 long now = Tick;
                 long next_wait_target = -1;
 
-                List<TaskCompletionSource<int>> tc_list = new List<TaskCompletionSource<int>>();
+                List<AsyncEvent> tc_list = new List<AsyncEvent>();
 
                 lock (wait_list)
                 {
@@ -199,16 +199,19 @@ namespace IPA.DN.CoreUtil.Basic
 
                     foreach (long target in past_target_list)
                     {
-                        List<WeakReference<TaskCompletionSource<int>>> tcl = wait_list[target];
+                        List<AsyncEvent> tcl = wait_list[target];
 
                         wait_list.Remove(target);
 
-                        foreach (WeakReference<TaskCompletionSource<int>> tc in tcl)
+                        foreach (AsyncEvent tc in tcl)
                         {
-                            if (tc.TryGetTarget(out TaskCompletionSource<int> tc2))
-                                tc_list.Add(tc2);
+                            if (tc.IsAbandoned == false)
+                                tc_list.Add(tc);
                             else
+                            {
                                 b3.IncrementMe++;
+                                //tc_list.Add(tc);
+                            }
                         }
                     }
 
@@ -222,7 +225,7 @@ namespace IPA.DN.CoreUtil.Basic
                 }
 
                 int n = 0;
-                foreach (TaskCompletionSource<int> tc in tc_list)
+                foreach (AsyncEvent tc in tc_list)
                 {
                     //tc.TrySetResult(0);
                     //Task.Factory.StartNew(() => tc.TrySetResult(0));
@@ -261,7 +264,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static Task Sleep(int msec)
+        public static Task PreciseDelay(int msec)
         {
             if (msec == Timeout.Infinite)
             {
@@ -274,8 +277,10 @@ namespace IPA.DN.CoreUtil.Basic
 
             long target_time = Tick + (long)msec;
 
-            TaskCompletionSource<int> tc = new TaskCompletionSource<int>();
-            List<WeakReference<TaskCompletionSource<int>>> o;
+            AsyncEvent tc = new AsyncEvent();
+            Task ret = tc.WaitAsync();
+
+            List<AsyncEvent> o;
 
             bool set_event = false;
 
@@ -291,7 +296,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (wait_list.ContainsKey(target_time) == false)
                 {
-                    o = new List<WeakReference<TaskCompletionSource<int>>>();
+                    o = new List<AsyncEvent>();
                     wait_list.Add(target_time, o);
                 }
                 else
@@ -299,7 +304,7 @@ namespace IPA.DN.CoreUtil.Basic
                     o = wait_list[target_time];
                 }
 
-                o.Add(new WeakReference<TaskCompletionSource<int>>(tc));
+                o.Add(tc);
 
                 first_target_after = wait_list.Keys[0];
 
@@ -314,7 +319,7 @@ namespace IPA.DN.CoreUtil.Basic
                 ev.Set();
             }
 
-            return tc.Task;
+            return ret;
         }
     }
     /*
@@ -463,9 +468,9 @@ namespace IPA.DN.CoreUtil.Basic
             return Task.WhenAll(t);
         }
 
-        public static Task Sleep(int msec)
+        public static Task PreciseDelay(int msec)
         {
-            return AsyncWaiter.Sleep(msec);
+            return AsyncPreciseDelay.PreciseDelay(msec);
         }
 
         /*public static Task<bool> Sleep(int msec, CancellationToken cancel)
