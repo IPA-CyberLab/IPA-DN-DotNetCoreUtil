@@ -92,7 +92,7 @@ namespace IPA.DN.CoreUtil.Basic
 
     public static class AsyncPreciseDelay
     {
-        static SortedList<long, List<AsyncEvent>> wait_list = new SortedList<long, List<AsyncEvent>>();
+        static SortedList<long, List<AsyncManualResetEvent>> wait_list = new SortedList<long, List<AsyncManualResetEvent>>();
 
         static Stopwatch w;
 
@@ -102,7 +102,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         static List<Thread> worker_thread_list = new List<Thread>();
 
-        static Queue<AsyncEvent> queued_tcs = new Queue<AsyncEvent>();
+        static Queue<AsyncManualResetEvent> queued_tcs = new Queue<AsyncManualResetEvent>();
 
         static AutoResetEvent queued_tcs_signal = new AutoResetEvent(false);
 
@@ -126,7 +126,7 @@ namespace IPA.DN.CoreUtil.Basic
                 Interlocked.Increment(ref num_busy_worker_threads);
                 while (true)
                 {
-                    AsyncEvent tcs = null;
+                    AsyncManualResetEvent tcs = null;
                     lock (queued_tcs)
                     {
                         if (queued_tcs.Count != 0)
@@ -150,7 +150,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        static void FireWorkerThread(AsyncEvent tc)
+        static void FireWorkerThread(AsyncManualResetEvent tc)
         {
             if (num_busy_worker_threads == num_worker_threads)
             {
@@ -178,7 +178,7 @@ namespace IPA.DN.CoreUtil.Basic
                 long now = Tick;
                 long next_wait_target = -1;
 
-                List<AsyncEvent> tc_list = new List<AsyncEvent>();
+                List<AsyncManualResetEvent> tc_list = new List<AsyncManualResetEvent>();
 
                 lock (wait_list)
                 {
@@ -199,11 +199,11 @@ namespace IPA.DN.CoreUtil.Basic
 
                     foreach (long target in past_target_list)
                     {
-                        List<AsyncEvent> tcl = wait_list[target];
+                        List<AsyncManualResetEvent> tcl = wait_list[target];
 
                         wait_list.Remove(target);
 
-                        foreach (AsyncEvent tc in tcl)
+                        foreach (AsyncManualResetEvent tc in tcl)
                         {
                             if (tc.IsAbandoned == false)
                                 tc_list.Add(tc);
@@ -225,7 +225,7 @@ namespace IPA.DN.CoreUtil.Basic
                 }
 
                 int n = 0;
-                foreach (AsyncEvent tc in tc_list)
+                foreach (AsyncManualResetEvent tc in tc_list)
                 {
                     //tc.TrySetResult(0);
                     //Task.Factory.StartNew(() => tc.TrySetResult(0));
@@ -277,10 +277,10 @@ namespace IPA.DN.CoreUtil.Basic
 
             long target_time = Tick + (long)msec;
 
-            AsyncEvent tc = new AsyncEvent();
+            AsyncManualResetEvent tc = new AsyncManualResetEvent();
             Task ret = tc.WaitAsync();
 
-            List<AsyncEvent> o;
+            List<AsyncManualResetEvent> o;
 
             bool set_event = false;
 
@@ -296,7 +296,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (wait_list.ContainsKey(target_time) == false)
                 {
-                    o = new List<AsyncEvent>();
+                    o = new List<AsyncManualResetEvent>();
                     wait_list.Add(target_time, o);
                 }
                 else
@@ -363,18 +363,68 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }*/
 
-    public class AsyncEvent
+    public class AsyncAutoResetEvent
+    {
+        object lockobj = new object();
+        Queue<AsyncManualResetEvent> event_queue = new Queue<AsyncManualResetEvent>();
+        bool is_set = false;
+
+        public Task WaitOneAsync()
+        {
+            lock (lockobj)
+            {
+                if (is_set)
+                {
+                    is_set = false;
+                    return Task.CompletedTask;
+                }
+
+                AsyncManualResetEvent e = new AsyncManualResetEvent();
+
+                Task ret = e.WaitAsync();
+
+                event_queue.Enqueue(e);
+
+                return ret;
+            }
+        }
+
+        public void Set()
+        {
+            AsyncManualResetEvent ev = null;
+            lock (lockobj)
+            {
+                while (event_queue.Count >= 1)
+                {
+                    AsyncManualResetEvent e = event_queue.Dequeue();
+                    if (e.IsAbandoned == false)
+                    {
+                        ev = e;
+                    }
+                }
+
+                if (ev == null)
+                {
+                    is_set = true;
+                }
+            }
+
+            if (ev != null)
+            {
+                ev.Set();
+            }
+        }
+    }
+
+    public class AsyncManualResetEvent
     {
         object lockobj = new object();
         volatile TaskCompletionSource<bool> tcs;
         bool is_set = false;
         WeakReference<Task> weak_task = null;
-        bool is_auto_reset = false;
 
-        public AsyncEvent(bool auto_reset = false)
+        public AsyncManualResetEvent()
         {
-            this.is_auto_reset = auto_reset;
-
             init();
         }
 
@@ -422,13 +472,6 @@ namespace IPA.DN.CoreUtil.Basic
                     if (weak_task == null || weak_task.TryGetTarget(out ret) == false)
                     {
                         ret = TaskUtil.CreateTaskFromTask(tcs.Task);
-                        if (this.is_auto_reset)
-                        {
-                            ret.ContinueWith(t =>
-                            {
-                                Reset();
-                            });
-                        }
                         weak_task = new WeakReference<Task>(ret);
                     }
                     return ret;

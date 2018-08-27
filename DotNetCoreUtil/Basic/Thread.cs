@@ -681,28 +681,51 @@ namespace IPA.DN.CoreUtil.Basic
             get { return thread; }
         }
         object userObject;
+        int index;
+        public int Index { get => this.index; }
 
         public ThreadObj(ThreadProc threadProc)
         {
-            init(threadProc, null, 0);
+            init(threadProc, null, 0, 0);
         }
 
         public ThreadObj(ThreadProc threadProc, int stacksize)
         {
-            init(threadProc, null, stacksize);
+            init(threadProc, null, stacksize, 0);
         }
 
         public ThreadObj(ThreadProc threadProc, object userObject)
         {
-            init(threadProc, userObject, 0);
+            init(threadProc, userObject, 0, 0);
         }
 
         public ThreadObj(ThreadProc threadProc, object userObject, int stacksize)
         {
-            init(threadProc, userObject, stacksize);
+            init(threadProc, userObject, stacksize, 0);
         }
 
-        void init(ThreadProc threadProc, object userObject, int stacksize)
+        public ThreadObj(ThreadProc threadProc, object userObject, int stacksize, int index)
+        {
+            init(threadProc, userObject, stacksize, index);
+        }
+
+        public static ThreadObj Start(ThreadProc proc, object param)
+        {
+            return new ThreadObj(proc, param);
+        }
+
+        public static ThreadObj[] StartMany(int num, ThreadProc proc, object param = null)
+        {
+            List<ThreadObj> ret = new List<ThreadObj>();
+            for (int i = 0; i < num; i++)
+            {
+                ThreadObj t = new ThreadObj(proc, param, 0, i);
+                ret.Add(t);
+            }
+            return ret.ToArray();
+        }
+
+        void init(ThreadProc threadProc, object userObject, int stacksize, int index)
         {
             if (stacksize == 0)
             {
@@ -711,6 +734,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             this.proc = threadProc;
             this.userObject = userObject;
+            this.index = index;
             waitInit = new EventWaitHandle(false, EventResetMode.AutoReset);
             waitEnd = new EventWaitHandle(false, EventResetMode.ManualReset);
             waitInitForUser = new EventWaitHandle(false, EventResetMode.ManualReset);

@@ -139,31 +139,74 @@ namespace DotNetCoreUtilTestApp
 
             // sleep_test();
 
-            sleep_task_gc_test();
+            //sleep_task_gc_test();
 
             //sleep_task_test2();
 
             //event_test();
 
-            //event_gc_test();
+            event_gc_test();
+
+            //auto_reset_event_test();
+        }
+
+        static void auto_reset_event_test()
+        {
+            int num = 10000;
+            List<AsyncAutoResetEvent> events = new List<AsyncAutoResetEvent>();
+            for (int i = 0; i < num; i++)
+            {
+                AsyncAutoResetEvent ae = new AsyncAutoResetEvent();
+                events.Add(ae);
+            }
+
+            object LockTest = new object();
+
+            ThreadObj.StartMany(100, param =>
+            {
+                while (true)
+                {
+                    Dbg.Where();
+                    //lock (LockTest)
+                    {
+                        foreach (AsyncAutoResetEvent e in events)
+                        {
+                            e.WaitOneAsync().Wait();
+                        }
+                    }
+                }
+            });
+
+            while (true)
+            {
+                //lock (LockTest)
+                {
+                    Dbg.Where();
+                    foreach (AsyncAutoResetEvent e in events)
+                    {
+                        e.Set();
+                    }
+                }
+                Kernel.SleepThread(1000);
+            }
         }
 
         static void event_gc_test()
         {
             Benchmark b = new Benchmark("event_gc_test");
 
-            List<AsyncEvent> events2 = new List<AsyncEvent>();
+            List<AsyncManualResetEvent> events2 = new List<AsyncManualResetEvent>();
 
             while (true)
             {
                 //b.IncrementMe++;
 
                 int num = 10000;
-                List<AsyncEvent> events = new List<AsyncEvent>();
+                List<AsyncManualResetEvent> events = new List<AsyncManualResetEvent>();
                 List<Task> tasks = new List<Task>();
                 for (int i = 0; i < num; i++)
                 {
-                    AsyncEvent ae = new AsyncEvent(false);
+                    AsyncManualResetEvent ae = new AsyncManualResetEvent();
                     Task t = ae.WaitAsync();
 
                     events.Add(ae);
@@ -172,7 +215,7 @@ namespace DotNetCoreUtilTestApp
                     tasks.Add(t);
                 }
 
-                foreach (AsyncEvent e in events)
+                foreach (AsyncManualResetEvent e in events)
                 {
                     e.Set();
                 }
@@ -186,7 +229,7 @@ namespace DotNetCoreUtilTestApp
                 tasks = null;
 
                 int num_a = 0, num_total = 0;
-                foreach (AsyncEvent ae in events2)
+                foreach (AsyncManualResetEvent ae in events2)
                 {
                     if (ae.IsAbandoned)
                     {
@@ -200,7 +243,7 @@ namespace DotNetCoreUtilTestApp
 
         static void event_test()
         {
-            AsyncEvent ae = new AsyncEvent(false);
+            AsyncManualResetEvent ae = new AsyncManualResetEvent();
 
             ThreadObj t = new ThreadObj(param =>
             {
@@ -1150,7 +1193,7 @@ namespace DotNetCoreUtilTestApp
 
                     Dbg.WriteCurrentThreadId("tick = " + diff);
 
-                    var e = new AsyncEvent();
+                    var e = new AsyncManualResetEvent();
 
                     //if (TaskUtil.CurrentTaskVmGracefulCancel.IsCancellationRequested)
                     //{
@@ -1187,7 +1230,7 @@ namespace DotNetCoreUtilTestApp
             }
         }
 
-        static async Task fire_test(AsyncEvent e)
+        static async Task fire_test(AsyncManualResetEvent e)
         {
             await AsyncPreciseDelay.PreciseDelay(200);
             e.Set();
