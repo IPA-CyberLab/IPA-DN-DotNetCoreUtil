@@ -178,11 +178,12 @@ namespace IPA.DN.CoreUtil.Basic
                 long now = Tick;
                 long next_wait_target = -1;
 
-                List<AsyncManualResetEvent> tc_list = new List<AsyncManualResetEvent>();
+                List<AsyncManualResetEvent> fire_event_list = new List<AsyncManualResetEvent>();
 
                 lock (wait_list)
                 {
                     List<long> past_target_list = new List<long>();
+                    List<long> future_target_list = new List<long>();
 
                     foreach (long target in wait_list.Keys)
                     {
@@ -193,25 +194,51 @@ namespace IPA.DN.CoreUtil.Basic
                         }
                         else
                         {
-                            break;
+                            future_target_list.Add(target);
                         }
                     }
 
                     foreach (long target in past_target_list)
                     {
-                        List<AsyncManualResetEvent> tcl = wait_list[target];
+                        List<AsyncManualResetEvent> event_list = wait_list[target];
 
                         wait_list.Remove(target);
 
-                        foreach (AsyncManualResetEvent tc in tcl)
+                        foreach (AsyncManualResetEvent e in event_list)
                         {
-                            if (tc.IsAbandoned == false)
-                                tc_list.Add(tc);
+                            if (e.IsAbandoned == false)
+                                fire_event_list.Add(e);
                             else
                             {
                                 b3.IncrementMe++;
-                                //tc_list.Add(tc);
                             }
+                        }
+                    }
+
+                    foreach (long target in future_target_list)
+                    {
+                        List<AsyncManualResetEvent> event_list = wait_list[target];
+
+                        List<AsyncManualResetEvent> remove_list = new List<AsyncManualResetEvent>();
+
+                        foreach (AsyncManualResetEvent e in event_list)
+                        {
+                            if (e.IsAbandoned)
+                            {
+                                remove_list.Add(e);
+                                b3.IncrementMe++;
+                                //Dbg.Where();
+                            }
+                        }
+
+                        foreach (AsyncManualResetEvent e in remove_list)
+                        {
+                            event_list.Remove(e);
+                        }
+
+                        if (event_list.Count == 0)
+                        {
+                            wait_list.Remove(target);
                         }
                     }
 
@@ -225,7 +252,7 @@ namespace IPA.DN.CoreUtil.Basic
                 }
 
                 int n = 0;
-                foreach (AsyncManualResetEvent tc in tc_list)
+                foreach (AsyncManualResetEvent tc in fire_event_list)
                 {
                     //tc.TrySetResult(0);
                     //Task.Factory.StartNew(() => tc.TrySetResult(0));
@@ -246,7 +273,7 @@ namespace IPA.DN.CoreUtil.Basic
                 {
                     if (next_wait_tick == -1 || next_wait_tick >= 100)
                     {
-                        //next_wait_tick = 100;
+                        next_wait_tick = 100;
                     }
                     ev.WaitOne((int)next_wait_tick);
                 }
@@ -471,7 +498,7 @@ namespace IPA.DN.CoreUtil.Basic
                     Task ret = null;
                     if (weak_task == null || weak_task.TryGetTarget(out ret) == false)
                     {
-                        ret = TaskUtil.CreateTaskFromTask(tcs.Task);
+                        ret = TaskUtil.CreateWeakTaskFromTask(tcs.Task);
                         weak_task = new WeakReference<Task>(ret);
                     }
                     return ret;
@@ -506,9 +533,48 @@ namespace IPA.DN.CoreUtil.Basic
 
     public static class TaskUtil
     {
-        public static Task CreateTaskFromTask(Task t)
+        /*public static Task CreateWeakTaskFromTask(Task t)
         {
             return Task.WhenAll(t);
+        }*/
+        
+        class weak_task_param
+        {
+            public WeakReference<TaskCompletionSource<bool>> tcs_weak;
+            public bool is_completed = false;
+            public object LockObj = new object();
+        }
+
+        static void weak_task_proc(Task t, object param)
+        {
+            weak_task_param p = (weak_task_param)param;
+
+            //Dbg.Where();
+
+            lock (p.LockObj)
+            {
+                if (p.tcs_weak.TryGetTarget(out TaskCompletionSource<bool> tcs))
+                {
+                    if (p.is_completed == false)
+                    {
+                        p.is_completed = true;
+                        tcs.TrySetResult(true);
+                    }
+                }
+            }
+        }
+
+        public static Task CreateWeakTaskFromTask(Task t)
+        {
+            Ref<object> avoid_gc_ref = new Ref<object>();
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>(avoid_gc_ref);
+            avoid_gc_ref.Set(tcs);
+            weak_task_param p = new weak_task_param()
+            {
+                tcs_weak = new WeakReference<TaskCompletionSource<bool>>(tcs),
+            };
+            t.ContinueWith(weak_task_proc, p, TaskContinuationOptions.ExecuteSynchronously);
+            return tcs.Task;
         }
 
         public static Task PreciseDelay(int msec)

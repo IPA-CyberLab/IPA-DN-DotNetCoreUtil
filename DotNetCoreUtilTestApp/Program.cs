@@ -137,17 +137,19 @@ namespace DotNetCoreUtilTestApp
 
             //Benchmark b = new Benchmark();
 
-            // sleep_test();
-
-            //sleep_task_gc_test();
+            //sleep_test();
 
             //sleep_task_test2();
 
             //event_test();
 
-            event_gc_test();
+            //event_gc_test();
 
             //auto_reset_event_test();
+
+            sleep_task_gc_test();
+
+            //Kernel.SleepThread(-1);
         }
 
         static void auto_reset_event_test()
@@ -201,7 +203,7 @@ namespace DotNetCoreUtilTestApp
             {
                 //b.IncrementMe++;
 
-                int num = 10000;
+                int num = 10;
                 List<AsyncManualResetEvent> events = new List<AsyncManualResetEvent>();
                 List<Task> tasks = new List<Task>();
                 for (int i = 0; i < num; i++)
@@ -219,7 +221,7 @@ namespace DotNetCoreUtilTestApp
                 {
                     e.Set();
                 }
-
+                
                 foreach (Task t in tasks)
                 {
                     t.Wait();
@@ -238,6 +240,8 @@ namespace DotNetCoreUtilTestApp
                     num_total++;
                 }
                 Con.WriteLine($"{num_a} {num_total}");
+
+                //GC.Collect();
             }
         }
 
@@ -249,7 +253,7 @@ namespace DotNetCoreUtilTestApp
             {
                 while (true)
                 {
-                    //Kernel.SleepThread(1000);
+                    Kernel.SleepThread(1000);
                     ae.Set();
                 }
             });
@@ -286,8 +290,8 @@ namespace DotNetCoreUtilTestApp
                 for (int i = 0; i < 100000; i++)
                 {
                     b.IncrementMe++;
-                    Task t = TaskUtil.PreciseDelay(1000);
-                    o.Add(t);
+                    Task t = TaskUtil.PreciseDelay(100000);
+                    //o.Add(t);
                 }
                 //t.Wait();
                 //Dbg.Where();
@@ -299,6 +303,7 @@ namespace DotNetCoreUtilTestApp
                     t.Wait();
                 }
                 Dbg.Where();
+                GC.Collect();
             }
             while (true)
             {
