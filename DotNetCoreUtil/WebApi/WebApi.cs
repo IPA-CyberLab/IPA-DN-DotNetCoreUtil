@@ -118,8 +118,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class WebApi
     {
-        public int TimeoutConnectSecs { get; set; } = 10;
-        public int TimeoutSendRecvSecs { get; set; } = 10;
+        public int TimeoutSecs { get; set; } = 100;
         public int MaxRecvSize { get; set; } = 100 * 1024 * 1024;
         public bool SslAccentAnyCerts { get; set; } = false;
         public List<string> SslAcceptCertSHA1HashList { get; set; } = new List<string>();
@@ -182,9 +181,7 @@ namespace IPA.DN.CoreUtil.WebApi
             r.CachePolicy = new RequestCachePolicy(RequestCacheLevel.NoCacheNoStore);
             r.MaximumAutomaticRedirections = 10;
             r.AllowAutoRedirect = true;
-            r.ContinueTimeout = r.Timeout = this.TimeoutConnectSecs * 1000;
-            r.ReadWriteTimeout = this.TimeoutSendRecvSecs * 1000;
-            //r.Timeout = r.ReadWriteTimeout = r.ContinueTimeout = this.TimeoutRecvSecs * 1000;
+            r.Timeout = r.ReadWriteTimeout = r.ContinueTimeout = this.TimeoutSecs * 1000;
             r.Method = method.ToString();
 
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)

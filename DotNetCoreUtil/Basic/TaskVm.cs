@@ -719,7 +719,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             BackgroundWorker.Run(arg =>
             {
-                cts.Cancel();
+                cts.TryCancel();
             }, null);
         }
 
@@ -739,9 +739,9 @@ namespace IPA.DN.CoreUtil.Basic
                 t.Register(() =>
                 {
                     if (no_wait == false)
-                        cts.Cancel(false);
-                    else
                         cts.TryCancel();
+                    else
+                        cts.TryCancelNoBlock();
                 });
             }
         }

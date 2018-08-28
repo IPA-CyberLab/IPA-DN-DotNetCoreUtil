@@ -319,6 +319,7 @@ namespace IPA.DN.CoreUtil.WebApi
         public JsonRpcServer(JsonRpcServerApi api, JsonRpcServerConfig cfg, CancellationToken cancel_token)
         {
             this.Api = api;
+            TaskUtil.ChainCancellationTokensToCancellationTokenSource(this.Api.CancelSource, true, cancel_token);
             this.Config = cfg;
         }
 
