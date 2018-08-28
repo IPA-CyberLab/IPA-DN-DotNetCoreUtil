@@ -427,7 +427,9 @@ namespace DotNetCoreUtilTestApp
 
             public async Task<int> Divide(int a, int b)
             {
-                //await TaskUtil.PreciseDelay(500);
+                Dbg.Where("***************************");
+                //await Task.Delay(5000);// TaskUtil.PreciseDelay(5000);
+                Kernel.SleepThread(5000);
                 return a / b;
             }
             public async Task<rpc_t> Test5(int a, string b)
@@ -508,6 +510,8 @@ namespace DotNetCoreUtilTestApp
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
                 JsonRpcHttpClient c = new JsonRpcHttpClient("http://localhost:88/rpc");
+                c.WebApi.TimeoutConnectSecs = 10;
+                c.WebApi.TimeoutSendRecvSecs = 1;
 
                 rpctmp1 t = new rpctmp1();
                 t.a = new rpc_t()

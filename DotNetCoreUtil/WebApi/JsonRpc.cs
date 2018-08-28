@@ -515,74 +515,89 @@ namespace IPA.DN.CoreUtil.WebApi
         {
             if (call_queue.Count == 0) return;
 
-            string req = "";
-            bool is_single = false;
-
-            Dictionary<string, (JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> requests_table = new Dictionary<string, (JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
-            List<JsonRpcRequest> requests = new List<JsonRpcRequest>();
-
-            foreach (var o in this.call_queue)
+            try
             {
-                requests_table.Add(o.request.Id, (o.request, o.response, o.response_data_type));
-                requests.Add(o.request);
-            }
+                string req = "";
+                bool is_single = false;
 
-            if (requests_table.Count == 1)
-            {
-                req = requests[0].ObjectToJson(compact: true);
-            }
-            else
-            {
-                req = requests.ObjectToJson(compact: true);
-            }
+                Dictionary<string, (JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> requests_table = new Dictionary<string, (JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
+                List<JsonRpcRequest> requests = new List<JsonRpcRequest>();
 
-            //req.Debug();
-
-            string ret = await GetResponse(req);
-
-            if (ret.StartsWith("{")) is_single = true;
-
-            List<JsonRpcResponse> ret_list = new List<JsonRpcResponse>();
-
-            if (is_single)
-            {
-                JsonRpcResponse r = ret.JsonToObject<JsonRpcResponse>();
-                ret_list.Add(r);
-            }
-            else
-            {
-                JsonRpcResponse[] r = ret.JsonToObject<JsonRpcResponse[]>();
-                ret_list = new List<JsonRpcResponse>(r);
-            }
-
-            foreach (var res in ret_list)
-            {
-                if (res.Id.IsFilled())
+                foreach (var o in this.call_queue)
                 {
-                    if (requests_table.ContainsKey(res.Id))
-                    {
-                        var q = requests_table[res.Id];
+                    requests_table.Add(o.request.Id, (o.request, o.response, o.response_data_type));
+                    requests.Add(o.request);
+                }
 
-                        q.response.Error = res.Error;
-                        q.response.Id = res.Id;
-                        q.response.Result = res.Result;
-                        q.response.Version = res.Version;
+                if (requests_table.Count == 1)
+                {
+                    req = requests[0].ObjectToJson(compact: true);
+                }
+                else
+                {
+                    req = requests.ObjectToJson(compact: true);
+                }
+
+                //req.Debug();
+
+                string ret = await GetResponse(req);
+
+                if (ret.StartsWith("{")) is_single = true;
+
+                List<JsonRpcResponse> ret_list = new List<JsonRpcResponse>();
+
+                if (is_single)
+                {
+                    JsonRpcResponse r = ret.JsonToObject<JsonRpcResponse>();
+                    ret_list.Add(r);
+                }
+                else
+                {
+                    JsonRpcResponse[] r = ret.JsonToObject<JsonRpcResponse[]>();
+                    ret_list = new List<JsonRpcResponse>(r);
+                }
+
+                foreach (var res in ret_list)
+                {
+                    if (res.Id.IsFilled())
+                    {
+                        if (requests_table.ContainsKey(res.Id))
+                        {
+                            var q = requests_table[res.Id];
+
+                            q.response.Error = res.Error;
+                            q.response.Id = res.Id;
+                            q.response.Result = res.Result;
+                            q.response.Version = res.Version;
+                        }
                     }
                 }
-            }
 
-            if (throw_each_error)
-                foreach (var r in ret_list)
-                {
-                    r.CheckError();
-                }
+                if (throw_each_error)
+                    foreach (var r in ret_list)
+                    {
+                        r.CheckError();
+                    }
+            }
+            finally
+            {
+                CallClear();
+            }
         }
 
         public async Task<JsonRpcResponse<TResponse>> CallOne<TResponse>(string method, object param, bool throw_each_error = false) where TResponse : class
         {
-            JsonRpcResponse<TResponse> res = CallAdd<TResponse>(method, param);
-            await CallAll(throw_each_error);
-            return res;
+            CallClear();
+            try
+            {
+                JsonRpcResponse<TResponse> res = CallAdd<TResponse>(method, param);
+                await CallAll(throw_each_error);
+                return res;
+            }
+            finally
+            {
+                CallClear();
+            }
         }
 
         public abstract Task<string> GetResponse(string req);
@@ -610,7 +625,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
                 //ret.Wait();
 
-                Dbg.WhereThread();
+                Dbg.WhereThread(v.Method.Name);
                 Task<object> ret = get_response_object_async(call_ret);
 
                 var return_type = v.Method.ReturnType;
@@ -622,7 +637,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 var task_return_type = generic_args[0];
 
                 v.ReturnValue = TaskUtil.ConvertTask(ret, typeof(object), task_return_type);
-                Dbg.WhereThread();
+                Dbg.WhereThread(v.Method.Name);
             }
 
             async Task<object> get_response_object_async(Task<JsonRpcResponse<object>> o)
@@ -640,7 +655,6 @@ namespace IPA.DN.CoreUtil.WebApi
             ProxyInterceptor ic = new ProxyInterceptor(this);
 
             return g.CreateInterfaceProxyWithoutTarget<TRpcInterface>(ic);
-            //return g.CreateInterfaceProxyWithoutTarget(
         }
     }
 
