@@ -392,6 +392,8 @@ namespace DotNetCoreUtilTestApp
             Task<string> Test3(int a, int b, int c);
             Task<int> Divide(int a, int b);
             Task<rpc_t> Test5(int a, string b);
+            Task<string[]> Test6();
+            Task<string> Test7(string[] p);
         }
 
 #pragma warning disable CS1998
@@ -437,6 +439,20 @@ namespace DotNetCoreUtilTestApp
                 };
             }
 
+            public async Task<string[]> Test6()
+            {
+                List<string> ret = new List<string>();
+                foreach (var d in IO.EnumDirEx(Env.AppRootDir))
+                {
+                    ret.Add(d.FullPath);
+                }
+                return ret.ToArray();
+            }
+
+            public async Task<string> Test7(string[] p)
+            {
+                return Str.CombineStringArray(p, ",");
+            }
         }
 #pragma warning restore CS1998
 
@@ -504,9 +520,12 @@ namespace DotNetCoreUtilTestApp
                 //JsonRpcResponse<object> ret = c.CallOne<object>("Test2", t).Result;
 
                 rpc_server_api_interface_test f = c.GetRpcInterface<rpc_server_api_interface_test>();
-                f.Divide(8, 0).Result.Print();
+                f.Divide(8, 2).Result.Print();
                 f.Test3(1, 2, 3).Result.Print();
                 f.Test5(1, "2").Result.ObjectToJson().Print();
+                var fnlist = f.Test6().Result;
+                //foreach (var fn in fnlist) fn.Print();
+                f.Test7(fnlist).Result.Print();
 
                 //Con.WriteLine(ret.ObjectToJson());
             }, null);

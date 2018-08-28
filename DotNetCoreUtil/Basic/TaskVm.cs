@@ -618,7 +618,6 @@ namespace IPA.DN.CoreUtil.Basic
             object result_old = old_task_type.GetProperty("Result").GetValue(t);
             TNewResult result_new = Json.ConvertObject<TNewResult>(result_old);
             return result_new;
-            return (TNewResult)old_task_type.GetProperty("Result").GetValue(t);
         }
         
         class weak_task_param
