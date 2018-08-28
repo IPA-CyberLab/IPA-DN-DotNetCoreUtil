@@ -3369,6 +3369,21 @@ namespace IPA.DN.CoreUtil.Basic
 
             return CombineStringArray(tmp.ToArray(), sepstr);
         }
+        public static string CombineStringArray2(string sepstr, params object[] objs)
+        {
+            List<string> tmp = new List<string>();
+
+            foreach (object obj in objs)
+            {
+                string str = (obj == null ? "" : obj.ToString());
+                if (Str.IsEmptyStr(str) == false)
+                {
+                    tmp.Add(str);
+                }
+            }
+
+            return CombineStringArray(tmp.ToArray(), sepstr);
+        }
         public static string CombineStringArray(string[] str)
         {
             return CombineStringArray(str, "");

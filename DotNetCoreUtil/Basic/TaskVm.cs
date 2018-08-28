@@ -16,6 +16,7 @@ using System.Web;
 using System.IO;
 using System.Net;
 using System.Net.Cache;
+using System.Reflection;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
@@ -533,10 +534,92 @@ namespace IPA.DN.CoreUtil.Basic
 
     public static class TaskUtil
     {
-        /*public static Task CreateWeakTaskFromTask(Task t)
+        public static void Test()
         {
-            return Task.WhenAll(t);
-        }*/
+            Dbg.WhereThread();
+            //Task<string> t = (Task<string>)ConvertTask(f1(), typeof(object), typeof(string));
+            Task<object> t = (Task<object>)ConvertTask(f2(), typeof(string), typeof(object));
+            Dbg.WhereThread();
+            t.Result.Print();
+            Dbg.WhereThread();
+        }
+
+        static async Task<object> f1()
+        {
+            Dbg.WhereThread();
+            await Task.Delay(100);
+            Dbg.WhereThread();
+            return "Hello";
+        }
+
+        static async Task<string> f2()
+        {
+            Dbg.WhereThread();
+            await Task.Delay(100);
+            Dbg.WhereThread();
+            return "Hello";
+        }
+
+        public static object ConvertTask(object src_task_object, Type old_task_type, Type new_task_type)
+        {
+            Type src_task_def = typeof(Task<>).MakeGenericType(old_task_type);
+
+            var cont_with_methods = src_task_def.GetMethods();
+            MethodInfo cont_with = null;
+            int num = 0;
+            foreach (var m in cont_with_methods)
+            {
+                if (m.Name == "ContinueWith" && m.ContainsGenericParameters)
+                {
+                    var pinfos = m.GetParameters();
+                    if (pinfos.Length == 1)
+                    {
+                        var pinfo = pinfos[0];
+                        var ptype = pinfo.ParameterType;
+                        var generic_args = ptype.GenericTypeArguments;
+                        if (generic_args.Length == 2)
+                        {
+                            if (generic_args[0].IsGenericType)
+                            {
+                                if (generic_args[1].IsGenericParameter)
+                                {
+                                    if (generic_args[0].BaseType == typeof(Task))
+                                    {
+                                        cont_with = m;
+                                        num++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (num != 1) throw new ApplicationException("ConvertTask: num != 1");
+
+            object ret = null;
+
+            var cont_with_generic = cont_with.MakeGenericMethod(new_task_type);
+
+            var convert_task_proc_method = typeof(TaskUtil).GetMethod(nameof(convert_task_proc), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(new_task_type);
+
+            var func_type = typeof(Func<,>).MakeGenericType(typeof(Task<>).MakeGenericType(old_task_type), new_task_type);
+
+            Delegate delegate_instance = convert_task_proc_method.CreateDelegate(func_type);
+
+            ret = cont_with_generic.Invoke(src_task_object, new object[] { delegate_instance });
+
+            return ret;
+        }
+
+        static TNewResult convert_task_proc<TNewResult>(object t)
+        {
+            Type old_task_type = t.GetType();
+            object result_old = old_task_type.GetProperty("Result").GetValue(t);
+            TNewResult result_new = Json.ConvertObject<TNewResult>(result_old);
+            return result_new;
+            return (TNewResult)old_task_type.GetProperty("Result").GetValue(t);
+        }
         
         class weak_task_param
         {
@@ -823,7 +906,7 @@ namespace IPA.DN.CoreUtil.Basic
             this.thread.WaitForInit();
         }
 
-        public static Task<TResult> NewTask(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken graceful_cancel = default(CancellationToken), CancellationToken abort_cancel = default(CancellationToken))
+        public static Task<TResult> NewTaskVm(Func<TIn, Task<TResult>> root_action, TIn input_parameter = default(TIn), CancellationToken graceful_cancel = default(CancellationToken), CancellationToken abort_cancel = default(CancellationToken))
         {
             TaskVm<TResult, TIn> vm = new TaskVm<TResult, TIn>(root_action, input_parameter, graceful_cancel, abort_cancel);
 

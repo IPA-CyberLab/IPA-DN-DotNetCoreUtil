@@ -45,18 +45,6 @@ namespace IPA.DN.CoreUtil.Basic
             if (Dbg.IsDebugMode) GlobalIntervalReporter.Singleton.Report(name, value);
         }
 
-        public static void WriteCurrentThreadId(string str = "")
-        {
-            string a = $"Thread[{ThreadObj.CurrentThreadId}]";
-
-            if (Str.IsFilledStr(str))
-            {
-                a += ": " + str;
-            }
-
-            WriteLine(a);
-        }
-
         public static string WriteLine()
         {
             WriteLine("");
@@ -85,6 +73,12 @@ namespace IPA.DN.CoreUtil.Basic
         {
             if (Dbg.IsDebugMode)
                 WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
+        }
+
+        public static void WhereThread(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
+        {
+            if (Dbg.IsDebugMode)
+                WriteLine($"Thread[{ThreadObj.CurrentThreadId}]: {Path.GetFileName(filename)}:{line} in {caller}()" + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
         }
 
         public static string GetObjectInnerString(object obj, string instance_base_name = "")

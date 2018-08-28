@@ -25,6 +25,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Castle.DynamicProxy;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -73,6 +74,7 @@ namespace IPA.DN.CoreUtil.WebApi
     public class JsonRpcResponse<TResult> : JsonRpcResponse
         where TResult : class
     {
+        [JsonIgnore]
         public TResult ResultData
         {
             get => Result == null ? null : base.Result.ConvertJsonObject<TResult>();
@@ -150,7 +152,7 @@ namespace IPA.DN.CoreUtil.WebApi
         public object Data { get; set; } = null;
     }
 
-    public class RpcMethodAttribute : Attribute { }
+    public class RpcInterfaceAttribute : Attribute { }
 
     public class RpcMethodInfo
     {
@@ -160,22 +162,41 @@ namespace IPA.DN.CoreUtil.WebApi
         public ParameterInfo[] ParametersByIndex { get; }
         public ParameterInfo ReturnParameter { get; }
         public bool IsTask { get; }
+        public Type TaskType { get; }
+        public bool IsGenericTask { get; }
+        public Type GeneticTaskType { get; }
 
         public RpcMethodInfo(Type target_class, string method_name)
         {
-            bool ok = false;
             MethodInfo method_info = target_class.GetMethod(method_name);
-            if (method_info != null)
+            if (method_info == null)
             {
-                foreach (var a in method_info.CustomAttributes)
-                    if (a.AttributeType == typeof(RpcMethodAttribute))
-                        ok = true;
+                throw new JsonRpcException(new JsonRpcError(-32601, "Method not found"));
             }
 
-            if (ok == false) throw new JsonRpcException(new JsonRpcError(-32601, "Method not found"));
             var r = method_info.ReturnParameter;
             bool is_task = false;
             if (r.ParameterType == typeof(Task) || r.ParameterType.IsSubclassOf(typeof(Task))) is_task = true;
+
+            if (is_task == false)
+            {
+                throw new ApplicationException($"The return value of the function '{method_info.Name}' is not a Task.");
+            }
+
+            if (is_task)
+            {
+                this.TaskType = r.ParameterType;
+                Type[] generic_types = TaskType.GenericTypeArguments;
+                if (generic_types.Length == 1)
+                {
+                    this.IsGenericTask = true;
+                    this.GeneticTaskType = generic_types[0];
+                }
+                else if (generic_types.Length >= 2)
+                {
+                    throw new ApplicationException("generic_types.Length >= 2");
+                }
+            }
 
             this.IsTask = is_task;
             this.Method = method_info;
@@ -188,10 +209,8 @@ namespace IPA.DN.CoreUtil.WebApi
                 this.ParametersByName.Add(method_params[i].Name, (method_params[i], i));
         }
 
-        public Task<object> InvokeMethod(object target_instance, string method_name, JObject param)
+        public async Task<object> InvokeMethod(object target_instance, string method_name, JObject param)
         {
-            object retobj;
-
             object[] in_params = new object[this.ParametersByIndex.Length];
             if (this.ParametersByIndex.Length == 1 && this.ParametersByIndex[0].ParameterType == typeof(System.Object))
             {
@@ -210,32 +229,38 @@ namespace IPA.DN.CoreUtil.WebApi
                 }
             }
 
-            retobj = this.Method.Invoke(target_instance, in_params);
+            object retobj = this.Method.Invoke(target_instance, in_params);
 
             if (this.IsTask == false)
                 return Task.FromResult<object>(retobj);
             else
             {
-                dynamic td = retobj;
+                Type t = retobj.GetType();
+                Task task = (Task)retobj;
 
-                return Task.Run<object>(() =>
-                {
-                    try
-                    {
-                        return td.Result;
-                    }
-                    catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
-                    {
-                        td.Wait();
-                        return null;
-                    }
-                });
+                Dbg.WhereThread();
+
+                await task;
+
+                Dbg.WhereThread();
+
+                var prop_mi = t.GetProperty("Result");
+                object retvalue = prop_mi.GetValue(retobj);
+
+                return retvalue;
             }
         }
     }
 
     public abstract class JsonRpcServerApi
     {
+        public Type RpcInterface { get; }
+
+        public JsonRpcServerApi()
+        {
+            this.RpcInterface = get_rpc_interface();
+        }
+
         public CancellationTokenSource CancelSource { get; } = new CancellationTokenSource();
         public CancellationToken CancelToken { get => this.CancelSource.Token; }
 
@@ -252,9 +277,38 @@ namespace IPA.DN.CoreUtil.WebApi
             }
             return m;
         }
-        RpcMethodInfo get_method_info_main(string method_name) => new RpcMethodInfo(this.GetType(), method_name);
+        RpcMethodInfo get_method_info_main(string method_name)
+        {
+            RpcMethodInfo mi = new RpcMethodInfo(this.GetType(), method_name);
+            if (this.RpcInterface.GetMethod(mi.Name) == null)
+            {
+                throw new ApplicationException($"The method '{method_name}' is not defined on the interface '{this.RpcInterface.Name}'.");
+            }
+            return mi;
+        }
 
-        public Task<object> InvokeMethod(string method_name, JObject param) => GetMethodInfo(method_name).InvokeMethod(this, method_name, param);
+        public virtual Task<object> InvokeMethod(string method_name, JObject param)
+        {
+            var method_info = GetMethodInfo(method_name);
+            return method_info.InvokeMethod(this, method_name, param);
+        }
+
+        virtual protected Type get_rpc_interface()
+        {
+            Type ret = null;
+            Type t = this.GetType();
+            var ints = t.GetTypeInfo().GetInterfaces();
+            int num = 0;
+            foreach (var f in ints)
+                if (f.GetCustomAttribute<RpcInterfaceAttribute>() != null)
+                {
+                    ret = f;
+                    num++;
+                }
+            if (num == 0) throw new ApplicationException($"The class '{t.Name}' has no interface with the RpcInterface attribute.");
+            if (num >= 2) throw new ApplicationException($"The class '{t.Name}' has two or mode interfaces with the RpcInterface attribute.");
+            return ret;
+        }
     }
 
     public abstract class JsonRpcServer
@@ -442,22 +496,6 @@ namespace IPA.DN.CoreUtil.WebApi
             => this.JsonServer.RegisterToHttpServer(app);
     }
 
-    public abstract class JsonRpcClientDynamicApi
-    {
-        //public JsonRpcClient Client { get; }
-        //public JsonRpcClientDynamicApi(JsonRpcClient client)
-        //{
-        //    this.Client = client;
-        //}
-
-        public abstract void F1();
-
-        public static void Test()
-        {
-        }
-    }
-
-
     public abstract class JsonRpcClient
     {
         List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> call_queue = new List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
@@ -548,6 +586,62 @@ namespace IPA.DN.CoreUtil.WebApi
         }
 
         public abstract Task<string> GetResponse(string req);
+
+        class ProxyInterceptor : IInterceptor
+        {
+            public JsonRpcClient RpcClient { get; }
+
+            public ProxyInterceptor(JsonRpcClient rpc_client)
+            {
+                this.RpcClient = rpc_client;
+            }
+
+            public void Intercept(IInvocation v)
+            {
+                JObject o = new JObject();
+                var in_params = v.Method.GetParameters();
+                if (v.Arguments.Length != in_params.Length) throw new ApplicationException("v.Arguments.Length != in_params.Length");
+                for (int i = 0; i < in_params.Length; i++)
+                {
+                    var p = in_params[i];
+                    o.Add(p.Name, JToken.FromObject(v.Arguments[i]));
+                }
+                Task<JsonRpcResponse<object>> call_ret = RpcClient.CallOne<object>(v.Method.Name, o, true);
+
+                //ret.Wait();
+
+                Dbg.WhereThread();
+                Task<object> ret = get_response_object_async(call_ret);
+
+                var return_type = v.Method.ReturnType;
+                if (return_type.IsGenericType == false) throw new ApplicationException($"The return type of the method '{v.Method.Name}' is not a Task<>.");
+                if (return_type.BaseType != typeof(Task)) throw new ApplicationException($"The return type of the method '{v.Method.Name}' is not a Task<>.");
+
+                var generic_args = return_type.GetGenericArguments();
+                if (generic_args.Length != 1) throw new ApplicationException($"The return type of the method '{v.Method.Name}' is not a Task<>.");
+                var task_return_type = generic_args[0];
+
+                v.ReturnValue = TaskUtil.ConvertTask(ret, typeof(object), task_return_type);
+                Dbg.WhereThread();
+            }
+
+            async Task<object> get_response_object_async(Task<JsonRpcResponse<object>> o)
+            {
+                Dbg.WhereThread();
+                await o;
+                Dbg.WhereThread();
+                return o.Result.ResultData;
+            }
+        }
+
+        public virtual TRpcInterface GetRpcInterface<TRpcInterface>() where TRpcInterface : class
+        {
+            ProxyGenerator g = new ProxyGenerator();
+            ProxyInterceptor ic = new ProxyInterceptor(this);
+
+            return g.CreateInterfaceProxyWithoutTarget<TRpcInterface>(ic);
+            //return g.CreateInterfaceProxyWithoutTarget(
+        }
     }
 
     public class JsonRpcHttpClient : JsonRpcClient

@@ -108,42 +108,16 @@ namespace DotNetCoreUtilTestApp
         public string A;
     }
 
-    public class DT1 : DynamicObject
-    {
-        public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
-        {
-            Dbg.Where();
-            return base.TryInvoke(binder, args, out result);
-        }
-
-        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
-        {
-            Dbg.Where();
-            return base.TryInvokeMember(binder, args, out result);
-        }
-
-        public void Hello(string str)
-        {
-            Con.WriteLine(str);
-        }
-    }
-
-    class Program
+    public class Program
     {
         [DllImport("MyLib.dll", CallingConvention = CallingConvention.StdCall)]
         internal static extern long NativeMethod();
-
 
         static void Main(string[] args)
         {
             "Test Program".Print();
 
             Dbg.SetDebugMode();
-
-            DT1 t = new DT1();
-            dynamic d = t;
-
-            d.Hello("hello");
 
             //twitter_test();
 
@@ -162,7 +136,8 @@ namespace DotNetCoreUtilTestApp
             //jsonrpc_http_server_test();
 
 
-            //jsonrpc_client_server_test();
+            //TaskUtil.Test();
+            jsonrpc_client_server_test();
 
             //Benchmark b = new Benchmark();
 
@@ -409,69 +384,100 @@ namespace DotNetCoreUtilTestApp
             public int Int1;
         }
 
-        public class rpc_server_api_test : JsonRpcServerApi
+        [RpcInterface]
+        public interface rpc_server_api_interface_test
         {
-            [RpcMethod]
-            public string Test(int a, int b, int c, int d=1)
-            {
-                Dbg.Where("こんにちは");
-                return $"Hello {a},{b},{c},{d}";
-            }
+            Task<rpc_t> Test1(rpc_t a);
+            Task Test2(rpc_t a);
+            Task<string> Test3(int a, int b, int c);
+            Task<int> Divide(int a, int b);
+            Task<rpc_t> Test5(int a, string b);
+        }
 
-            [RpcMethod]
-            public async Task<string> Test2(int a)
+#pragma warning disable CS1998
+        public class rpc_server_api_test : JsonRpcServerApi, rpc_server_api_interface_test
+        {
+            public async Task<rpc_t> Test1(rpc_t a)
             {
-                await TaskUtil.PreciseDelay(500);
-                return "Hello " + a.ToString();
-            }
-
-            [RpcMethod]
-            public async Task<string> Test3(int a)
-            {
-                await TaskUtil.PreciseDelay(500);
-                return "! " + a;
-            }
-
-            [RpcMethod]
-            public string Test4(object o)
-            {
-                return ((object)o).ObjectToJson(compact: true);
-            }
-
-            [RpcMethod]
-            public rpc_t Test5(rpc_t a)
-            {
-                rpc_t ret = new rpc_t()
+                Dbg.WhereThread();
+                //await TaskUtil.PreciseDelay(500);
+                Dbg.WhereThread();
+                return new rpc_t()
                 {
-                    Str1 = a.Str1,
                     Int1 = a.Int1,
+                    Str1 = a.Str1,
                 };
-                return ret;
             }
 
-
-            [RpcMethod]
-            public string Ping()
+            public async Task Test2(rpc_t a)
             {
-                return "Hello";
+                Dbg.WhereThread();
+                //await TaskUtil.PreciseDelay(500);
+                Dbg.WhereThread();
+                return;
             }
 
-            [RpcMethod]
-            public void Ping2()
+            public async Task<string> Test3(int a, int b, int c)
             {
-                throw new ApplicationException("ha");
+                //await TaskUtil.PreciseDelay(500);
+                return Str.CombineStringArray2(",", a, b, c);
             }
 
-            [RpcMethod]
-            public async Task Ping3()
+            public async Task<int> Divide(int a, int b)
             {
-                await TaskUtil.PreciseDelay(500);
-                //throw new ApplicationException("ha");
+                //await TaskUtil.PreciseDelay(500);
+                return a / b;
             }
+            public async Task<rpc_t> Test5(int a, string b)
+            {
+                return new rpc_t()
+                {
+                    Int1 = a,
+                    Str1 = b,
+                };
+            }
+
+        }
+#pragma warning restore CS1998
+
+        public class rpctmp1
+        {
+            public rpc_t a;
+        }
+
+        public static async Task jsonrpc_server_invoke_test()
+        {
+            rpc_server_api_test m = new rpc_server_api_test();
+
+            Type tt = m.RpcInterface;
+
+            rpc_t t = new rpc_t()
+            {
+                Int1 = 1,
+                Str1 = "a",
+            };
+            rpctmp1 t2 = new rpctmp1()
+            {
+                a = t,
+            };
+
+            Dbg.WhereThread();
+            for (int i = 0; i < 100; i++)
+            {
+                object r = await m.InvokeMethod("Test2", (JObject)(t2.ObjectToJson().JsonToDynamic()));
+                Util.DoNothing();
+            }
+            Dbg.WhereThread();
+
+            //r.ObjectToJson().Print();
+
+            Util.DoNothing();
         }
 
         public static void jsonrpc_client_server_test()
         {
+            //jsonrpc_server_invoke_test().Wait();return;
+
             // start server
             HttpServerBuilderConfig http_cfg = new HttpServerBuilderConfig()
             {
@@ -487,8 +493,22 @@ namespace DotNetCoreUtilTestApp
             {
                 JsonRpcHttpClient c = new JsonRpcHttpClient("http://localhost:88/rpc");
 
-                JsonRpcResponse<object> ret = c.CallOne<object>("Test5", null).Result;
-                Con.WriteLine(ret.ObjectToJson());
+                rpctmp1 t = new rpctmp1();
+                t.a = new rpc_t()
+                {
+                    Int1 = 2,
+                    Str1 = "Neko",
+                };
+
+                //JsonRpcResponse<object> ret = c.CallOne<object>("Test1", t).Result;
+                //JsonRpcResponse<object> ret = c.CallOne<object>("Test2", t).Result;
+
+                rpc_server_api_interface_test f = c.GetRpcInterface<rpc_server_api_interface_test>();
+                f.Divide(8, 0).Result.Print();
+                f.Test3(1, 2, 3).Result.Print();
+                f.Test5(1, "2").Result.ObjectToJson().Print();
+
+                //Con.WriteLine(ret.ObjectToJson());
             }, null);
 
             //Con.ReadLine("Enter>");
@@ -1202,12 +1222,12 @@ namespace DotNetCoreUtilTestApp
 
             /*TaskVm<string, int> tt = new TaskVm<string, int>(async_task1, 12345);
 
-            Dbg.WriteCurrentThreadId("abort");
+            Dbg.WhereThread("abort");
             string str = tt.GetResult();
             Con.WriteLine("ret = " + str);*/
 
             //string s = async_test_x().Result;
-            //Dbg.WriteCurrentThreadId("ret = " + s);
+            //Dbg.WhereThread("ret = " + s);
 
             try
             {
@@ -1228,11 +1248,11 @@ namespace DotNetCoreUtilTestApp
         {
             CancellationTokenSource glaceful = new CancellationTokenSource(100);
             CancellationTokenSource abort = new CancellationTokenSource(1000);
-            Task<string> task1 = TaskVm<string, int>.NewTask(async_task_main_proc_2, 123, glaceful.Token, abort.Token);
+            Task<string> task1 = TaskVm<string, int>.NewTaskVm(async_task_main_proc_2, 123, glaceful.Token, abort.Token);
 
-            Dbg.WriteCurrentThreadId("async_test_x: before await");
+            Dbg.WhereThread("async_test_x: before await");
             string ret = await task1;
-            Dbg.WriteCurrentThreadId("async_test_x: after await. ret = " + ret);
+            Dbg.WhereThread("async_test_x: after await. ret = " + ret);
 
             return ret;
         }
@@ -1249,14 +1269,14 @@ namespace DotNetCoreUtilTestApp
             }
             finally
             {
-                Dbg.WriteCurrentThreadId("Finally2 start");
+                Dbg.WhereThread("Finally2 start");
                 try
                 {
                     string s = await async_task_main_proc(arg);
                 }
                 finally
                 {
-                    Dbg.WriteCurrentThreadId("Finally2 end");
+                    Dbg.WhereThread("Finally2 end");
                 }
             }
         }
@@ -1273,7 +1293,7 @@ namespace DotNetCoreUtilTestApp
                     long diff = now - last;
                     last = now;
 
-                    Dbg.WriteCurrentThreadId("tick = " + diff);
+                    Dbg.WhereThread("tick = " + diff);
 
                     var e = new AsyncManualResetEvent();
 
@@ -1308,7 +1328,7 @@ namespace DotNetCoreUtilTestApp
             }
             finally
             {
-                Dbg.WriteCurrentThreadId("Finally1");
+                Dbg.WhereThread("Finally1");
             }
         }
 
@@ -1320,50 +1340,50 @@ namespace DotNetCoreUtilTestApp
 
         static async Task<string> async_task1(int arg)
         {
-            Dbg.WriteCurrentThreadId("a " + arg.ToString());
+            Dbg.WhereThread("a " + arg.ToString());
 
             //throw new ApplicationException("zzz");
             await Task.Delay(200);
 
-            Dbg.WriteCurrentThreadId("u");
+            Dbg.WhereThread("u");
 
             await Task.Yield();
 
-            Dbg.WriteCurrentThreadId("v");
+            Dbg.WhereThread("v");
 
             await async_task2();
-            Dbg.WriteCurrentThreadId("b");
+            Dbg.WhereThread("b");
 
             CancellationTokenSource tsc = new CancellationTokenSource();
 
-            Dbg.WriteCurrentThreadId("cancel test start");
+            Dbg.WhereThread("cancel test start");
 
             async_task_cancel_fire_test(tsc);
 
-            Dbg.WriteCurrentThreadId("cancel test c");
+            Dbg.WhereThread("cancel test c");
 
             await TaskUtil.WhenCanceledOrTimeouted(tsc.Token, 1000);
 
-            Dbg.WriteCurrentThreadId("cancel test end");
+            Dbg.WhereThread("cancel test end");
 
             return "aho";
         }
 
         static async void async_task_cancel_fire_test(CancellationTokenSource tsc)
         {
-            Dbg.WriteCurrentThreadId("async_task_cancel_fire_test a");
+            Dbg.WhereThread("async_task_cancel_fire_test a");
             await Task.Delay(200);
-            Dbg.WriteCurrentThreadId("async_task_cancel_fire_test b");
+            Dbg.WhereThread("async_task_cancel_fire_test b");
 
             tsc.Cancel();
         }
 
         static async Task async_task2()
         {
-            Dbg.WriteCurrentThreadId("c");
+            Dbg.WhereThread("c");
             await Task.Delay(200);
             //throw new ApplicationException("aho");
-            Dbg.WriteCurrentThreadId("d");
+            Dbg.WhereThread("d");
         }
 
 
