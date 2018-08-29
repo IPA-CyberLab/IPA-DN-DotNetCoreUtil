@@ -605,7 +605,7 @@ namespace DotNetCoreUtilTestApp
 
             Benchmark b = new Benchmark("testcall");
 
-            ThreadObj.StartMany(40, par =>
+            ThreadObj.StartMany(200, par =>
             {
 
                 if (is_simple_mode)
