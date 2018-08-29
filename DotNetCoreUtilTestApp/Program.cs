@@ -609,9 +609,8 @@ namespace DotNetCoreUtilTestApp
                             //ret.ToString().Print();
                             b.IncrementMe++;
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            ex.Message.Print();
                         }
                     }
                 }
@@ -626,9 +625,8 @@ namespace DotNetCoreUtilTestApp
                             c.CallOne<object>("Divide", a, true).Wait();
                             b.IncrementMe++;
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            ex.Message.Print();
                         }
                     }
                 }
