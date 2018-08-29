@@ -14,6 +14,8 @@ using System.Web;
 using System.IO;
 using System.Net;
 using System.Net.Cache;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
@@ -116,10 +118,13 @@ namespace IPA.DN.CoreUtil.WebApi
         PUT,
     }
 
-    public class WebApi
+    public class WebApi : IDisposable
     {
-        public int TimeoutSecs { get; set; } = 100;
-        public int MaxRecvSize { get; set; } = 100 * 1024 * 1024;
+        public const int DefaultTimeoutMsecs = 5 * 1000;
+        public int TimeoutMsecs { get => (int)Client.Timeout.TotalMilliseconds; set => Client.Timeout = new TimeSpan(0, 0, 0, 0, value); }
+
+        public const long DefaultMaxRecvSize = 100 * 1024 * 1024;
+        public long MaxRecvSize { get => this.Client.MaxResponseContentBufferSize; set => this.Client.MaxResponseContentBufferSize = value; }
         public bool SslAccentAnyCerts { get; set; } = false;
         public List<string> SslAcceptCertSHA1HashList { get; set; } = new List<string>();
         public Encoding RequestEncoding { get; set; } = Str.Utf8Encoding;
@@ -131,6 +136,14 @@ namespace IPA.DN.CoreUtil.WebApi
         public bool DebugPrintResponse { get; set; } = false;
 
         public SortedList<string, string> RequestHeaders = new SortedList<string, string>();
+
+        public HttpClient Client { get; private set; } = new HttpClient();
+
+        public WebApi()
+        {
+            this.MaxRecvSize = WebApi.DefaultMaxRecvSize;
+            this.TimeoutMsecs = WebApi.DefaultTimeoutMsecs;
+        }
 
         public string BuildQueryString(params (string name, string value)[] query_list)
         {
@@ -171,11 +184,9 @@ namespace IPA.DN.CoreUtil.WebApi
             }
         }
 
-        virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
+        virtual protected HttpRequestMessage CreateWebRequest(WebApiMethods method, string url, params (string name, string value)[] query_list)
         {
             string qs = "";
-
-            if (post_content_type.IsEmpty()) post_content_type = "application/x-www-form-urlencoded";
 
             if (method == WebApiMethods.GET || method == WebApiMethods.DELETE)
             {
@@ -186,95 +197,79 @@ namespace IPA.DN.CoreUtil.WebApi
                 }
             }
 
-            HttpWebRequest r = HttpWebRequest.CreateHttp(url);
-            if (this.SslAccentAnyCerts)
-            {
-                r.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-            }
-            else if (this.SslAcceptCertSHA1HashList != null && SslAcceptCertSHA1HashList.Count >= 1)
-            {
-                r.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) =>
-                {
-                    foreach (var s in this.SslAcceptCertSHA1HashList)
-                        if (certificate.GetCertHashString().IsSamei(s)) return true;
-                    return false;
-                };
-            }
-            r.CachePolicy = new RequestCachePolicy(RequestCacheLevel.NoCacheNoStore);
-            r.MaximumAutomaticRedirections = 10;
-            r.AllowAutoRedirect = true;
-            r.Timeout = r.ReadWriteTimeout = r.ContinueTimeout = this.TimeoutSecs * 1000;
-            r.Method = method.ToString();
+            HttpRequestMessage req_msg = new HttpRequestMessage(new HttpMethod(method.ToString()), url);
 
-            if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
-            {
-                r.ContentType = post_content_type;
-            }
+            CacheControlHeaderValue cache_control = new CacheControlHeaderValue();
+            cache_control.NoStore = true;
+            cache_control.NoCache = true;
+            req_msg.Headers.CacheControl = cache_control;
 
             foreach (string name in this.RequestHeaders.Keys)
             {
                 string value = this.RequestHeaders[name];
-                r.Headers.Add(name, value);
+                req_msg.Headers.Add(name, value);
             }
 
-            return r;
-            
+            return req_msg;
+        }
+
+        public static void ThrowIfError(HttpResponseMessage res)
+        {
+            res.EnsureSuccessStatusCode();
         }
 
         public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
         {
-            HttpWebRequest r = CreateWebRequest(method, url, null, query_list);
+            HttpRequestMessage r = CreateWebRequest(method, url, query_list);
 
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
             {
                 string qs = BuildQueryString(query_list);
-                byte[] qs_byte = qs.GetBytes(this.RequestEncoding);
 
-                Stream upload = await r.GetRequestStreamAsync();
-                await upload.WriteAsync(qs_byte, 0, qs_byte.Length);
+                r.Content = new StringContent(qs, this.RequestEncoding, post_content_type);
             }
 
-            using (HttpWebResponse res = (HttpWebResponse)await r.GetResponseAsync())
+            using (HttpResponseMessage res = await this.Client.SendAsync(r, HttpCompletionOption.ResponseContentRead))
             {
-                byte[] data = await res.GetResponseStream().ReadToEndAsync(this.MaxRecvSize);
-                return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
+                ThrowIfError(res);
+                byte[] data = await res.Content.ReadAsByteArrayAsync();
+                return new WebRet(this, url, res.Content.Headers.TryGetContentsType(), data);
             }
         }
 
         public async Task<WebRet> RequestWithPostData(string url, byte[] post_data, string post_contents_type = "application/json")
         {
             if (post_contents_type.IsEmpty()) post_contents_type = "application/json";
-            HttpWebRequest r = CreateWebRequest(WebApiMethods.POST, url, post_contents_type, null);
+            HttpRequestMessage r = CreateWebRequest(WebApiMethods.POST, url,  null);
 
-            Stream upload = await r.GetRequestStreamAsync();
-            await upload.WriteAsync(post_data, 0, post_data.Length);
+            r.Content = new ByteArrayContent(post_data);
+            r.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(post_contents_type);
 
-            using (HttpWebResponse res = (HttpWebResponse)await r.GetResponseAsync())
+            using (HttpResponseMessage res = await this.Client.SendAsync(r, HttpCompletionOption.ResponseContentRead))
             {
-                byte[] data = await res.GetResponseStream().ReadToEndAsync(this.MaxRecvSize);
-                return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
+                ThrowIfError(res);
+                byte[] data = await res.Content.ReadAsByteArrayAsync();
+                string type = res.Content.Headers.TryGetContentsType();
+                return new WebRet(this, url, res.Content.Headers.TryGetContentsType(), data);
             }
         }
 
         public virtual async Task<WebRet> RequestWithJson(WebApiMethods method, string url, string json_string)
         {
-            if (!(method == WebApiMethods.POST || method == WebApiMethods.PUT)) throw new ArgumentException("method");
+            if (!(method == WebApiMethods.POST || method == WebApiMethods.PUT)) throw new ArgumentException($"Invalid method: {method.ToString()}");
 
-            HttpWebRequest r = CreateWebRequest(method, url, null);
-
-            r.ContentType = "application/json";
-
-            json_string.Debug();
+            HttpRequestMessage r = CreateWebRequest(method, url, null);
 
             byte[] upload_data = json_string.GetBytes(this.RequestEncoding);
 
-            Stream upload = await r.GetRequestStreamAsync();
-            await upload.WriteAsync(upload_data, 0, upload_data.Length);
+            r.Content = new ByteArrayContent(upload_data);
+            r.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
 
-            using (HttpWebResponse res = (HttpWebResponse)await r.GetResponseAsync())
+            using (HttpResponseMessage res = await this.Client.SendAsync(r, HttpCompletionOption.ResponseContentRead))
             {
-                byte[] data = await res.GetResponseStream().ReadToEndAsync(this.MaxRecvSize);
-                return new WebRet(this, res.ResponseUri.ToString(), res.ContentType, data);
+                ThrowIfError(res);
+                byte[] data = await res.Content.ReadAsByteArrayAsync();
+                return new WebRet(this, url, res.Content.Headers.TryGetContentsType(), data);
             }
         }
 
@@ -291,6 +286,16 @@ namespace IPA.DN.CoreUtil.WebApi
         public virtual async Task<WebRet> RequestWithJsonDynamic(WebApiMethods method, string url, dynamic json_dynamic)
         {
             return await RequestWithJson(method, url, Json.SerializeDynamic(json_dynamic));
+        }
+
+        Once dispose_once;
+        public void Dispose()
+        {
+            if (dispose_once.IsFirstCall)
+            {
+                this.Client.Dispose();
+                this.Client = null;
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ using System.Runtime.InteropServices;
 using IPA.DN.CoreUtil.Basic;
 using IPA.DN.CoreUtil.Helper.Basic;
 using IPA.DN.CoreUtil.Helper.SlackApi;
+using System.Net.Http;
 
 namespace IPA.DN.CoreUtil.Helper.SlackApi
 {
@@ -55,9 +56,9 @@ namespace IPA.DN.CoreUtil.WebApi
             this.AccessTokenStr = access_token;
         }
 
-        protected override HttpWebRequest CreateWebRequest(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
+        protected override HttpRequestMessage CreateWebRequest(WebApiMethods method, string url, params (string name, string value)[] query_list)
         {
-            HttpWebRequest r = base.CreateWebRequest(method, url, post_content_type, query_list);
+            HttpRequestMessage r = base.CreateWebRequest(method, url, query_list);
 
             if (this.AccessTokenStr.IsFilled())
             {

@@ -15,6 +15,8 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
+using System.Net.Http;
+using System.Net.Http.Headers;
 
 using IPA.DN.CoreUtil.Basic;
 
@@ -190,6 +192,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
 
         public static string GetStrOrEmpty(this SortedDictionary<string, string> d, string key) => (d.ContainsKey(key) ? d[key].NonNull() : "");
+
+        public static string TryGetContentsType(this HttpContentHeaders h) => (h == null ? "" : h.ContentType == null ? "" : h.ContentType.ToString().NonNull());
     }
 }
 

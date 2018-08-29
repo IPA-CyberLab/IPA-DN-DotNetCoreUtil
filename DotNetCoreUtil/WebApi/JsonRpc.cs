@@ -458,9 +458,9 @@ namespace IPA.DN.CoreUtil.WebApi
         }
     }
 
-    public class JsonHttpRpcServer : JsonRpcServer
+    public class JsonRpcHttpServer : JsonRpcServer
     {
-        public JsonHttpRpcServer(JsonRpcServerApi api, JsonRpcServerConfig cfg, CancellationToken cancel_token) : base(api, cfg, cancel_token) { }
+        public JsonRpcHttpServer(JsonRpcServerApi api, JsonRpcServerConfig cfg, CancellationToken cancel_token) : base(api, cfg, cancel_token) { }
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
@@ -508,6 +508,7 @@ namespace IPA.DN.CoreUtil.WebApi
             Dbg.WriteLine("ret_str: " + ret_str);
 
             byte[] ret_data = ret_str.GetBytes_UTF8();
+            response.ContentType = "application/json";
             await response.Body.WriteAsync(ret_data, 0, ret_data.Length);
         }
 
@@ -530,13 +531,13 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class JsonHttpRpcListener : HttpServerImplementation
     {
-        public JsonHttpRpcServer JsonServer { get; }
+        public JsonRpcHttpServer JsonServer { get; }
 
         public JsonHttpRpcListener(IConfiguration configuration) : base(configuration)
         {
             (JsonRpcServerConfig rpc_cfg, JsonRpcServerApi api) p = ((JsonRpcServerConfig rpc_cfg, JsonRpcServerApi api))this.Param;
 
-            JsonServer = new JsonHttpRpcServer(p.api, p.rpc_cfg, this.CancelToken);
+            JsonServer = new JsonRpcHttpServer(p.api, p.rpc_cfg, this.CancelToken);
         }
 
         public static HttpServer<JsonHttpRpcListener> StartServer(HttpServerBuilderConfig http_cfg, JsonRpcServerConfig rpc_server_cfg, JsonRpcServerApi rpc_api)
@@ -652,7 +653,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public abstract Task<string> GetResponse(string req);
 
-        public abstract int TimeoutSecs { get; set; }
+        public abstract int TimeoutMsecs { get; set; }
 
         public abstract void AddHeader(string name, string value);
 
@@ -712,12 +713,12 @@ namespace IPA.DN.CoreUtil.WebApi
         }
     }
 
-    public class JsonRpcHttpClient : JsonRpcClient
+    public class JsonRpcHttpClient : JsonRpcClient, IDisposable
     {
-        public WebApi WebApi { get; set; } = new WebApi();
+        public WebApi WebApi { get; private set; } = new WebApi();
         public string ApiBaseUrl { get; set; }
 
-        public override int TimeoutSecs { get => WebApi.TimeoutSecs; set => WebApi.TimeoutSecs = value; }
+        public override int TimeoutMsecs { get => WebApi.TimeoutMsecs; set => WebApi.TimeoutMsecs = value; }
         public override void AddHeader(string name, string value) => WebApi.AddHeader(name, value);
 
         public JsonRpcHttpClient(string api_url)
@@ -730,6 +731,16 @@ namespace IPA.DN.CoreUtil.WebApi
             WebRet ret = await this.WebApi.RequestWithPostData(this.ApiBaseUrl, req.GetBytes_UTF8(), "application/json");
 
             return ret.ToString();
+        }
+
+        Once dispose_once;
+        public void Dispose()
+        {
+            if (dispose_once.IsFirstCall)
+            {
+                this.WebApi.Dispose();
+                this.WebApi = null;
+            }
         }
     }
 

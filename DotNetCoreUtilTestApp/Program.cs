@@ -154,9 +154,31 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            jsonrpc_client_server_test();
+            //jsonrpc_client_server_test();
+
+            //http_client_test();
 
             //async_ctx_test().Wait();
+        }
+
+        static void http_client_test()
+        {
+            using (WebApi a = new WebApi())
+            {
+                while (true)
+                {
+                    try
+                    {
+                        WebRet ret = a.RequestWithQuery(WebApiMethods.GET, "https://mail.coe.ad.jp/").Result;
+                        ret.ToString().Print();
+                    }
+                    catch (Exception e)
+                    {
+                        Con.WriteLine(e.Message);
+                    }
+                    Kernel.SleepThread(1000);
+                }
+            }
         }
 
         static void auto_reset_event_test()
@@ -529,30 +551,31 @@ namespace DotNetCoreUtilTestApp
             // start client
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
-                JsonRpcHttpClient< rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc");
-
-                c.AddHeader("X-1", "Hello");
-
-                rpctmp1 t = new rpctmp1();
-                t.a = new rpc_t()
+                using (JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc"))
                 {
-                    Int1 = 2,
-                    Str1 = "Neko",
-                };
+                    c.AddHeader("X-1", "Hello");
 
-                //JsonRpcResponse<object> ret = c.CallOne<object>("Test1", t).Result;
-                //JsonRpcResponse<object> ret = c.CallOne<object>("Test2", t).Result;
-                
-                c.Call.Divide(8, 2).Result.Print();
-                c.Call.Divide(8, 2).Result.Print();
-                c.Call.Divide(8, 2).Result.Print();
-                //c.Call.Test3(1, 2, 3).Result.Print();
-                //c.Call.Test5(1, "2").Result.ObjectToJson().Print();
-                //var fnlist = c.Call.Test6().Result;
-                ////foreach (var fn in fnlist) fn.Print();
-                //c.Call.Test7(fnlist).Result.Print();
+                    rpctmp1 t = new rpctmp1();
+                    t.a = new rpc_t()
+                    {
+                        Int1 = 2,
+                        Str1 = "Neko",
+                    };
 
-                //Con.WriteLine(ret.ObjectToJson());
+                    //JsonRpcResponse<object> ret = c.CallOne<object>("Test1", t).Result;
+                    //JsonRpcResponse<object> ret = c.CallOne<object>("Test2", t).Result;
+
+                    c.Call.Divide(8, 2).Result.Print();
+                    c.Call.Divide(8, 2).Result.Print();
+                    c.Call.Divide(8, 2).Result.Print();
+                    //c.Call.Test3(1, 2, 3).Result.Print();
+                    //c.Call.Test5(1, "2").Result.ObjectToJson().Print();
+                    //var fnlist = c.Call.Test6().Result;
+                    ////foreach (var fn in fnlist) fn.Print();
+                    //c.Call.Test7(fnlist).Result.Print();
+
+                    //Con.WriteLine(ret.ObjectToJson());
+                }
             }, null);
 
             //Con.ReadLine("Enter>");
