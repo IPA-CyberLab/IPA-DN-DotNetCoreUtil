@@ -615,6 +615,7 @@ namespace DotNetCoreUtilTestApp
                     {
                         TMP1 a = new TMP1() { a = 2, b = 1 };
                         c.CallOne<object>("Divide", a, true).Wait();
+                        b.IncrementMe++;
                     }
                 }
             }
