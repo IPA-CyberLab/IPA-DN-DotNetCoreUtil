@@ -292,9 +292,9 @@ namespace IPA.DN.CoreUtil.WebApi
             return mi;
         }
 
-        public Task<object> InvokeMethod(string method_name, JObject param)
+        public Task<object> InvokeMethod(string method_name, JObject param, RpcMethodInfo method_info = null)
         {
-            var method_info = GetMethodInfo(method_name);
+            if (method_info == null) method_info = GetMethodInfo(method_name);
             return method_info.InvokeMethod(this, method_name, param);
         }
 
@@ -344,7 +344,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 JObject in_obj = (JObject)req.Params;
                 try
                 {
-                    object ret_obj = await this.Api.InvokeMethod(req.Method, in_obj);
+                    object ret_obj = "1";// await this.Api.InvokeMethod(req.Method, in_obj, method);
                     return new JsonRpcResponseOk()
                     {
                         Id = req.Id,
@@ -490,6 +490,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     headers);
 
                 string in_str = (await request.Body.ReadToEndAsync(this.Config.MaxRequestBodyLen)).GetString_UTF8();
+                //string in_str = (request.Body.ReadToEnd(this.Config.MaxRequestBodyLen)).GetString_UTF8();
                 //Dbg.WriteLine("in_str: " + in_str);
 
                 ret_str = await this.CallMethods(in_str, client_info);

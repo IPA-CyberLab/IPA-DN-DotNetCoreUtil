@@ -627,6 +627,7 @@ namespace DotNetCoreUtilTestApp
                         }
                         catch
                         {
+                            Kernel.SleepThread(1000);
                         }
                     }
                 }
