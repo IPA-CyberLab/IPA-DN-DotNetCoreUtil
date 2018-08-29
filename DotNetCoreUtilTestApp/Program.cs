@@ -430,7 +430,7 @@ namespace DotNetCoreUtilTestApp
 
             public async Task<int> Divide(int a, int b)
             {
-                Dbg.Where("*************************** X: " + this.ClientInfo.Headers.GetStrOrEmpty("X-1"));
+                this.ClientInfo.ToString().Print();
                 return a / b;
             }
             public async Task<rpc_t> Test5(int a, string b)
@@ -544,18 +544,20 @@ namespace DotNetCoreUtilTestApp
                 //JsonRpcResponse<object> ret = c.CallOne<object>("Test2", t).Result;
                 
                 c.Call.Divide(8, 2).Result.Print();
-                c.Call.Test3(1, 2, 3).Result.Print();
-                c.Call.Test5(1, "2").Result.ObjectToJson().Print();
-                var fnlist = c.Call.Test6().Result;
-                //foreach (var fn in fnlist) fn.Print();
-                c.Call.Test7(fnlist).Result.Print();
+                c.Call.Divide(8, 2).Result.Print();
+                c.Call.Divide(8, 2).Result.Print();
+                //c.Call.Test3(1, 2, 3).Result.Print();
+                //c.Call.Test5(1, "2").Result.ObjectToJson().Print();
+                //var fnlist = c.Call.Test6().Result;
+                ////foreach (var fn in fnlist) fn.Print();
+                //c.Call.Test7(fnlist).Result.Print();
 
                 //Con.WriteLine(ret.ObjectToJson());
             }, null);
 
-            Con.ReadLine("Enter>");
+            //Con.ReadLine("Enter>");
 
-            //client_thread.WaitForEnd();
+            client_thread.WaitForEnd();
 
             s.StopAsync().Wait();
 
