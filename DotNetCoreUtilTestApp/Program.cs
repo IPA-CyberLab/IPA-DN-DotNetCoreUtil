@@ -597,13 +597,13 @@ namespace DotNetCoreUtilTestApp
 
             ThreadObj.StartMany(40, par =>
             {
-                WebApi a = new WebApi();
 
                 if (false)
                 {
+                    WebApi api = new WebApi();
                     while (true)
                     {
-                        WebRet ret = a.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
+                        WebRet ret = api.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
                         //ret.ToString().Print();
                         b.IncrementMe++;
                     }
@@ -613,6 +613,7 @@ namespace DotNetCoreUtilTestApp
                     JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
                     while (true)
                     {
+                        TMP1 a = new TMP1() { a = 2, b = 1 };
                         c.CallOne<object>("Divide", a, true).Wait();
                     }
                 }
