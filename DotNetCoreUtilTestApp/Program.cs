@@ -170,7 +170,7 @@ namespace DotNetCoreUtilTestApp
             WebApi a = new WebApi();
 
             {
-                ThreadObj.StartMany(2, param =>
+                ThreadObj.StartMany(100, param =>
                 {
                     //using (WebApi a = new WebApi())
                     {
@@ -568,6 +568,11 @@ namespace DotNetCoreUtilTestApp
             Util.DoNothing();
         }
 
+        public class TMP1
+        {
+            public int a, b;
+        }
+
         public static void jsonrpc_client_server_test()
         {
             //jsonrpc_server_invoke_test().Wait();return;
@@ -586,11 +591,11 @@ namespace DotNetCoreUtilTestApp
             // start client
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
-                if (false)
+                if (true)
                 {
                     Benchmark b = new Benchmark("testcall");
 
-                    ThreadObj.StartMany(100, par =>
+                    ThreadObj.StartMany(200, par =>
                     {
 
                         WebApi a = new WebApi();
@@ -607,9 +612,9 @@ namespace DotNetCoreUtilTestApp
                     Kernel.SuspendForDebug();
                 }
 
-                using (JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc"))
+                //using ()
                 {
-                    c.AddHeader("X-1", "Hello");
+                    //c.AddHeader("X-1", "Hello");
 
                     rpctmp1 t = new rpctmp1();
                     t.a = new rpc_t()
@@ -623,20 +628,23 @@ namespace DotNetCoreUtilTestApp
 
                     Benchmark b = new Benchmark("rpccall");
 
-                    ThreadObj.StartMany(2, par =>
+                    ThreadObj.StartMany(200, par =>
                     {
+                        JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc");
                         while (true)
                         {
                             b.IncrementMe++;
-                            c.Call.Divide(8, 2).Wait();
+                            //c.Call.Divide(8, 2).Wait();
+                            TMP1 a = new TMP1() { a = 2, b = 1 };
+                            c.CallOne<object>("Divide", a, true).Wait();
                         }
                     }
                     );
 
                     Kernel.SleepThread(-1);
 
-                    c.Call.Divide(8, 2).Result.Print();
-                    c.Call.Divide(8, 2).Result.Print();
+                    //c.Call.Divide(8, 2).Result.Print();
+                    //c.Call.Divide(8, 2).Result.Print();
                     //c.Call.Test3(1, 2, 3).Result.Print();
                     //c.Call.Test5(1, "2").Result.ObjectToJson().Print();
                     //var fnlist = c.Call.Test6().Result;
