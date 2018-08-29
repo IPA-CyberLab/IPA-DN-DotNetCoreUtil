@@ -137,10 +137,16 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public SortedList<string, string> RequestHeaders = new SortedList<string, string>();
 
-        public HttpClient Client { get; private set; } = new HttpClient();
+        HttpClientHandler client_handler = new HttpClientHandler();
+
+        public HttpClient Client { get; private set; }
 
         public WebApi()
         {
+            this.client_handler.AllowAutoRedirect = true;
+            this.client_handler.MaxAutomaticRedirections = 10;
+
+            this.Client = new HttpClient(this.client_handler, true);
             this.MaxRecvSize = WebApi.DefaultMaxRecvSize;
             this.TimeoutMsecs = WebApi.DefaultTimeoutMsecs;
         }
@@ -204,6 +210,26 @@ namespace IPA.DN.CoreUtil.WebApi
             cache_control.NoCache = true;
             req_msg.Headers.CacheControl = cache_control;
 
+            //try
+            {
+                if (this.SslAccentAnyCerts)
+                {
+                    this.client_handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+                }
+                else if (this.SslAcceptCertSHA1HashList != null && SslAcceptCertSHA1HashList.Count >= 1)
+                {
+                    this.client_handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+                    {
+                        foreach (var s in this.SslAcceptCertSHA1HashList)
+                            if (cert.GetCertHashString().IsSamei(s)) return true;
+                        return false;
+                    };
+                }
+            }
+            //catch
+            {
+            }
+
             foreach (string name in this.RequestHeaders.Keys)
             {
                 string value = this.RequestHeaders[name];
@@ -244,7 +270,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
             r.Content = new ByteArrayContent(post_data);
             r.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(post_contents_type);
-
+            
             using (HttpResponseMessage res = await this.Client.SendAsync(r, HttpCompletionOption.ResponseContentRead))
             {
                 ThrowIfError(res);

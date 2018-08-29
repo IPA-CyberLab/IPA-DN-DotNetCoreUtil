@@ -156,7 +156,7 @@ namespace DotNetCoreUtilTestApp
 
             //jsonrpc_client_server_test();
 
-            //http_client_test();
+            http_client_test();
 
             //async_ctx_test().Wait();
         }
@@ -169,12 +169,14 @@ namespace DotNetCoreUtilTestApp
                 {
                     try
                     {
-                        WebRet ret = a.RequestWithQuery(WebApiMethods.GET, "https://mail.coe.ad.jp/").Result;
+                        a.SslAcceptCertSHA1HashList.Add("b0416f96fe4ed8ac7dddee5316c92ee12a3f745a");
+                        //a.SslAcceptCertSHA1HashList.Add("b0416f96fe4ed8ac7ddd0e5316c92ee12a3f745a");
+                        WebRet ret = a.RequestWithQuery(WebApiMethods.GET, "https://api.vpngate.net/").Result;
                         ret.ToString().Print();
                     }
                     catch (Exception e)
                     {
-                        Con.WriteLine(e.Message);
+                        Con.WriteLine(e.ToString());
                     }
                     Kernel.SleepThread(1000);
                 }
