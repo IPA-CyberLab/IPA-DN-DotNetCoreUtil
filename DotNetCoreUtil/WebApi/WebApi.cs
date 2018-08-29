@@ -41,7 +41,7 @@ namespace IPA.DN.CoreUtil.WebApi
         public byte[] Data { get; }
         public string MediaType { get; }
         public string CharSet { get; }
-        public Encoding DefaultEncoding { get; }
+        public Encoding DefaultEncoding { get; } = Str.Utf8Encoding;
         public WebApi Api { get; }
 
         public WebRet(WebApi webapi, string url, string contents_type, byte[] data)
@@ -64,11 +64,13 @@ namespace IPA.DN.CoreUtil.WebApi
 
             try
             {
-                this.DefaultEncoding = Encoding.GetEncoding(this.CharSet);
+                if (this.CharSet.IsFilled())
+                {
+                    this.DefaultEncoding = Encoding.GetEncoding(this.CharSet);
+                }
             }
             catch
             {
-                this.DefaultEncoding = Str.Utf8Encoding;
             }
 
             this.Data = data.NonNull();
@@ -120,7 +122,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class WebApi : IDisposable
     {
-        public const int DefaultTimeoutMsecs = 5 * 1000;
+        public const int DefaultTimeoutMsecs = 60 * 1000;
         public int TimeoutMsecs { get => (int)Client.Timeout.TotalMilliseconds; set => Client.Timeout = new TimeSpan(0, 0, 0, 0, value); }
 
         public const long DefaultMaxRecvSize = 100 * 1024 * 1024;

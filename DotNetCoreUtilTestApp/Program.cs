@@ -154,11 +154,43 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            //jsonrpc_client_server_test();
+            jsonrpc_client_server_test();
 
-            http_client_test();
+            //http_client_test();
+
+            //http_client_test2();
 
             //async_ctx_test().Wait();
+        }
+
+        static void http_client_test2()
+        {
+            Benchmark b = new Benchmark();
+
+            WebApi a = new WebApi();
+
+            {
+                ThreadObj.StartMany(2, param =>
+                {
+                    //using (WebApi a = new WebApi())
+                    {
+                        while (true)
+                        {
+                            try
+                            {
+                                WebRet ret = a.RequestWithQuery(WebApiMethods.GET, "http://mail.coe.ad.jp/").Result;
+                                b.IncrementMe++;
+                                //ret.ToString().Print();
+                            }
+                            catch (Exception e)
+                            {
+                                Con.WriteLine(e.ToString());
+                            }
+                            //                    Kernel.SleepThread(1000);
+                        }
+                    }
+                });
+            }
         }
 
         static void http_client_test()
@@ -252,7 +284,7 @@ namespace DotNetCoreUtilTestApp
                 {
                     e.Set();
                 }
-                
+
                 foreach (Task t in tasks)
                 {
                     t.Wait();
@@ -454,7 +486,7 @@ namespace DotNetCoreUtilTestApp
 
             public async Task<int> Divide(int a, int b)
             {
-                this.ClientInfo.ToString().Print();
+                //this.ClientInfo.ToString().Print();
                 return a / b;
             }
             public async Task<rpc_t> Test5(int a, string b)
@@ -543,6 +575,7 @@ namespace DotNetCoreUtilTestApp
             // start server
             HttpServerBuilderConfig http_cfg = new HttpServerBuilderConfig()
             {
+                DebugToConsole = false,
             };
             JsonRpcServerConfig rpc_cfg = new JsonRpcServerConfig()
             {
@@ -553,6 +586,27 @@ namespace DotNetCoreUtilTestApp
             // start client
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
+                if (false)
+                {
+                    Benchmark b = new Benchmark("testcall");
+
+                    ThreadObj.StartMany(100, par =>
+                    {
+
+                        WebApi a = new WebApi();
+
+                        while (true)
+                        {
+                            WebRet ret = a.RequestWithQuery(WebApiMethods.GET, "http://127.0.0.1:88/rpc").Result;
+                            //ret.ToString().Print();
+                            b.IncrementMe++;
+                        }
+                    }
+                    );
+
+                    Kernel.SuspendForDebug();
+                }
+
                 using (JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc"))
                 {
                     c.AddHeader("X-1", "Hello");
@@ -567,7 +621,20 @@ namespace DotNetCoreUtilTestApp
                     //JsonRpcResponse<object> ret = c.CallOne<object>("Test1", t).Result;
                     //JsonRpcResponse<object> ret = c.CallOne<object>("Test2", t).Result;
 
-                    c.Call.Divide(8, 2).Result.Print();
+                    Benchmark b = new Benchmark("rpccall");
+
+                    ThreadObj.StartMany(2, par =>
+                    {
+                        while (true)
+                        {
+                            b.IncrementMe++;
+                            c.Call.Divide(8, 2).Wait();
+                        }
+                    }
+                    );
+
+                    Kernel.SleepThread(-1);
+
                     c.Call.Divide(8, 2).Result.Print();
                     c.Call.Divide(8, 2).Result.Print();
                     //c.Call.Test3(1, 2, 3).Result.Print();
@@ -586,7 +653,7 @@ namespace DotNetCoreUtilTestApp
 
             s.StopAsync().Wait();
 
-            
+
         }
 
         public static void jsonrpc_http_server_test()
@@ -876,7 +943,7 @@ namespace DotNetCoreUtilTestApp
         {
             ChildProcess p = new ChildProcess(" / bin/bash", "", "#!/bin/bash\r\necho aaa > aaa.txt\r\necho bbb\ndate\n\r\n\r\n".NormalizeCrlfThisPlatform(), true, 1000);
 
-                         //ChildProcess p = new ChildProcess(@"C:\git\dn-rlogin\rlogin_src\openssl-1.1.0h-x32\apps\openssl.exe", "", "version\n\n", true, 1000);
+            //ChildProcess p = new ChildProcess(@"C:\git\dn-rlogin\rlogin_src\openssl-1.1.0h-x32\apps\openssl.exe", "", "version\n\n", true, 1000);
 
             WriteLine(p.StdOut);
             WriteLine(p.StdErr);

@@ -238,11 +238,11 @@ namespace IPA.DN.CoreUtil.WebApi
                 Type t = retobj.GetType();
                 Task task = (Task)retobj;
 
-                Dbg.WhereThread();
+                //Dbg.WhereThread();
 
                 await task;
 
-                Dbg.WhereThread();
+                //Dbg.WhereThread();
 
                 var prop_mi = t.GetProperty("Result");
                 object retvalue = prop_mi.GetValue(retobj);
@@ -487,7 +487,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     headers);
 
                 string in_str = (await request.Body.ReadToEndAsync(this.Config.MaxRequestBodyLen)).GetString_UTF8();
-                Dbg.WriteLine("in_str: " + in_str);
+                //Dbg.WriteLine("in_str: " + in_str);
 
                 ret_str = await this.CallMethods(in_str, client_info);
             }
@@ -505,7 +505,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 }.ObjectToJson();
             }
 
-            Dbg.WriteLine("ret_str: " + ret_str);
+            //Dbg.WriteLine("ret_str: " + ret_str);
 
             byte[] ret_data = ret_str.GetBytes_UTF8();
             response.ContentType = "application/json";
@@ -680,7 +680,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
                 //ret.Wait();
 
-                Dbg.WhereThread(v.Method.Name);
+                //Dbg.WhereThread(v.Method.Name);
                 Task<object> ret = get_response_object_async(call_ret);
 
                 var return_type = v.Method.ReturnType;
@@ -692,14 +692,14 @@ namespace IPA.DN.CoreUtil.WebApi
                 var task_return_type = generic_args[0];
 
                 v.ReturnValue = TaskUtil.ConvertTask(ret, typeof(object), task_return_type);
-                Dbg.WhereThread(v.Method.Name);
+                //Dbg.WhereThread(v.Method.Name);
             }
 
             async Task<object> get_response_object_async(Task<JsonRpcResponse<object>> o)
             {
-                Dbg.WhereThread();
+                //Dbg.WhereThread();
                 await o;
-                Dbg.WhereThread();
+                //Dbg.WhereThread();
                 return o.Result.ResultData;
             }
         }
