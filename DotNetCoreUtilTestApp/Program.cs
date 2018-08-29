@@ -593,13 +593,21 @@ namespace DotNetCoreUtilTestApp
 
         public static void jsonrpc_benchmark_client(string ip)
         {
+            bool is_simple_mode = false;
+            if (ip.StartsWith("@"))
+            {
+                ip = ip.Substring(1);
+                is_simple_mode = true;
+            }
+
             Benchmark b = new Benchmark("testcall");
 
             ThreadObj.StartMany(40, par =>
             {
 
-                if (false)
+                if (is_simple_mode)
                 {
+                    Con.WriteLine("Simple mode: " + ip);
                     WebApi api = new WebApi();
                     while (true)
                     {
@@ -616,6 +624,7 @@ namespace DotNetCoreUtilTestApp
                 }
                 else
                 {
+                    Con.WriteLine("JSON-RPC mode: " + ip);
                     JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
                     while (true)
                     {

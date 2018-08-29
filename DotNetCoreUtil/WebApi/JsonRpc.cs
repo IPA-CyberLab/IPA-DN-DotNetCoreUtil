@@ -344,7 +344,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 JObject in_obj = (JObject)req.Params;
                 try
                 {
-                    object ret_obj = "1";// await this.Api.InvokeMethod(req.Method, in_obj, method);
+                    object ret_obj = await this.Api.InvokeMethod(req.Method, in_obj, method);
                     return new JsonRpcResponseOk()
                     {
                         Id = req.Id,
