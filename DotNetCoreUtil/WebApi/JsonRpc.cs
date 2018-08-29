@@ -273,7 +273,10 @@ namespace IPA.DN.CoreUtil.WebApi
             lock (method_info_cache)
             {
                 if (method_info_cache.ContainsKey(method_name) == false)
+                {
                     m = get_method_info_main(method_name);
+                    method_info_cache.Add(method_name, m);
+                }
                 else
                     m = method_info_cache[method_name];
             }
