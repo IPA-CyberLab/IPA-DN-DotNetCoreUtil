@@ -604,6 +604,7 @@ namespace DotNetCoreUtilTestApp
             }
 
             Benchmark b = new Benchmark("testcall");
+            Benchmark b2 = new Benchmark("error");
 
             ThreadObj.StartMany(200, par =>
             {
@@ -622,6 +623,8 @@ namespace DotNetCoreUtilTestApp
                         }
                         catch
                         {
+                            b2.IncrementMe++;
+                            Kernel.SleepThread(Secure.Rand31i() % 4000);
                         }
                     }
                 }
@@ -639,7 +642,8 @@ namespace DotNetCoreUtilTestApp
                         }
                         catch
                         {
-                            Kernel.SleepThread(1000);
+                            b2.IncrementMe++;
+                            Kernel.SleepThread(Secure.Rand31i() % 4000);
                         }
                     }
                 }
