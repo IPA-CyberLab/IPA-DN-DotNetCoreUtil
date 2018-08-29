@@ -261,6 +261,8 @@ namespace IPA.DN.CoreUtil.WebApi
             this.RpcInterface = get_rpc_interface();
         }
 
+        protected JsonRpcClientInfo ClientInfo { get => TaskVar<JsonRpcClientInfo>.Value; }
+
         public CancellationTokenSource CancelSource { get; } = new CancellationTokenSource();
         public CancellationToken CancelToken { get => this.CancelSource.Token; }
 
@@ -287,13 +289,13 @@ namespace IPA.DN.CoreUtil.WebApi
             return mi;
         }
 
-        public virtual Task<object> InvokeMethod(string method_name, JObject param)
+        public Task<object> InvokeMethod(string method_name, JObject param)
         {
             var method_info = GetMethodInfo(method_name);
             return method_info.InvokeMethod(this, method_name, param);
         }
 
-        virtual protected Type get_rpc_interface()
+        protected Type get_rpc_interface()
         {
             Type ret = null;
             Type t = this.GetType();
@@ -309,6 +311,14 @@ namespace IPA.DN.CoreUtil.WebApi
             if (num >= 2) throw new ApplicationException($"The class '{t.Name}' has two or mode interfaces with the RpcInterface attribute.");
             return ret;
         }
+
+        public virtual void StartCall(JsonRpcClientInfo client_info) { }
+
+        public virtual async Task StartCallAsync(JsonRpcClientInfo client_info) => await Task.CompletedTask;
+
+        public virtual void FinishCall() { }
+
+        public virtual async Task FinishCallAsync() => await Task.CompletedTask;
     }
 
     public abstract class JsonRpcServer
@@ -365,7 +375,7 @@ namespace IPA.DN.CoreUtil.WebApi
             }
         }
 
-        public async Task<string> CallMethods(string in_str)
+        public async Task<string> CallMethods(string in_str, JsonRpcClientInfo client_info)
         {
             bool is_single = false;
             List<JsonRpcRequest> request_list = new List<JsonRpcRequest>();
@@ -390,26 +400,50 @@ namespace IPA.DN.CoreUtil.WebApi
 
             List<JsonRpcResponse> response_list = new List<JsonRpcResponse>();
 
-            foreach (JsonRpcRequest req in request_list)
+            TaskVar.Set<JsonRpcClientInfo>(client_info);
+            try
             {
+                this.Api.StartCall(client_info);
                 try
                 {
-                    JsonRpcResponse res = await CallMethod(req);
-                    if (req.Id != null) response_list.Add(res);
-                }
-                catch (Exception ex)
-                {
-                    JsonRpcException json_ex;
-                    if (ex is JsonRpcException) json_ex = ex as JsonRpcException;
-                    else json_ex = new JsonRpcException(new JsonRpcError(-32603, ex.Message, ex.ToString()));
-                    JsonRpcResponseError res = new JsonRpcResponseError()
+                    await this.Api.StartCallAsync(client_info);
+                    try
                     {
-                        Id = req.Id,
-                        Error = json_ex.RpcError,
-                        Result = null,
-                    };
-                    if (req.Id != null) response_list.Add(res);
+                        foreach (JsonRpcRequest req in request_list)
+                        {
+                            try
+                            {
+                                JsonRpcResponse res = await CallMethod(req);
+                                if (req.Id != null) response_list.Add(res);
+                            }
+                            catch (Exception ex)
+                            {
+                                JsonRpcException json_ex;
+                                if (ex is JsonRpcException) json_ex = ex as JsonRpcException;
+                                else json_ex = new JsonRpcException(new JsonRpcError(-32603, ex.Message, ex.ToString()));
+                                JsonRpcResponseError res = new JsonRpcResponseError()
+                                {
+                                    Id = req.Id,
+                                    Error = json_ex.RpcError,
+                                    Result = null,
+                                };
+                                if (req.Id != null) response_list.Add(res);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        await this.Api.FinishCallAsync();
+                    }
                 }
+                finally
+                {
+                    this.Api.FinishCall();
+                }
+            }
+            finally
+            {
+                TaskVar.Set<JsonRpcClientInfo>(null);
             }
 
             if (is_single)
@@ -438,9 +472,24 @@ namespace IPA.DN.CoreUtil.WebApi
             string ret_str = "";
             try
             {
+                SortedDictionary<string, string> headers = new SortedDictionary<string, string>();
+                foreach (string header_name in request.Headers.Keys)
+                {
+                    if (request.Headers.TryGetValue(header_name, out var val))
+                    {
+                        headers.Add(header_name, val.ToString());
+                    }
+                }
+
+                var conn = request.HttpContext.Connection;
+                JsonRpcClientInfo client_info = new JsonRpcClientInfo(this, conn.LocalIpAddress.ToString(), conn.LocalPort,
+                    conn.RemoteIpAddress.ToString(), conn.RemotePort,
+                    headers);
+
                 string in_str = (await request.Body.ReadToEndAsync(this.Config.MaxRequestBodyLen)).GetString_UTF8();
                 Dbg.WriteLine("in_str: " + in_str);
-                ret_str = await this.CallMethods(in_str);
+
+                ret_str = await this.CallMethods(in_str, client_info);
             }
             catch (Exception ex)
             {
@@ -691,6 +740,33 @@ namespace IPA.DN.CoreUtil.WebApi
         public JsonRpcHttpClient(string api_url) : base(api_url)
         {
             this.Call = this.GenerateRpcInterface<TRpcInterface>();
+        }
+    }
+
+    public class JsonRpcClientInfo
+    {
+        public string LocalIP { get; }
+        public int LocalPort { get; }
+        public string RemoteIP { get; }
+        public int RemotePort { get; }
+        public DateTime ConnectedDateTime { get; }
+        public SortedDictionary<string, string> Headers { get; }
+        public JsonRpcServer RpcServer {get;}
+
+        public JsonRpcClientInfo(JsonRpcServer rpc_server, string local_ip, int local_port, string remote_ip, int remote_port, SortedDictionary<string, string> headers)
+        {
+            this.RpcServer = rpc_server;
+            this.ConnectedDateTime = DateTime.Now;
+            this.LocalIP = local_ip.NonNull();
+            this.LocalPort = local_port;
+            this.RemoteIP = remote_ip.NonNull();
+            this.RemotePort = remote_port;
+            this.Headers = headers;
+        }
+
+        public override string ToString()
+        {
+            return $"{this.RemoteIP}:{this.RemotePort}";
         }
     }
 }

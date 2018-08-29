@@ -188,6 +188,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static async Task TryCancelAsync(this CancellationTokenSource cts) => await TaskUtil.TryCancelAsync(cts);
 
         public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
+
+        public static string GetStrOrEmpty(this SortedDictionary<string, string> d, string key) => (d.ContainsKey(key) ? d[key].NonNull() : "");
     }
 }
 

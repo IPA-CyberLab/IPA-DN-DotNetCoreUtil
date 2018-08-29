@@ -137,7 +137,6 @@ namespace DotNetCoreUtilTestApp
 
 
             //TaskUtil.Test();
-            jsonrpc_client_server_test();
 
             //Benchmark b = new Benchmark();
 
@@ -154,6 +153,10 @@ namespace DotNetCoreUtilTestApp
             //sleep_task_gc_test();
 
             //Kernel.SleepThread(-1);
+
+            jsonrpc_client_server_test();
+
+            //async_ctx_test().Wait();
         }
 
         static void auto_reset_event_test()
@@ -427,7 +430,7 @@ namespace DotNetCoreUtilTestApp
 
             public async Task<int> Divide(int a, int b)
             {
-                Dbg.Where("***************************");
+                Dbg.Where("*************************** X: " + this.ClientInfo.Headers.GetStrOrEmpty("X-1"));
                 return a / b;
             }
             public async Task<rpc_t> Test5(int a, string b)
@@ -452,6 +455,25 @@ namespace DotNetCoreUtilTestApp
             public async Task<string> Test7(string[] p)
             {
                 return Str.CombineStringArray(p, ",");
+            }
+
+            public override void StartCall(JsonRpcClientInfo client_info)
+            {
+            }
+
+            public override Task StartCallAsync(JsonRpcClientInfo client_info)
+            {
+                return Task.CompletedTask;
+            }
+
+            public override void FinishCall()
+            {
+                Util.DoNothing();
+            }
+
+            public override Task FinishCallAsync()
+            {
+                return Task.CompletedTask;
             }
         }
 #pragma warning restore CS1998
@@ -508,6 +530,8 @@ namespace DotNetCoreUtilTestApp
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
                 JsonRpcHttpClient< rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc");
+
+                c.AddHeader("X-1", "Hello");
 
                 rpctmp1 t = new rpctmp1();
                 t.a = new rpc_t()

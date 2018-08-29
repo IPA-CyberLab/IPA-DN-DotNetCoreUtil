@@ -214,7 +214,7 @@ namespace IPA.DN.CoreUtil.WebApi
             foreach (string name in this.RequestHeaders.Keys)
             {
                 string value = this.RequestHeaders[name];
-                this.RequestHeaders.Add(name, value);
+                r.Headers.Add(name, value);
             }
 
             return r;
