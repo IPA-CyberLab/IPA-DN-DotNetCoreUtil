@@ -595,15 +595,26 @@ namespace DotNetCoreUtilTestApp
         {
             Benchmark b = new Benchmark("testcall");
 
-            ThreadObj.StartMany(200, par =>
+            ThreadObj.StartMany(40, par =>
             {
                 WebApi a = new WebApi();
 
-                while (true)
+                if (false)
                 {
-                    WebRet ret = a.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
-                    //ret.ToString().Print();
-                    b.IncrementMe++;
+                    while (true)
+                    {
+                        WebRet ret = a.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
+                        //ret.ToString().Print();
+                        b.IncrementMe++;
+                    }
+                }
+                else
+                {
+                    JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
+                    while (true)
+                    {
+                        c.CallOne<object>("Divide", a, true).Wait();
+                    }
                 }
             }
             );
