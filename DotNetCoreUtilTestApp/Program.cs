@@ -606,6 +606,9 @@ namespace DotNetCoreUtilTestApp
             Benchmark b = new Benchmark("testcall");
             Benchmark b2 = new Benchmark("error");
 
+            RefInt max_conn = new RefInt(20);
+            RefInt current_conn = new RefInt(0);
+
             ThreadObj.StartMany(200, par =>
             {
 
@@ -615,16 +618,29 @@ namespace DotNetCoreUtilTestApp
                     WebApi api = new WebApi();
                     while (true)
                     {
+                        while (current_conn.Value >= max_conn.Value)
+                        {
+                            Kernel.SleepThread(Secure.Rand31i() % 1000);
+                        }
+
+                        Interlocked.Increment(ref current_conn.Value);
                         try
                         {
-                            WebRet ret = api.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
-                            //ret.ToString().Print();
-                            b.IncrementMe++;
+                            try
+                            {
+                                WebRet ret = api.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
+                                //ret.ToString().Print();
+                                b.IncrementMe++;
+                            }
+                            catch
+                            {
+                                b2.IncrementMe++;
+                                Kernel.SleepThread(Secure.Rand31i() % 4000);
+                            }
                         }
-                        catch
+                        finally
                         {
-                            b2.IncrementMe++;
-                            Kernel.SleepThread(Secure.Rand31i() % 4000);
+                            Interlocked.Decrement(ref current_conn.Value);
                         }
                     }
                 }
@@ -634,23 +650,45 @@ namespace DotNetCoreUtilTestApp
                     JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
                     while (true)
                     {
-                        TMP1 a = new TMP1() { a = 2, b = 1 };
+                        while (current_conn.Value >= max_conn.Value)
+                        {
+                            Kernel.SleepThread(Secure.Rand31i() % 1000);
+                        }
+
+                        Interlocked.Increment(ref current_conn.Value);
+
                         try
                         {
-                            c.CallOne<object>("Divide", a, true).Wait();
-                            b.IncrementMe++;
+                            TMP1 a = new TMP1() { a = 2, b = 1 };
+                            try
+                            {
+                                c.CallOne<object>("Divide", a, true).Wait();
+                                b.IncrementMe++;
+                            }
+                            catch
+                            {
+                                b2.IncrementMe++;
+                                Kernel.SleepThread(Secure.Rand31i() % 4000);
+                            }
                         }
-                        catch
+                        finally
                         {
-                            b2.IncrementMe++;
-                            Kernel.SleepThread(Secure.Rand31i() % 4000);
+                            Interlocked.Decrement(ref current_conn.Value);
                         }
                     }
                 }
             }
             );
 
-            Kernel.SuspendForDebug();
+            while (true)
+            {
+                string line = Con.ReadLine();
+                int n = line.ToInt();
+                if (n >= 1)
+                {
+                    max_conn.Set(n);
+                }
+            }
         }
 
         public static void jsonrpc_benchmark_server()

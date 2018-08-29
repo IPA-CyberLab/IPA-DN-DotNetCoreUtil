@@ -170,6 +170,20 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
+    // RefInt クラス
+    public class RefInt
+    {
+        public RefInt() : this(0) { }
+        public RefInt(int value)
+        {
+            this.Value = value;
+        }
+        public int Value;
+        public void Set(int value) => this.Value = value;
+        public int Get() => this.Value;
+        public override string ToString() => this.Value.ToString();
+    }
+
     // Ref クラス
     public class Ref<T>
     {
