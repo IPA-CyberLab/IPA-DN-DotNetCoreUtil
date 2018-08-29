@@ -130,6 +130,8 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public bool DebugPrintResponse { get; set; } = false;
 
+        public SortedList<string, string> RequestHeaders = new SortedList<string, string>();
+
         public string BuildQueryString(params (string name, string value)[] query_list)
         {
             StringWriter w = new StringWriter();
@@ -147,6 +149,26 @@ namespace IPA.DN.CoreUtil.WebApi
                 }
             }
             return w.ToString();
+        }
+
+        public void AddHeader(string name, string value)
+        {
+            if (name.IsEmpty()) return;
+            lock (this.RequestHeaders)
+            {
+                if (value.IsEmpty() == false)
+                {
+                    if (this.RequestHeaders.ContainsKey(name))
+                        this.RequestHeaders[name] = value;
+                    else
+                        this.RequestHeaders.Add(name, value);
+                }
+                else
+                {
+                    if (this.RequestHeaders.ContainsKey(name))
+                        this.RequestHeaders.Remove(name);
+                }
+            }
         }
 
         virtual protected HttpWebRequest CreateWebRequest(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
@@ -187,6 +209,12 @@ namespace IPA.DN.CoreUtil.WebApi
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
             {
                 r.ContentType = post_content_type;
+            }
+
+            foreach (string name in this.RequestHeaders.Keys)
+            {
+                string value = this.RequestHeaders[name];
+                this.RequestHeaders.Add(name, value);
             }
 
             return r;

@@ -503,7 +503,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public void CallClear() => call_queue.Clear();
 
-        public JsonRpcResponse<TResponse> CallAdd<TResponse>(string method, object param) where TResponse: class
+        public JsonRpcResponse<TResponse> CallAdd<TResponse>(string method, object param) where TResponse : class
         {
             var ret = new JsonRpcResponse<TResponse>();
 
@@ -603,6 +603,10 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public abstract Task<string> GetResponse(string req);
 
+        public abstract int TimeoutSecs { get; set; }
+
+        public abstract void AddHeader(string name, string value);
+
         class ProxyInterceptor : IInterceptor
         {
             public JsonRpcClient RpcClient { get; }
@@ -650,7 +654,7 @@ namespace IPA.DN.CoreUtil.WebApi
             }
         }
 
-        public virtual TRpcInterface GetRpcInterface<TRpcInterface>() where TRpcInterface : class
+        public virtual TRpcInterface GenerateRpcInterface<TRpcInterface>() where TRpcInterface : class
         {
             ProxyGenerator g = new ProxyGenerator();
             ProxyInterceptor ic = new ProxyInterceptor(this);
@@ -664,6 +668,9 @@ namespace IPA.DN.CoreUtil.WebApi
         public WebApi WebApi { get; set; } = new WebApi();
         public string ApiBaseUrl { get; set; }
 
+        public override int TimeoutSecs { get => WebApi.TimeoutSecs; set => WebApi.TimeoutSecs = value; }
+        public override void AddHeader(string name, string value) => WebApi.AddHeader(name, value);
+
         public JsonRpcHttpClient(string api_url)
         {
             this.ApiBaseUrl = api_url;
@@ -674,6 +681,16 @@ namespace IPA.DN.CoreUtil.WebApi
             WebRet ret = await this.WebApi.RequestWithPostData(this.ApiBaseUrl, req.GetBytes_UTF8(), "application/json");
 
             return ret.ToString();
+        }
+    }
+
+    public class JsonRpcHttpClient<TRpcInterface> : JsonRpcHttpClient
+        where TRpcInterface : class
+    {
+        public TRpcInterface Call { get; }
+        public JsonRpcHttpClient(string api_url) : base(api_url)
+        {
+            this.Call = this.GenerateRpcInterface<TRpcInterface>();
         }
     }
 }
