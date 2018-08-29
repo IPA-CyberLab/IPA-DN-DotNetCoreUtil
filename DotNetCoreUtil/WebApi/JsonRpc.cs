@@ -464,7 +464,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
-            await response.WriteAsync("This is a JSON-RPC server.\r\nCurrent time : " + DateTime.Now.ToDtStr(true, DtstrOption.All, true));
+            await response.WriteAsync("This is a JSON-RPC server.");
         }
 
         public virtual async Task PostRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)

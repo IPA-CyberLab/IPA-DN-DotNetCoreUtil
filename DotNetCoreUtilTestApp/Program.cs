@@ -154,7 +154,9 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            jsonrpc_client_server_test();
+            //jsonrpc_client_server_test();
+
+            jsonrpc_benchmark_test();
 
             //http_client_test();
 
@@ -571,6 +573,58 @@ namespace DotNetCoreUtilTestApp
         public class TMP1
         {
             public int a, b;
+        }
+
+        public static void jsonrpc_benchmark_test()
+        {
+            Con.WriteLine("Empty to start a server.");
+            Con.WriteLine("IP to start a client.");
+            string s = Con.ReadLine(">");
+
+            if (s.IsEmpty())
+            {
+                jsonrpc_benchmark_server();
+            }
+            else
+            {
+                jsonrpc_benchmark_client(s.Trim());
+            }
+        }
+
+        public static void jsonrpc_benchmark_client(string ip)
+        {
+            Benchmark b = new Benchmark("testcall");
+
+            ThreadObj.StartMany(200, par =>
+            {
+                WebApi a = new WebApi();
+
+                while (true)
+                {
+                    WebRet ret = a.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
+                    //ret.ToString().Print();
+                    b.IncrementMe++;
+                }
+            }
+            );
+
+            Kernel.SuspendForDebug();
+        }
+
+        public static void jsonrpc_benchmark_server()
+        {
+            HttpServerBuilderConfig http_cfg = new HttpServerBuilderConfig()
+            {
+                DebugToConsole = false,
+                ports_list = new List<int>(new int[] { 80 }),
+            };
+            JsonRpcServerConfig rpc_cfg = new JsonRpcServerConfig()
+            {
+            };
+            rpc_server_api_test h = new rpc_server_api_test();
+            var s = JsonHttpRpcListener.StartServer(http_cfg, rpc_cfg, h);
+
+            Kernel.SuspendForDebug();
         }
 
         public static void jsonrpc_client_server_test()
