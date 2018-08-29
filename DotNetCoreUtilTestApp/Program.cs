@@ -603,9 +603,16 @@ namespace DotNetCoreUtilTestApp
                     WebApi api = new WebApi();
                     while (true)
                     {
-                        WebRet ret = api.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
-                        //ret.ToString().Print();
-                        b.IncrementMe++;
+                        try
+                        {
+                            WebRet ret = api.RequestWithQuery(WebApiMethods.GET, $"http://{ip}:80/rpc").Result;
+                            //ret.ToString().Print();
+                            b.IncrementMe++;
+                        }
+                        catch (Exception ex)
+                        {
+                            ex.Message.Print();
+                        }
                     }
                 }
                 else
@@ -614,8 +621,15 @@ namespace DotNetCoreUtilTestApp
                     while (true)
                     {
                         TMP1 a = new TMP1() { a = 2, b = 1 };
-                        c.CallOne<object>("Divide", a, true).Wait();
-                        b.IncrementMe++;
+                        try
+                        {
+                            c.CallOne<object>("Divide", a, true).Wait();
+                            b.IncrementMe++;
+                        }
+                        catch (Exception ex)
+                        {
+                            ex.Message.Print();
+                        }
                     }
                 }
             }
