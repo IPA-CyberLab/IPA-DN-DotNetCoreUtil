@@ -169,8 +169,8 @@ namespace DotNetCoreUtilTestApp
                 {
                     try
                     {
-                        a.SslAcceptCertSHA1HashList.Add("b0416f96fe4ed8ac7dddee5316c92ee12a3f745a");
-                        //a.SslAcceptCertSHA1HashList.Add("b0416f96fe4ed8ac7ddd0e5316c92ee12a3f745a");
+                        //a.SslAcceptCertSHA1HashList.Add("b0416f96fe4ed8ac7dddee5316c92ee12a3f745a");
+                        a.SslAcceptCertSHA1HashList.Add("b0416f96fe4ed8ac7ddd0e5316c92ee12a3f745a");
                         WebRet ret = a.RequestWithQuery(WebApiMethods.GET, "https://api.vpngate.net/").Result;
                         ret.ToString().Print();
                     }

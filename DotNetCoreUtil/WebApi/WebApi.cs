@@ -210,7 +210,7 @@ namespace IPA.DN.CoreUtil.WebApi
             cache_control.NoCache = true;
             req_msg.Headers.CacheControl = cache_control;
 
-            //try
+            try
             {
                 if (this.SslAccentAnyCerts)
                 {
@@ -226,7 +226,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     };
                 }
             }
-            //catch
+            catch
             {
             }
 
