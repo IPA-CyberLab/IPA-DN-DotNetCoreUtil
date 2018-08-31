@@ -119,8 +119,8 @@ namespace DotNetCoreUtilTestApp
 
             Dbg.SetDebugMode();
 
-            ThreadPool.SetMinThreads(500, 500);
-            ThreadPool.SetMaxThreads(500, 500);
+            //ThreadPool.SetMinThreads(500, 500);
+            //ThreadPool.SetMaxThreads(500, 500);
 
             //twitter_test();
 
