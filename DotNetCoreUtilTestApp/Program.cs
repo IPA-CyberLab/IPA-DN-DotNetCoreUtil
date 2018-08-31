@@ -489,9 +489,11 @@ namespace DotNetCoreUtilTestApp
                 return Str.CombineStringArray2(",", a, b, c);
             }
 
+            //static Benchmark bm = new Benchmark();
             public async Task<int> Divide(int a, int b)
             {
                 //this.ClientInfo.ToString().Print();
+                //bm.IncrementMe++;
                 return a / b;
             }
             public async Task<rpc_t> Test5(int a, string b)
@@ -580,9 +582,13 @@ namespace DotNetCoreUtilTestApp
 
         public static void jsonrpc_benchmark_test()
         {
+            //jspnrpc_benchmark_inmemory_server();return;
+
             Con.WriteLine("Empty to start a server.");
             Con.WriteLine("IP to start a client.");
             string s = Con.ReadLine(">");
+
+            IntervalReporter.StartThreadPoolStatReporter();
 
             if (s.IsEmpty())
             {
@@ -688,6 +694,35 @@ namespace DotNetCoreUtilTestApp
                 {
                     max_conn.Set(n);
                 }
+            }
+        }
+
+        public static void jspnrpc_benchmark_inmemory_server()
+        {
+            rpc_server_api_test h = new rpc_server_api_test();
+            Benchmark b = new Benchmark("call");
+
+            TMP1 arg = new TMP1()
+            {
+                a = 8,
+                b = 2,
+            };
+            string json_str = arg.ObjectToJson();
+
+            var info = h.GetMethodInfo("Divide");
+
+            while (true)
+            {
+
+                JObject jobj = json_str.JsonToDynamic();
+                //h.InvokeMethod("Divide", jobj, null).Wait();
+                object o = info.InvokeMethod(h, "Divide", jobj).Result;
+                //Task t = (Task)info.Method.Invoke(h, new object[] { 8, 2 });
+                //t.Wait();
+
+                o.ObjectToJson();
+
+                b.IncrementMe++;
             }
         }
 

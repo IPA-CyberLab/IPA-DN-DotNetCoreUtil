@@ -158,7 +158,6 @@ namespace IPA.DN.CoreUtil.WebApi
     {
         public string Name { get; }
         public MethodInfo Method { get; }
-        public Dictionary<string, (ParameterInfo info, int index)> ParametersByName { get; } = new Dictionary<string, (ParameterInfo info, int index)>();
         public ParameterInfo[] ParametersByIndex { get; }
         public ParameterInfo ReturnParameter { get; }
         public bool IsTask { get; }
@@ -203,10 +202,6 @@ namespace IPA.DN.CoreUtil.WebApi
             this.Name = method_name;
             this.ReturnParameter = r;
             this.ParametersByIndex = method_info.GetParameters();
-
-            var method_params = ParametersByIndex;
-            for (int i = 0; i < method_params.Length; i++)
-                this.ParametersByName.Add(method_params[i].Name, (method_params[i], i));
         }
 
         public async Task<object> InvokeMethod(object target_instance, string method_name, JObject param)
@@ -489,6 +484,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     conn.RemoteIpAddress.ToString(), conn.RemotePort,
                     headers);
 
+                //string in_str = request.Body.ReadToEnd().GetString_UTF8();
                 string in_str = (await request.Body.ReadToEndAsync(this.Config.MaxRequestBodyLen)).GetString_UTF8();
                 //string in_str = (request.Body.ReadToEnd(this.Config.MaxRequestBodyLen)).GetString_UTF8();
                 //Dbg.WriteLine("in_str: " + in_str);
@@ -593,7 +589,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     req = requests.ObjectToJson(compact: true);
                 }
 
-                //req.Debug();
+                req.Debug();
 
                 string ret = await GetResponse(req);
 

@@ -1140,6 +1140,22 @@ namespace IPA.DN.CoreUtil.Basic
         public bool IsSet => (this.flag != 0);
     }
 
+    public struct Singleton<T> where T: class
+    {
+        static object lockobj = new object();
+        T obj;
+
+        public T CreateOrGet(Func<T> create_proc)
+        {
+            lock (lockobj)
+            {
+                if (obj == null)
+                    obj = create_proc();
+                return obj;
+            }
+        }
+    }
+
     public static class GlobalObjectExchange
     {
         static Dictionary<string, object> table = new Dictionary<string, object>();

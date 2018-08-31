@@ -505,7 +505,8 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
-    public class IntevalReporter : IDisposable
+
+    public class IntervalReporter : IDisposable
     {
         public int Interval { get; }
         Once d;
@@ -513,12 +514,16 @@ namespace IPA.DN.CoreUtil.Basic
         ManualResetEventSlim halt_event = new ManualResetEventSlim();
         bool halt_flag = false;
         public string Name { get; }
-        public object SetMe = null;
+        public object SetMeToPrint = null;
+        public const int DefaultInterval = 1000;
+        public Func<string> PrintProc { get; }
 
-        public IntevalReporter(string name = "Reporter", int interval = 1000)
+        public IntervalReporter(string name = "Reporter", int interval = DefaultInterval, Func<string> print_proc = null)
         {
+            if (interval == 0) interval = DefaultInterval;
             this.Interval = interval;
             this.Name = name;
+            this.PrintProc = print_proc;
 
             if (Dbg.IsDebugMode)
             {
@@ -537,14 +542,28 @@ namespace IPA.DN.CoreUtil.Basic
                 halt_event.Wait(wait_interval);
                 if (halt_flag) break;
 
-                try
+                //try
                 {
-                    object obj = this.SetMe;
-                    if (obj != null) Dbg.WriteLine($"{this.Name}: {SetMe.ToString()}");
+                    Print();
                 }
-                catch
+                //catch
                 {
                 }
+            }
+        }
+
+        public virtual void Print()
+        {
+            string str = "";
+            object obj = this.SetMeToPrint;
+            if (obj != null) str = obj.ToString();
+            if (this.PrintProc != null)
+            {
+                str = this.PrintProc();
+            }
+            if (str.IsFilled())
+            {
+                Dbg.WriteLine($"{this.Name}: {str}");
             }
         }
 
@@ -556,6 +575,33 @@ namespace IPA.DN.CoreUtil.Basic
                 halt_event.Set();
                 this.thread.WaitForEnd();
             }
+        }
+
+        static Singleton<IntervalReporter> thread_pool_stat_reporter;
+        public static IntervalReporter StartThreadPoolStatReporter()
+        {
+            return thread_pool_stat_reporter.CreateOrGet(() =>
+            {
+                return new IntervalReporter("ThreadPool Status", print_proc: () =>
+                {
+                    List<string> o = new List<string>();
+
+                    {
+                        ThreadPool.GetAvailableThreads(out int workers, out int compports);
+                        o.Add($"Avail: {workers}:{compports}");
+                    }
+                    {
+                        ThreadPool.GetMaxThreads(out int workers, out int compports);
+                        o.Add($"Max: {workers}:{compports}");
+                    }
+                    {
+                        ThreadPool.GetMinThreads(out int workers, out int compports);
+                        o.Add($"Min: {workers}:{compports}");
+                    }
+
+                    return Str.CombineStringArray(o.ToArray(), ", ");
+                });
+            });
         }
     }
 }
