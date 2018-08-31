@@ -182,6 +182,8 @@ namespace IPA.DN.CoreUtil.Basic
         public void Set(int value) => this.Value = value;
         public int Get() => this.Value;
         public override string ToString() => this.Value.ToString();
+        public int Increment() => Interlocked.Increment(ref this.Value);
+        public int Decrement() => Interlocked.Decrement(ref this.Value);
     }
 
     // Ref クラス

@@ -95,8 +95,9 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // 現在のプロセスを強制終了する
-        static public void SelfKill()
+        static public void SelfKill(string msg = null)
         {
+            if (msg.IsFilled()) msg.Print();
             System.Diagnostics.Process.GetCurrentProcess().Kill();
         }
 

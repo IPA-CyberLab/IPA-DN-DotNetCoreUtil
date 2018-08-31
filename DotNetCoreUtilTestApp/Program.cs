@@ -157,15 +157,111 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            //jsonrpc_client_server_test();
-
-            jsonrpc_benchmark_test();
+            //jsonrpc_client_server_both_test();
 
             //http_client_test();
 
             //http_client_test2();
 
             //async_ctx_test().Wait();
+
+            jsonrpc_benchmark_test();
+
+            //weak_task_test();
+        }
+
+        static void weak_task_test()
+        {
+            SemaphoreSlim sem = new SemaphoreSlim(1, 1);
+            int num = 100000;
+            List<AsyncManualResetEvent> event_list = new List<AsyncManualResetEvent>();
+
+            "init".Print();
+            for (int i = 0; i < num; i++)
+            {
+                event_list.Add(new AsyncManualResetEvent());
+            }
+            System.GC.Collect();
+            System.GC.WaitForFullGCApproach();
+            System.GC.WaitForPendingFinalizers();
+            System.GC.WaitForFullGCComplete();
+            "set".Print();
+
+            for (int i = 0; i < num; i++)
+            {
+                Task t = Task.Run(async () =>
+                {
+                    await sem.WaitAsync();
+                    try
+                    {
+                        foreach (var e in event_list)
+                        {
+                            e.Set();
+                        }
+                    }
+                    finally
+                    {
+                        sem.Release();
+                    }
+                });
+            }
+
+            "wait".Print();
+
+            foreach (var e in event_list)
+            {
+                Task.Run(async () =>
+                {
+                    await e.WaitAsync();
+                }).Wait();
+            }
+
+            "done".Print();
+        }
+
+        static void weak_task_test__()
+        {
+            int num = 100000;
+            List<TaskCompletionSource<bool>> tcs_list = new List<TaskCompletionSource<bool>>();
+            List<Task> task_list = new List<Task>();
+            "init".Print();
+            for (int i = 0; i < num; i++)
+            {
+                TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+                tcs_list.Add(tcs);
+                //task_list.Add(tcs.Task);
+                //task_list.Add(TaskUtil.CreateWeakTaskFromTask(tcs.Task));
+            }
+            System.GC.Collect();
+            System.GC.WaitForFullGCApproach();
+            System.GC.WaitForPendingFinalizers();
+            System.GC.WaitForFullGCComplete();
+            "set".Print();
+
+            Task t = Task.Run(() =>
+            {
+                Dbg.Where();
+                foreach (var tcs in tcs_list)
+                {
+                    tcs.TrySetResult(true);
+                }
+                Dbg.Where();
+            });
+
+            t.Wait();
+            "wait".Print();
+
+            foreach (var tcs in tcs_list)
+            {
+                TaskUtil.CreateWeakTaskFromTask(tcs.Task).Wait();
+            }
+
+            //foreach (var task in task_list)
+            //{
+            //    task.Wait();
+            //}
+
+            "done".Print();
         }
 
         static void http_client_test2()
@@ -520,21 +616,22 @@ namespace DotNetCoreUtilTestApp
                 return Str.CombineStringArray(p, ",");
             }
 
-            public override void StartCall(JsonRpcClientInfo client_info)
+            public override object StartCall(JsonRpcClientInfo client_info)
             {
+                return null;
             }
 
-            public override Task StartCallAsync(JsonRpcClientInfo client_info)
+            public override async Task<object> StartCallAsync(JsonRpcClientInfo client_info, object param)
             {
-                return Task.CompletedTask;
+                return null;
             }
 
-            public override void FinishCall()
+            public override void FinishCall(object param)
             {
                 Util.DoNothing();
             }
 
-            public override Task FinishCallAsync()
+            public override Task FinishCallAsync(object param)
             {
                 return Task.CompletedTask;
             }
@@ -600,6 +697,8 @@ namespace DotNetCoreUtilTestApp
             }
         }
 
+
+        static int json_test_value = 1;
         public static void jsonrpc_benchmark_client(string ip)
         {
             bool is_simple_mode = false;
@@ -612,10 +711,11 @@ namespace DotNetCoreUtilTestApp
             Benchmark b = new Benchmark("testcall");
             Benchmark b2 = new Benchmark("error");
 
-            RefInt max_conn = new RefInt(20);
+            RefInt max_conn = new RefInt(int.MaxValue);
             RefInt current_conn = new RefInt(0);
+            JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
 
-            ThreadObj.StartMany(256, par =>
+            ThreadObj.StartMany(1, par =>
             {
 
                 if (is_simple_mode)
@@ -653,40 +753,40 @@ namespace DotNetCoreUtilTestApp
                 else
                 {
                     Con.WriteLine("JSON-RPC mode: " + ip);
-                    JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
                     while (true)
                     {
-                        while (current_conn.Value >= max_conn.Value)
+                        /*while (current_conn.Value >= max_conn.Value)
                         {
                             Kernel.SleepThread(Secure.Rand31i() % 1000);
-                        }
+                        }*/
 
                         Interlocked.Increment(ref current_conn.Value);
 
                         try
                         {
-                            TMP1 a = new TMP1() { a = 2, b = 1 };
+                            TMP1 a = new TMP1() { a = json_test_value++, b = 2 };
                             try
                             {
-                                int num_call = 1000;
-
-                                if (num_call == 1)
+                                if (false)
                                 {
-                                    c.CallOne<object>("Divide", a, true).Wait();
+                                    c.ST_CallOne<object>("Divide", a, true).Wait();
                                     b.IncrementMe++;
                                 }
                                 else
                                 {
-                                    for (int i = 0; i < num_call; i++)
+                                    object res = c.Call<object>("Divide", a, true).Result.Result;
+                                    int res_int = (int)((long)res);
+
+                                    if (res_int != (a.a / 2))
                                     {
-                                        c.CallAdd<object>("Divide", a);
-                                        b.IncrementMe++;
+                                        Kernel.SelfKill("(res != (value / 2))");
                                     }
-                                    c.CallAll(true).Wait();
+                                    b.IncrementMe++;
                                 }
                             }
-                            catch
+                            catch (Exception ex)
                             {
+                                ex.ToString().Print();
                                 b2.IncrementMe++;
                                 Kernel.SleepThread(Secure.Rand31i() % 4000);
                             }
@@ -756,7 +856,7 @@ namespace DotNetCoreUtilTestApp
             Kernel.SuspendForDebug();
         }
 
-        public static void jsonrpc_client_server_test()
+        public static void jsonrpc_client_server_both_test()
         {
             //jsonrpc_server_invoke_test().Wait();return;
 
@@ -774,11 +874,11 @@ namespace DotNetCoreUtilTestApp
             // start client
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
-                if (true)
+                if (false)
                 {
                     Benchmark b = new Benchmark("testcall");
 
-                    ThreadObj.StartMany(200, par =>
+                    ThreadObj.StartMany(256, par =>
                     {
 
                         WebApi a = new WebApi();
@@ -811,15 +911,17 @@ namespace DotNetCoreUtilTestApp
 
                     Benchmark b = new Benchmark("rpccall");
 
-                    ThreadObj.StartMany(200, par =>
+                    JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc");
+                    ThreadObj.StartMany(256, par =>
                     {
-                        JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc");
+
                         while (true)
                         {
-                            b.IncrementMe++;
                             //c.Call.Divide(8, 2).Wait();
                             TMP1 a = new TMP1() { a = 2, b = 1 };
-                            c.CallOne<object>("Divide", a, true).Wait();
+                            c.Call<object>("Divide", a, true).Wait();
+                            //c.ST_CallOne<object>("Divide", a, true).Wait();
+                            b.IncrementMe++;
                         }
                     }
                     );
@@ -892,7 +994,7 @@ namespace DotNetCoreUtilTestApp
             Con.WriteLine(res.ToString());
             Con.WriteLine(res2.ToString());*/
 
-            var res3 = c.CallOne<genstr_response>("generateStrings", p, true).Result;
+            var res3 = c.ST_CallOne<genstr_response>("generateStrings", p, true).Result;
             Con.WriteLine(res3.ToString());
         }
 

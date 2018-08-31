@@ -310,13 +310,13 @@ namespace IPA.DN.CoreUtil.WebApi
             return ret;
         }
 
-        public virtual void StartCall(JsonRpcClientInfo client_info) { }
+        public virtual object StartCall(JsonRpcClientInfo client_info) { return null; }
 
-        public virtual async Task StartCallAsync(JsonRpcClientInfo client_info) => await Task.CompletedTask;
+        public virtual async Task<object> StartCallAsync(JsonRpcClientInfo client_info, object param) => await Task.FromResult<object>(null);
 
-        public virtual void FinishCall() { }
+        public virtual void FinishCall(object param) { }
 
-        public virtual async Task FinishCallAsync() => await Task.CompletedTask;
+        public virtual async Task FinishCallAsync(object param) => await Task.CompletedTask;
     }
 
     public abstract class JsonRpcServer
@@ -401,10 +401,10 @@ namespace IPA.DN.CoreUtil.WebApi
             TaskVar.Set<JsonRpcClientInfo>(client_info);
             try
             {
-                this.Api.StartCall(client_info);
+                object param1 = this.Api.StartCall(client_info);
                 try
                 {
-                    await this.Api.StartCallAsync(client_info);
+                    object param2 = await this.Api.StartCallAsync(client_info, param1);
                     try
                     {
                         foreach (JsonRpcRequest req in request_list)
@@ -431,12 +431,12 @@ namespace IPA.DN.CoreUtil.WebApi
                     }
                     finally
                     {
-                        await this.Api.FinishCallAsync();
+                        await this.Api.FinishCallAsync(param2);
                     }
                 }
                 finally
                 {
-                    this.Api.FinishCall();
+                    this.Api.FinishCall(param1);
                 }
             }
             finally
@@ -549,22 +549,35 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public abstract class JsonRpcClient
     {
-        List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> call_queue = new List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
+        List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> st_call_queue = new List<(JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
 
-        public void CallClear() => call_queue.Clear();
+        public void ST_CallClear() => st_call_queue.Clear();
 
-        public JsonRpcResponse<TResponse> CallAdd<TResponse>(string method, object param) where TResponse : class
+        public JsonRpcResponse<TResponse> ST_CallAdd<TResponse>(string method, object param) where TResponse : class
         {
             var ret = new JsonRpcResponse<TResponse>();
 
-            call_queue.Add((new JsonRpcRequest(method, param, Str.NewGuid()), ret, typeof(TResponse)));
+            var add_item = (new JsonRpcRequest(method, param, Str.NewGuid()), ret, typeof(TResponse));
+
+            st_call_queue.Add(add_item);
 
             return ret;
         }
 
-        public async Task CallAll(bool throw_each_error = false)
+        public JsonRpcResponse ST_CallAdd(string method, object param, Type result_type)
         {
-            if (call_queue.Count == 0) return;
+            JsonRpcResponse ret = (JsonRpcResponse)Activator.CreateInstance(typeof(JsonRpcResponse<>).MakeGenericType(result_type));
+
+            var add_item = (new JsonRpcRequest(method, param, Str.NewGuid()), ret, result_type);
+
+            st_call_queue.Add(add_item);
+
+            return ret;
+        }
+
+        public async Task ST_CallAll(bool throw_each_error = false)
+        {
+            if (st_call_queue.Count == 0) return;
 
             try
             {
@@ -574,11 +587,14 @@ namespace IPA.DN.CoreUtil.WebApi
                 Dictionary<string, (JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)> requests_table = new Dictionary<string, (JsonRpcRequest request, JsonRpcResponse response, Type response_data_type)>();
                 List<JsonRpcRequest> requests = new List<JsonRpcRequest>();
 
-                foreach (var o in this.call_queue)
+                foreach (var o in this.st_call_queue)
                 {
                     requests_table.Add(o.request.Id, (o.request, o.response, o.response_data_type));
                     requests.Add(o.request);
                 }
+
+                if (requests_table.Count >= 2)
+                Dbg.WriteLine($"Num_Requests_per_call: {requests_table.Count}");
 
                 if (requests_table.Count == 1)
                 {
@@ -591,7 +607,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
                 //req.Debug();
 
-                string ret = await GetResponse(req);
+                string ret = await SendRequestAndGetResponse(req);
 
                 if (ret.StartsWith("{")) is_single = true;
 
@@ -632,26 +648,142 @@ namespace IPA.DN.CoreUtil.WebApi
             }
             finally
             {
-                CallClear();
+                ST_CallClear();
             }
         }
 
-        public async Task<JsonRpcResponse<TResponse>> CallOne<TResponse>(string method, object param, bool throw_error = false) where TResponse : class
+        public async Task<JsonRpcResponse<TResponse>> ST_CallOne<TResponse>(string method, object param, bool throw_error = false) where TResponse : class
         {
-            CallClear();
+            ST_CallClear();
             try
             {
-                JsonRpcResponse<TResponse> res = CallAdd<TResponse>(method, param);
-                await CallAll(throw_error);
+                JsonRpcResponse<TResponse> res = ST_CallAdd<TResponse>(method, param);
+                await ST_CallAll(throw_error);
                 return res;
             }
             finally
             {
-                CallClear();
+                ST_CallClear();
             }
         }
 
-        public abstract Task<string> GetResponse(string req);
+        class MT_QueueItem
+        {
+            public string Method;
+            public object Param;
+            public Type ResultType;
+            public JsonRpcResponse Response;
+            public AsyncManualResetEvent CompleteEvent;
+        }
+
+        object lock_mt_queue = new object();
+        List<MT_QueueItem> mt_queue = new List<MT_QueueItem>();
+        SemaphoreSlim mt_semaphore = new SemaphoreSlim(1, 1);
+        object lock_st_call = new object();
+
+        RefInt c = new RefInt();
+        RefInt d = new RefInt();
+        Singleton<IntervalReporter> c_rep = new Singleton<IntervalReporter>();
+
+        public async Task<JsonRpcResponse<TResponse>> Call<TResponse>(string method, object param, bool throw_error = false) where TResponse : class
+        {
+            Ref<Task> task = new Ref<Task>();
+            var response = new JsonRpcResponse<TResponse>();
+
+            // まずリクエストをキューに入れる
+            MT_QueueItem q = new MT_QueueItem()
+            {
+                Method = method,
+                Param = param,
+                ResultType = typeof(TResponse),
+                Response = null,
+                CompleteEvent = new AsyncManualResetEvent(),
+            };
+            //q.WaitTask = q.CompleteEvent.WaitAsync();
+            task.Value = q.CompleteEvent.WaitAsync();
+            //q.A = task;
+
+            c.Increment();
+
+            c_rep.CreateOrGet(() =>
+            {
+                return new IntervalReporter("c", 100, () =>
+                {
+                    return $"{c} {d}";
+                });
+            });
+
+
+            lock (lock_mt_queue)
+            {
+                mt_queue.Add(q);
+            }
+            
+
+            Task t = Task.Run(async () =>
+            {
+                await mt_semaphore.WaitAsync();
+                try
+                {
+                    List<MT_QueueItem> mt_queue_this;
+
+                    lock (lock_mt_queue)
+                    {
+                        mt_queue_this = this.mt_queue;
+                        this.mt_queue = new List<MT_QueueItem>();
+                    }
+
+                    if (mt_queue_this.Count == 0)
+                    {
+                        return;
+                    }
+
+                    lock (lock_st_call)
+                    {
+                        try
+                        {
+                            foreach (MT_QueueItem item in mt_queue_this)
+                            {
+                                item.Response = ST_CallAdd(item.Method, item.Param, item.ResultType);
+                            }
+
+                            ST_CallAll(false).Wait();
+                        }
+                        catch (Exception ex)
+                        {
+                            ex.ToString().Print();
+                            foreach (MT_QueueItem item in mt_queue_this)
+                            {
+                                item.Response.Error = new JsonRpcError(-1, ex.ToString());
+                            }
+                        }
+                        finally
+                        {
+                            foreach (MT_QueueItem item in mt_queue_this)
+                            {
+                                item.CompleteEvent.Set();
+
+                                c.Decrement();
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    mt_semaphore.Release();
+                }
+            });
+
+            d.Increment();
+            await task.Value;
+            //await q.CompleteEvent.WaitAsync();
+            task.Value = null;
+            d.Decrement();
+
+            return (JsonRpcResponse<TResponse>)q.Response;
+        }
+
+        public abstract Task<string> SendRequestAndGetResponse(string req);
 
         public abstract int TimeoutMsecs { get; set; }
 
@@ -676,7 +808,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     var p = in_params[i];
                     o.Add(p.Name, JToken.FromObject(v.Arguments[i]));
                 }
-                Task<JsonRpcResponse<object>> call_ret = RpcClient.CallOne<object>(v.Method.Name, o, true);
+                Task<JsonRpcResponse<object>> call_ret = RpcClient.ST_CallOne<object>(v.Method.Name, o, true);
 
                 //ret.Wait();
 
@@ -726,7 +858,7 @@ namespace IPA.DN.CoreUtil.WebApi
             this.ApiBaseUrl = api_url;
         }
         
-        public override async Task<string> GetResponse(string req)
+        public override async Task<string> SendRequestAndGetResponse(string req)
         {
             WebRet ret = await this.WebApi.RequestWithPostData(this.ApiBaseUrl, req.GetBytes_UTF8(), "application/json");
 

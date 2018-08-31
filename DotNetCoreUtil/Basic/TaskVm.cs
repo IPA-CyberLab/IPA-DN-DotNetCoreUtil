@@ -693,20 +693,31 @@ namespace IPA.DN.CoreUtil.Basic
 
         static void weak_task_proc(Task t, object param)
         {
-            weak_task_param p = (weak_task_param)param;
-
-            //Dbg.Where();
-
-            lock (p.LockObj)
+            try
             {
-                if (p.tcs_weak.TryGetTarget(out TaskCompletionSource<bool> tcs))
+                weak_task_param p = (weak_task_param)param;
+
+                //Dbg.Where();
+
+                lock (p.LockObj)
                 {
-                    if (p.is_completed == false)
+                    if (p.tcs_weak.TryGetTarget(out TaskCompletionSource<bool> tcs))
                     {
-                        p.is_completed = true;
-                        tcs.TrySetResult(true);
+                        if (p.is_completed == false)
+                        {
+                            p.is_completed = true;
+                            tcs.TrySetResult(true);
+                        }
+                    }
+                    else
+                    {
+                        Dbg.Where();
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                ex.ToString().Debug();
             }
         }
 
@@ -720,7 +731,8 @@ namespace IPA.DN.CoreUtil.Basic
                 tcs_weak = new WeakReference<TaskCompletionSource<bool>>(tcs),
             };
             t.ContinueWith(weak_task_proc, p, TaskContinuationOptions.ExecuteSynchronously);
-            return tcs.Task;
+            Task ret = tcs.Task;
+            return ret;
         }
 
         public static Task PreciseDelay(int msec)
