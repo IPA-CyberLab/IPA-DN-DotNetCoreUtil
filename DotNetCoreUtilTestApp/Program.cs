@@ -615,7 +615,7 @@ namespace DotNetCoreUtilTestApp
             RefInt max_conn = new RefInt(20);
             RefInt current_conn = new RefInt(0);
 
-            ThreadObj.StartMany(200, par =>
+            ThreadObj.StartMany(256, par =>
             {
 
                 if (is_simple_mode)
@@ -668,8 +668,22 @@ namespace DotNetCoreUtilTestApp
                             TMP1 a = new TMP1() { a = 2, b = 1 };
                             try
                             {
-                                c.CallOne<object>("Divide", a, true).Wait();
-                                b.IncrementMe++;
+                                int num_call = 1000;
+
+                                if (num_call == 1)
+                                {
+                                    c.CallOne<object>("Divide", a, true).Wait();
+                                    b.IncrementMe++;
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < num_call; i++)
+                                    {
+                                        c.CallAdd<object>("Divide", a);
+                                        b.IncrementMe++;
+                                    }
+                                    c.CallAll(true).Wait();
+                                }
                             }
                             catch
                             {

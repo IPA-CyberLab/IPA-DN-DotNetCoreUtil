@@ -589,7 +589,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     req = requests.ObjectToJson(compact: true);
                 }
 
-                req.Debug();
+                //req.Debug();
 
                 string ret = await GetResponse(req);
 
@@ -636,13 +636,13 @@ namespace IPA.DN.CoreUtil.WebApi
             }
         }
 
-        public async Task<JsonRpcResponse<TResponse>> CallOne<TResponse>(string method, object param, bool throw_each_error = false) where TResponse : class
+        public async Task<JsonRpcResponse<TResponse>> CallOne<TResponse>(string method, object param, bool throw_error = false) where TResponse : class
         {
             CallClear();
             try
             {
                 JsonRpcResponse<TResponse> res = CallAdd<TResponse>(method, param);
-                await CallAll(throw_each_error);
+                await CallAll(throw_error);
                 return res;
             }
             finally
