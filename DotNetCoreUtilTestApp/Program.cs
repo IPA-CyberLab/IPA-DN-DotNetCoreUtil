@@ -253,7 +253,7 @@ namespace DotNetCoreUtilTestApp
 
             foreach (var tcs in tcs_list)
             {
-                TaskUtil.CreateWeakTaskFromTask(tcs.Task).Wait();
+                //TaskUtil.CreateWeakTaskFromTask(tcs.Task).Wait();
             }
 
             //foreach (var task in task_list)
@@ -397,10 +397,10 @@ namespace DotNetCoreUtilTestApp
                 int num_a = 0, num_total = 0;
                 foreach (AsyncManualResetEvent ae in events2)
                 {
-                    if (ae.IsAbandoned)
+                    /*if (ae.IsAbandoned)
                     {
                         num_a++;
-                    }
+                    }*/
                     num_total++;
                 }
                 Con.WriteLine($"{num_a} {num_total}");
@@ -713,9 +713,9 @@ namespace DotNetCoreUtilTestApp
 
             RefInt max_conn = new RefInt(int.MaxValue);
             RefInt current_conn = new RefInt(0);
-            JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
 
-            ThreadObj.StartMany(1, par =>
+            JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>($"http://{ip}:80/rpc");
+            ThreadObj.StartMany(256, par =>
             {
 
                 if (is_simple_mode)
@@ -765,28 +765,33 @@ namespace DotNetCoreUtilTestApp
                         try
                         {
                             TMP1 a = new TMP1() { a = json_test_value++, b = 2 };
+                            //if ((json_test_value % 1000) == 0) System.GC.Collect();
                             try
                             {
                                 if (false)
                                 {
-                                    c.ST_CallOne<object>("Divide", a, true).Wait();
+                                    lock (c)
+                                    {
+                                        c.ST_CallOne<object>("Divide", a, true).Wait();
+                                    }
                                     b.IncrementMe++;
                                 }
                                 else
                                 {
-                                    object res = c.Call<object>("Divide", a, true).Result.Result;
-                                    int res_int = (int)((long)res);
+                                    //object res = c.Call<object>("Divide", a, true).Result.Result;
+                                    int res_int = c.Call.Divide(a.a, a.b).Result;
 
                                     if (res_int != (a.a / 2))
                                     {
                                         Kernel.SelfKill("(res != (value / 2))");
                                     }
+                                    //Thread.Sleep(Secure.Rand31i() % 40);
                                     b.IncrementMe++;
                                 }
                             }
                             catch (Exception ex)
                             {
-                                ex.ToString().Print();
+                                ("ERR: " + ex.ToString()).Print();
                                 b2.IncrementMe++;
                                 Kernel.SleepThread(Secure.Rand31i() % 4000);
                             }
@@ -794,6 +799,7 @@ namespace DotNetCoreUtilTestApp
                         finally
                         {
                             Interlocked.Decrement(ref current_conn.Value);
+                            //System.GC.Collect();
                         }
                     }
                 }
@@ -919,7 +925,7 @@ namespace DotNetCoreUtilTestApp
                         {
                             //c.Call.Divide(8, 2).Wait();
                             TMP1 a = new TMP1() { a = 2, b = 1 };
-                            c.Call<object>("Divide", a, true).Wait();
+                            c.MT_Call<object>("Divide", a, true).Wait();
                             //c.ST_CallOne<object>("Divide", a, true).Wait();
                             b.IncrementMe++;
                         }

@@ -24,6 +24,142 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil.Basic
 {
+    public class BatchQueueItem<T>
+    {
+        internal BatchQueueItem(T item)
+        {
+            this.UserItem = item;
+            this.IsCompleted = false;
+            this.CompletedEvent = new AsyncManualResetEvent();
+        }
+
+        public T UserItem { get; }
+        public bool IsCompleted { get; internal set; }
+        public AsyncManualResetEvent CompletedEvent { get; }
+
+        public void SetCompleted()
+        {
+            this.IsCompleted = true;
+            this.CompletedEvent.Set();
+        }
+    }
+
+    public class BatchQueue<T>
+    {
+        object lockobj = new object();
+        Queue<BatchQueueItem<T>> queue = new Queue<BatchQueueItem<T>>();
+        AutoResetEvent new_event_signal = new AutoResetEvent(false);
+        public int IdleThreadRemainTimeMsecs { get; }
+        public const int DefaultIdleThreadRemainTimeMsecs = 1000;
+        Action<BatchQueueItem<T>[]> process_items_proc;
+
+        public BatchQueue(Action<BatchQueueItem<T>[]> process_items_proc, int idle_thread_remain_time_msecs = DefaultIdleThreadRemainTimeMsecs)
+        {
+            this.IdleThreadRemainTimeMsecs = idle_thread_remain_time_msecs;
+            this.process_items_proc = process_items_proc;
+        }
+
+        void do_process_list(List<BatchQueueItem<T>> current)
+        {
+            try
+            {
+                this.process_items_proc(current.ToArray());
+            }
+            catch (Exception ex)
+            {
+                Dbg.WriteLine(ex.ToString());
+            }
+
+            foreach (var q in current)
+            {
+                q.SetCompleted();
+            }
+        }
+
+        int thread_mode = 0;
+
+        static Benchmark th = new Benchmark("num_thread_create");
+        void bg_thread_proc(object param)
+        {
+            Thread.CurrentThread.IsBackground = true;
+            long last_queue_proc_tick = 0;
+
+            //Dbg.WhereThread($"BatchQueue<{typeof(T).Name}>: Start background thread.");
+            th.IncrementMe++;
+
+            while (true)
+            {
+                List<BatchQueueItem<T>> current = new List<BatchQueueItem<T>>();
+
+                lock (lockobj)
+                {
+                    while (this.queue.Count >= 1)
+                    {
+                        BatchQueueItem<T> item = this.queue.Dequeue();
+                        current.Add(item);
+                    }
+                }
+
+                if (current.Count >= 1)
+                {
+                    do_process_list(current);
+
+                    last_queue_proc_tick = Time.Tick64;
+                }
+
+                if (this.queue.Count >= 1)
+                {
+                    continue;
+                }
+
+                long now = Time.Tick64;
+                long remain_time = last_queue_proc_tick + (long)this.IdleThreadRemainTimeMsecs - now;
+                if (remain_time >= 1)
+                {
+                    new_event_signal.WaitOne((int)remain_time);
+                }
+                else
+                {
+                    lock (lockobj)
+                    {
+                        if (this.queue.Count >= 1)
+                        {
+                            continue;
+                        }
+
+                        thread_mode = 0;
+
+                        //Dbg.WhereThread($"BatchQueue<{typeof(T).Name}>: Stop background thread.");
+
+                        return;
+                    }
+                }
+            }
+        }
+
+        public BatchQueueItem<T> Add(T item)
+        {
+            BatchQueueItem<T> q = new BatchQueueItem<T>(item);
+
+            lock (lockobj)
+            {
+                this.queue.Enqueue(q);
+
+                if (thread_mode == 0)
+                {
+                    thread_mode = 1;
+
+                    ThreadObj t = new ThreadObj(bg_thread_proc);
+                }
+
+            }
+
+            new_event_signal.Set();
+
+            return q;
+        }
+    }
+
     internal class TaskVarObject
     {
         Dictionary<string, object> data = new Dictionary<string, object>();
@@ -271,39 +407,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                         foreach (AsyncManualResetEvent e in event_list)
                         {
-                            if (e.IsAbandoned == false)
-                                fire_event_list.Add(e);
-                            else
-                            {
-                                //b3.IncrementMe++;
-                            }
-                        }
-                    }
-
-                    foreach (long target in future_target_list)
-                    {
-                        List<AsyncManualResetEvent> event_list = wait_list[target];
-
-                        List<AsyncManualResetEvent> remove_list = new List<AsyncManualResetEvent>();
-
-                        foreach (AsyncManualResetEvent e in event_list)
-                        {
-                            if (e.IsAbandoned)
-                            {
-                                remove_list.Add(e);
-                                //b3.IncrementMe++;
-                                //Dbg.Where();
-                            }
-                        }
-
-                        foreach (AsyncManualResetEvent e in remove_list)
-                        {
-                            event_list.Remove(e);
-                        }
-
-                        if (event_list.Count == 0)
-                        {
-                            wait_list.Remove(target);
+                            fire_event_list.Add(e);
                         }
                     }
 
@@ -489,10 +593,7 @@ namespace IPA.DN.CoreUtil.Basic
                 while (event_queue.Count >= 1)
                 {
                     AsyncManualResetEvent e = event_queue.Dequeue();
-                    if (e.IsAbandoned == false)
-                    {
-                        ev = e;
-                    }
+                    ev = e;
                 }
 
                 if (ev == null)
@@ -513,7 +614,6 @@ namespace IPA.DN.CoreUtil.Basic
         object lockobj = new object();
         volatile TaskCompletionSource<bool> tcs;
         bool is_set = false;
-        WeakReference<Task> weak_task = null;
 
         public AsyncManualResetEvent()
         {
@@ -523,7 +623,6 @@ namespace IPA.DN.CoreUtil.Basic
         void init()
         {
             this.tcs = new TaskCompletionSource<bool>();
-            weak_task = null;
         }
 
         public bool IsSet
@@ -537,19 +636,6 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public bool IsAbandoned
-        {
-            get
-            {
-                Task ret = null;
-                if (weak_task == null || weak_task.TryGetTarget(out ret) == false)
-                {
-                    return true;
-                }
-                return false;
-            }
-        }
-
         public Task WaitAsync()
         {
             lock (lockobj)
@@ -560,13 +646,7 @@ namespace IPA.DN.CoreUtil.Basic
                 }
                 else
                 {
-                    Task ret = null;
-                    if (weak_task == null || weak_task.TryGetTarget(out ret) == false)
-                    {
-                        ret = TaskUtil.CreateWeakTaskFromTask(tcs.Task);
-                        weak_task = new WeakReference<Task>(ret);
-                    }
-                    return ret;
+                    return tcs.Task;
                 }
             }
         }
@@ -683,57 +763,7 @@ namespace IPA.DN.CoreUtil.Basic
             TNewResult result_new = Json.ConvertObject<TNewResult>(result_old);
             return result_new;
         }
-        
-        class weak_task_param
-        {
-            public WeakReference<TaskCompletionSource<bool>> tcs_weak;
-            public bool is_completed = false;
-            public object LockObj = new object();
-        }
 
-        static void weak_task_proc(Task t, object param)
-        {
-            try
-            {
-                weak_task_param p = (weak_task_param)param;
-
-                //Dbg.Where();
-
-                lock (p.LockObj)
-                {
-                    if (p.tcs_weak.TryGetTarget(out TaskCompletionSource<bool> tcs))
-                    {
-                        if (p.is_completed == false)
-                        {
-                            p.is_completed = true;
-                            tcs.TrySetResult(true);
-                        }
-                    }
-                    else
-                    {
-                        Dbg.Where();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ex.ToString().Debug();
-            }
-        }
-
-        public static Task CreateWeakTaskFromTask(Task t)
-        {
-            Ref<object> avoid_gc_ref = new Ref<object>();
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>(avoid_gc_ref);
-            avoid_gc_ref.Set(tcs);
-            weak_task_param p = new weak_task_param()
-            {
-                tcs_weak = new WeakReference<TaskCompletionSource<bool>>(tcs),
-            };
-            t.ContinueWith(weak_task_proc, p, TaskContinuationOptions.ExecuteSynchronously);
-            Task ret = tcs.Task;
-            return ret;
-        }
 
         public static Task PreciseDelay(int msec)
         {
@@ -766,7 +796,7 @@ namespace IPA.DN.CoreUtil.Basic
         public static TaskVm<TResult, TIn> GetCurrentTaskVm<TResult, TIn>()
         {
             TaskVm<TResult, TIn>.TaskVmSynchronizationContext ctx = (TaskVm<TResult, TIn>.TaskVmSynchronizationContext)SynchronizationContext.Current;
-            
+
             return ctx.Vm;
         }
 
@@ -1091,7 +1121,7 @@ namespace IPA.DN.CoreUtil.Basic
             //Dbg.WriteCurrentThreadId("task_proc: before yield");
 
             await Task.Yield();
-            
+
             //Dbg.WriteCurrentThreadId("task_proc: before await");
 
             TResult ret = default(TResult);

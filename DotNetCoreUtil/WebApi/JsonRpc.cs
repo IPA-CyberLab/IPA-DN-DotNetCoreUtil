@@ -120,7 +120,7 @@ namespace IPA.DN.CoreUtil.WebApi
         [JsonIgnore]
         public virtual bool IsOk => !IsError;
 
-        public virtual void CheckError()
+        public virtual void ThrowIfError()
         {
             if (this.IsError) throw new JsonRpcException(this.Error);
         }
@@ -553,6 +553,11 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public void ST_CallClear() => st_call_queue.Clear();
 
+        protected JsonRpcClient()
+        {
+            mt_batch = new BatchQueue<MT_QueueItem>(mt_batch_process_proc, 10);
+        }
+
         public JsonRpcResponse<TResponse> ST_CallAdd<TResponse>(string method, object param) where TResponse : class
         {
             var ret = new JsonRpcResponse<TResponse>();
@@ -594,7 +599,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 }
 
                 if (requests_table.Count >= 2)
-                Dbg.WriteLine($"Num_Requests_per_call: {requests_table.Count}");
+                    Dbg.WriteLine($"Num_Requests_per_call: {requests_table.Count}");
 
                 if (requests_table.Count == 1)
                 {
@@ -643,7 +648,7 @@ namespace IPA.DN.CoreUtil.WebApi
                 if (throw_each_error)
                     foreach (var r in ret_list)
                     {
-                        r.CheckError();
+                        r.ThrowIfError();
                     }
             }
             finally
@@ -673,112 +678,59 @@ namespace IPA.DN.CoreUtil.WebApi
             public object Param;
             public Type ResultType;
             public JsonRpcResponse Response;
-            public AsyncManualResetEvent CompleteEvent;
         }
 
         object lock_mt_queue = new object();
         List<MT_QueueItem> mt_queue = new List<MT_QueueItem>();
         SemaphoreSlim mt_semaphore = new SemaphoreSlim(1, 1);
-        object lock_st_call = new object();
 
-        RefInt c = new RefInt();
-        RefInt d = new RefInt();
-        Singleton<IntervalReporter> c_rep = new Singleton<IntervalReporter>();
+        BatchQueue<MT_QueueItem> mt_batch;
 
-        public async Task<JsonRpcResponse<TResponse>> Call<TResponse>(string method, object param, bool throw_error = false) where TResponse : class
+        void mt_batch_process_proc(BatchQueueItem<MT_QueueItem>[] items)
         {
-            Ref<Task> task = new Ref<Task>();
+            try
+            {
+                foreach (var q in items)
+                {
+                    var item = q.UserItem;
+                    item.Response = ST_CallAdd(item.Method, item.Param, item.ResultType);
+                }
+
+                ST_CallAll(false).Wait();
+            }
+            catch (Exception ex)
+            {
+                //ex.ToString().Print();
+                foreach (var q in items)
+                {
+                    var item = q.UserItem;
+                    item.Response.Error = new JsonRpcError(-1, ex.ToString());
+                }
+            }
+            finally
+            {
+                foreach (var q in items)
+                {
+                    q.SetCompleted();
+                }
+            }
+        }
+
+        public async Task<JsonRpcResponse<TResponse>> MT_Call<TResponse>(string method, object param, bool throw_error = false) where TResponse : class
+        {
             var response = new JsonRpcResponse<TResponse>();
 
-            // まずリクエストをキューに入れる
             MT_QueueItem q = new MT_QueueItem()
             {
                 Method = method,
                 Param = param,
                 ResultType = typeof(TResponse),
                 Response = null,
-                CompleteEvent = new AsyncManualResetEvent(),
             };
-            //q.WaitTask = q.CompleteEvent.WaitAsync();
-            task.Value = q.CompleteEvent.WaitAsync();
-            //q.A = task;
 
-            c.Increment();
+            var b = mt_batch.Add(q);
 
-            c_rep.CreateOrGet(() =>
-            {
-                return new IntervalReporter("c", 100, () =>
-                {
-                    return $"{c} {d}";
-                });
-            });
-
-
-            lock (lock_mt_queue)
-            {
-                mt_queue.Add(q);
-            }
-            
-
-            Task t = Task.Run(async () =>
-            {
-                await mt_semaphore.WaitAsync();
-                try
-                {
-                    List<MT_QueueItem> mt_queue_this;
-
-                    lock (lock_mt_queue)
-                    {
-                        mt_queue_this = this.mt_queue;
-                        this.mt_queue = new List<MT_QueueItem>();
-                    }
-
-                    if (mt_queue_this.Count == 0)
-                    {
-                        return;
-                    }
-
-                    lock (lock_st_call)
-                    {
-                        try
-                        {
-                            foreach (MT_QueueItem item in mt_queue_this)
-                            {
-                                item.Response = ST_CallAdd(item.Method, item.Param, item.ResultType);
-                            }
-
-                            ST_CallAll(false).Wait();
-                        }
-                        catch (Exception ex)
-                        {
-                            ex.ToString().Print();
-                            foreach (MT_QueueItem item in mt_queue_this)
-                            {
-                                item.Response.Error = new JsonRpcError(-1, ex.ToString());
-                            }
-                        }
-                        finally
-                        {
-                            foreach (MT_QueueItem item in mt_queue_this)
-                            {
-                                item.CompleteEvent.Set();
-
-                                c.Decrement();
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    mt_semaphore.Release();
-                }
-            });
-
-            d.Increment();
-            await task.Value;
-            //await q.CompleteEvent.WaitAsync();
-            task.Value = null;
-            d.Decrement();
+            await b.CompletedEvent.WaitAsync();
 
             return (JsonRpcResponse<TResponse>)q.Response;
         }
@@ -808,7 +760,7 @@ namespace IPA.DN.CoreUtil.WebApi
                     var p = in_params[i];
                     o.Add(p.Name, JToken.FromObject(v.Arguments[i]));
                 }
-                Task<JsonRpcResponse<object>> call_ret = RpcClient.ST_CallOne<object>(v.Method.Name, o, true);
+                Task<JsonRpcResponse<object>> call_ret = RpcClient.MT_Call<object>(v.Method.Name, o, true);
 
                 //ret.Wait();
 
@@ -831,6 +783,7 @@ namespace IPA.DN.CoreUtil.WebApi
             {
                 //Dbg.WhereThread();
                 await o;
+                o.Result.ThrowIfError();
                 //Dbg.WhereThread();
                 return o.Result.ResultData;
             }
