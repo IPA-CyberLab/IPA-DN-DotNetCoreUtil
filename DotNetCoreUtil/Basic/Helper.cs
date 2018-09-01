@@ -17,6 +17,8 @@ using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
 using IPA.DN.CoreUtil.Basic;
 
@@ -182,7 +184,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static T YamlToObject<T>(this string str) => Yaml.Deserialize<T>(str);
 
         public static byte[] ReadToEnd(this Stream s, int max_size = 0) => IO.ReadStreamToEnd(s, max_size);
-        public static async Task<byte[]> ReadToEndAsync(this Stream s, int max_size = 0) => await IO.ReadStreamToEndAsync(s, max_size);
+        public static async Task<byte[]> ReadToEndAsync(this Stream s, int max_size = 0, CancellationToken cancel = default(CancellationToken)) => await IO.ReadStreamToEndAsync(s, max_size, cancel);
 
         public static void TryCancelNoBlock(this CancellationTokenSource cts) => TaskUtil.TryCancelNoBlock(cts);
         public static void TryCancel(this CancellationTokenSource cts) => TaskUtil.TryCancel(cts);
@@ -194,6 +196,33 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static string GetStrOrEmpty(this SortedDictionary<string, string> d, string key) => (d.ContainsKey(key) ? d[key].NonNull() : "");
 
         public static string TryGetContentsType(this HttpContentHeaders h) => (h == null ? "" : h.ContentType == null ? "" : h.ContentType.ToString().NonNull());
+
+        public static Task SendStringContents(this HttpResponse h, string body, string contents_type = "text/plain; charset=UTF-8", Encoding encoding = null, CancellationToken cancel = default(CancellationToken))
+        {
+            if (encoding == null) encoding = Str.Utf8Encoding;
+            h.ContentType = contents_type;
+            byte[] ret_data = encoding.GetBytes(body);
+            return h.Body.WriteAsync(ret_data, 0, ret_data.Length, cancel);
+        }
+
+        public static async Task<string> RecvStringContents(this HttpRequest h, int max_request_body_len = int.MaxValue, Encoding encoding = null, CancellationToken cancel = default(CancellationToken))
+        {
+            if (encoding == null) encoding = Str.Utf8Encoding;
+            return (await h.Body.ReadToEndAsync(max_request_body_len, cancel)).GetString_UTF8();
+        }
+
+        public static string GetStringNonNull(this IDictionary<string, object> d, string name)
+        {
+            try
+            {
+                if (d == null) return "";
+                if (d.ContainsKey(name) == false) return "";
+                object o = d[name];
+                if (o == null) return "";
+                return (string)o;
+            }
+            catch { return ""; }
+        }
     }
 }
 

@@ -406,11 +406,11 @@ namespace IPA.DN.CoreUtil.Basic
         // byte 配列を結合する
         public static byte[] CombineByteArray(byte[] b1, byte[] b2)
         {
-            if (b1 == null) b1 = new byte[0];
-            if (b2 == null) b2 = new byte[0];
+            if (b1 == null || b1.Length == 0) return b2;
+            if (b2 == null || b2.Length == 0) return b1;
             byte[] ret = new byte[b1.Length + b2.Length];
-            if (b1.Length >= 1) Array.Copy(b1, 0, ret, 0, b1.Length);
-            if (b2.Length >= 1) Array.Copy(b2, 0, ret, b1.Length, b2.Length);
+            Array.Copy(b1, 0, ret, 0, b1.Length);
+            Array.Copy(b2, 0, ret, b1.Length, b2.Length);
             return ret;
         }
 

@@ -2208,15 +2208,17 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // URL エンコード
-        public static string ToUrl(string str, Encoding e)
+        public static string ToUrl(string str, Encoding e = null)
         {
+            if (e == null) e = Str.Utf8Encoding;
             Str.NormalizeString(ref str);
             return HttpUtility.UrlEncode(str, e);
         }
 
         // URL デコード
-        public static string FromUrl(string str, Encoding e)
+        public static string FromUrl(string str, Encoding e = null)
         {
+            if (e == null) e = Str.Utf8Encoding;
             Str.NormalizeString(ref str);
             return HttpUtility.UrlDecode(str, e);
         }

@@ -2067,7 +2067,7 @@ namespace IPA.DN.CoreUtil.Basic
             return ms.ToArray();
         }
 
-        public static async Task<byte[]> ReadStreamToEndAsync(Stream s, int max_size = 0)
+        public static async Task<byte[]> ReadStreamToEndAsync(Stream s, int max_size = 0, CancellationToken cancel = default(CancellationToken))
         {
             if (max_size <= 0) max_size = int.MaxValue;
             MemoryStream ms = new MemoryStream();
@@ -2075,7 +2075,8 @@ namespace IPA.DN.CoreUtil.Basic
             byte[] tmp = new byte[200000];
             while (true)
             {
-                int r = await s.ReadAsync(tmp, 0, tmp.Length);
+                cancel.ThrowIfCancellationRequested();
+                int r = await s.ReadAsync(tmp, 0, tmp.Length, cancel);
                 if (r == 0)
                 {
                     break;

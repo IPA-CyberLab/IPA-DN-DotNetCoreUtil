@@ -323,6 +323,7 @@ namespace IPA.DN.CoreUtil.WebApi
     {
         public JsonRpcServerApi Api { get; }
         public JsonRpcServerConfig Config { get; }
+        public CancellationToken CancelToken { get => this.Api.CancelToken; }
 
         public JsonRpcServer(JsonRpcServerApi api, JsonRpcServerConfig cfg, CancellationToken cancel_token)
         {
@@ -335,6 +336,7 @@ namespace IPA.DN.CoreUtil.WebApi
         {
             try
             {
+                this.CancelToken.ThrowIfCancellationRequested();
                 RpcMethodInfo method = this.Api.GetMethodInfo(req.Method);
                 JObject in_obj = (JObject)req.Params;
                 try
@@ -462,10 +464,58 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public virtual async Task GetRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
         {
-            await response.WriteAsync("This is a JSON-RPC server.");
+            try
+            {
+                string rpc_method = route_data.Values.GetStringNonNull("rpc_method");
+                if (rpc_method.IsEmpty())
+                {
+                    await response.SendStringContents($"This is a JSON-RPC server.\r\nAPI: {Api.GetType().AssemblyQualifiedName}\r\nNow: {DateTime.Now.ToDtStr(with_nanosecs: true)}", cancel: this.CancelToken);
+                }
+                else
+                {
+                    string args = route_data.Values.GetStringNonNull("rpc_param");
+
+                    if (args.IsEmpty())
+                    {
+                        JObject jo = new JObject();
+
+                        foreach (string key in request.Query.Keys)
+                        {
+                            string value = request.Query[key];
+
+                            jo.Add(key, JToken.FromObject(value));
+                        }
+
+                        args = jo.ObjectToJson(compact: true);
+                    }
+
+                    string id = "GET-" + Str.NewGuid();
+                    string in_str = "{'jsonrpc':'2.0','method':'" + rpc_method + "','params':" + args + ",'id':'" + id + "'}";
+
+                    await process_http_request_main(request, response, in_str, "text/plain; charset=UTF-8");
+                }
+            }
+            catch (Exception ex)
+            {
+                await response.SendStringContents(ex.ToString(), cancel: this.CancelToken);
+            }
         }
 
         public virtual async Task PostRequestHandler(HttpRequest request, HttpResponse response, RouteData route_data)
+        {
+            try
+            {
+                string in_str = await request.RecvStringContents(this.Config.MaxRequestBodyLen, cancel: this.CancelToken);
+
+                await process_http_request_main(request, response, in_str);
+            }
+            catch (Exception ex)
+            {
+                await response.SendStringContents(ex.ToString(), cancel: this.CancelToken);
+            }
+        }
+
+        protected virtual async Task process_http_request_main(HttpRequest request, HttpResponse response, string in_str, string response_contents_type = "application/json")
         {
             string ret_str = "";
             try
@@ -485,7 +535,6 @@ namespace IPA.DN.CoreUtil.WebApi
                     headers);
 
                 //string in_str = request.Body.ReadToEnd().GetString_UTF8();
-                string in_str = (await request.Body.ReadToEndAsync(this.Config.MaxRequestBodyLen)).GetString_UTF8();
                 //string in_str = (request.Body.ReadToEnd(this.Config.MaxRequestBodyLen)).GetString_UTF8();
                 //Dbg.WriteLine("in_str: " + in_str);
 
@@ -507,17 +556,17 @@ namespace IPA.DN.CoreUtil.WebApi
 
             //Dbg.WriteLine("ret_str: " + ret_str);
 
-            byte[] ret_data = ret_str.GetBytes_UTF8();
-            response.ContentType = "application/json";
-            await response.Body.WriteAsync(ret_data, 0, ret_data.Length);
+            await response.SendStringContents(ret_str, response_contents_type, cancel: this.CancelToken);
         }
 
-        public void RegisterToHttpServer(IApplicationBuilder app, string template = "rpc")
+        public void RegisterToHttpServer(IApplicationBuilder app, string path = "rpc")
         {
             RouteBuilder rb = new RouteBuilder(app);
 
-            rb.MapGet(template, GetRequestHandler);
-            rb.MapPost(template, PostRequestHandler);
+            rb.MapGet(path, GetRequestHandler);
+            rb.MapGet(path + "/{rpc_method}", GetRequestHandler);
+            rb.MapGet(path + "/{rpc_method}/{rpc_param}", GetRequestHandler);
+            rb.MapPost(path, PostRequestHandler);
 
             IRouter router = rb.Build();
             app.UseRouter(router);
@@ -598,8 +647,8 @@ namespace IPA.DN.CoreUtil.WebApi
                     requests.Add(o.request);
                 }
 
-                if (requests_table.Count >= 2)
-                    Dbg.WriteLine($"Num_Requests_per_call: {requests_table.Count}");
+                //if (requests_table.Count >= 2)
+                //    Dbg.WriteLine($"Num_Requests_per_call: {requests_table.Count}");
 
                 if (requests_table.Count == 1)
                 {

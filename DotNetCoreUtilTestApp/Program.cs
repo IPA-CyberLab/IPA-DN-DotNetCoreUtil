@@ -143,7 +143,7 @@ namespace DotNetCoreUtilTestApp
 
             //Benchmark b = new Benchmark();
 
-            sleep_test();
+            //sleep_test();
 
             //sleep_task_test2();
 
@@ -157,7 +157,7 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            //jsonrpc_client_server_both_test();
+            jsonrpc_client_server_both_test();
 
             //http_client_test();
 
@@ -877,9 +877,12 @@ namespace DotNetCoreUtilTestApp
             rpc_server_api_test h = new rpc_server_api_test();
             var s = JsonHttpRpcListener.StartServer(http_cfg, rpc_cfg, h);
 
+            Ref<bool> client_stop_flag = new Ref<bool>();
+
             // start client
             ThreadObj client_thread = ThreadObj.Start(param =>
             {
+                //Kernel.SleepThread(-1);
                 if (false)
                 {
                     Benchmark b = new Benchmark("testcall");
@@ -918,10 +921,10 @@ namespace DotNetCoreUtilTestApp
                     Benchmark b = new Benchmark("rpccall");
 
                     JsonRpcHttpClient<rpc_server_api_interface_test> c = new JsonRpcHttpClient<rpc_server_api_interface_test>("http://127.0.0.1:88/rpc");
-                    ThreadObj.StartMany(256, par =>
+                    var threads = ThreadObj.StartMany(256, par =>
                     {
 
-                        while (true)
+                        while (client_stop_flag.Value == false)
                         {
                             //c.Call.Divide(8, 2).Wait();
                             TMP1 a = new TMP1() { a = 2, b = 1 };
@@ -932,7 +935,10 @@ namespace DotNetCoreUtilTestApp
                     }
                     );
 
-                    Kernel.SleepThread(-1);
+                    foreach (var thread in threads)
+                    {
+                        thread.WaitForEnd();
+                    }
 
                     //c.Call.Divide(8, 2).Result.Print();
                     //c.Call.Divide(8, 2).Result.Print();
@@ -946,7 +952,9 @@ namespace DotNetCoreUtilTestApp
                 }
             }, null);
 
-            //Con.ReadLine("Enter>");
+            Con.ReadLine("Enter>");
+
+            client_stop_flag.Set(true);
 
             client_thread.WaitForEnd();
 

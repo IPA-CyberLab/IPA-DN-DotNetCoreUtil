@@ -373,12 +373,12 @@ namespace IPA.DN.CoreUtil.Basic
         bool halt_flag = false;
         public string Name { get; }
 
-        public Benchmark(string name = "Benchmark", int interval = 1000)
+        public Benchmark(string name = "Benchmark", int interval = 1000, bool disabled = false)
         {
             this.Interval = interval;
             this.Name = name;
 
-            if (Dbg.IsDebugMode)
+            if (Dbg.IsDebugMode && disabled == false)
             {
                 this.thread = new ThreadObj(thread_proc);
             }
