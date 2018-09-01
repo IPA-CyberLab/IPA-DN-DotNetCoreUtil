@@ -293,7 +293,7 @@ namespace IPA.DN.CoreUtil.Basic
 
     public static class AsyncPreciseDelay
     {
-        static SortedList<long, List<AsyncManualResetEvent>> wait_list = new SortedList<long, List<AsyncManualResetEvent>>();
+        static SortedList<long, AsyncManualResetEvent> wait_list = new SortedList<long, AsyncManualResetEvent>();
 
         static Stopwatch w;
 
@@ -401,14 +401,11 @@ namespace IPA.DN.CoreUtil.Basic
 
                     foreach (long target in past_target_list)
                     {
-                        List<AsyncManualResetEvent> event_list = wait_list[target];
+                        AsyncManualResetEvent e = wait_list[target];
 
                         wait_list.Remove(target);
 
-                        foreach (AsyncManualResetEvent e in event_list)
-                        {
-                            fire_event_list.Add(e);
-                        }
+                        fire_event_list.Add(e);
                     }
 
                     if (next_wait_target == -1)
@@ -473,10 +470,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             long target_time = Tick + (long)msec;
 
-            AsyncManualResetEvent tc = new AsyncManualResetEvent();
-            Task ret = tc.WaitAsync();
-
-            List<AsyncManualResetEvent> o;
+            AsyncManualResetEvent tc = null;
 
             bool set_event = false;
 
@@ -492,15 +486,13 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (wait_list.ContainsKey(target_time) == false)
                 {
-                    o = new List<AsyncManualResetEvent>();
-                    wait_list.Add(target_time, o);
+                    tc = new AsyncManualResetEvent();
+                    wait_list.Add(target_time, tc);
                 }
                 else
                 {
-                    o = wait_list[target_time];
+                    tc = wait_list[target_time];
                 }
-
-                o.Add(tc);
 
                 first_target_after = wait_list.Keys[0];
 
@@ -515,7 +507,7 @@ namespace IPA.DN.CoreUtil.Basic
                 ev.Set();
             }
 
-            return ret;
+            return tc.WaitAsync();
         }
     }
     /*

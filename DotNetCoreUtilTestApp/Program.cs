@@ -143,7 +143,7 @@ namespace DotNetCoreUtilTestApp
 
             //Benchmark b = new Benchmark();
 
-            //sleep_test();
+            sleep_test();
 
             //sleep_task_test2();
 
@@ -165,7 +165,7 @@ namespace DotNetCoreUtilTestApp
 
             //async_ctx_test().Wait();
 
-            jsonrpc_benchmark_test();
+            //jsonrpc_benchmark_test();
 
             //weak_task_test();
         }
@@ -454,7 +454,7 @@ namespace DotNetCoreUtilTestApp
                 for (int i = 0; i < 100000; i++)
                 {
                     b.IncrementMe++;
-                    Task t = TaskUtil.PreciseDelay(100000);
+                    Task t = TaskUtil.PreciseDelay(10000);
                     //o.Add(t);
                 }
                 //t.Wait();
