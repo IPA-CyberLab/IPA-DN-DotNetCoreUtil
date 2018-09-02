@@ -80,8 +80,10 @@ namespace IPA.DN.CoreUtil.WebApi
     {
         public List<int> HttpPortsList = new List<int>(new int[] { 88, 8080 });
         public List<int> HttpsPortsList = new List<int>(new int[] { 8081 });
+
         public string ContentsRoot = Env.AppRootDir.CombinePath("wwwroot");
         public bool LocalHostOnly = false;
+        public bool IPv4Only = false;
         public bool DebugToConsole = true;
         public bool UseStaticFiles = true;
         public bool ShowDetailError = true;
@@ -121,6 +123,17 @@ namespace IPA.DN.CoreUtil.WebApi
                         {
                             foreach (int port in config.HttpPortsList) opt.ListenLocalhost(port);
                             foreach (int port in config.HttpsPortsList) opt.ListenLocalhost(port, lo =>
+                            {
+                                lo.UseHttps(so =>
+                                {
+                                    so.SslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                                });
+                            });
+                        }
+                        else if (config.IPv4Only)
+                        {
+                            foreach (int port in config.HttpPortsList) opt.Listen(IPAddress.Any, port);
+                            foreach (int port in config.HttpsPortsList) opt.Listen(IPAddress.Any, port, lo =>
                             {
                                 lo.UseHttps(so =>
                                 {
