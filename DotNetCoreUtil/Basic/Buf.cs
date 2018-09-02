@@ -242,9 +242,7 @@ namespace IPA.DN.CoreUtil.Basic
         // 書き込み
         public void WriteByte(byte data)
         {
-            byte[] a = new byte[1] { data };
-
-            Write(a);
+            buf.WriteByte(data);
         }
         public void Write(byte[] data)
         {
