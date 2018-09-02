@@ -378,7 +378,7 @@ namespace IPA.DN.CoreUtil.Basic
             this.Interval = interval;
             this.Name = name;
 
-            if (Dbg.IsDebugMode && disabled == false)
+            if (disabled == false)
             {
                 this.thread = new ThreadObj(thread_proc);
             }
