@@ -23,6 +23,9 @@ using System.Xml.Serialization;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
+using System.Reflection;
+
+using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil.Basic
 {
@@ -1123,6 +1126,36 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 blackhole.AddLast(obj);
             }
+        }
+
+        // データベースのテーブルのクラスで Non NULL を強制する
+        public static object DbEnforceNonNull(object obj)
+        {
+            if (obj == null) return null;
+
+            Type t = obj.GetType();
+
+            var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var p in props)
+            {
+                var ptype = p.PropertyType;
+                if (ptype.IsNullable() == false)
+                {
+                    if (ptype == typeof(string))
+                    {
+                        string s = (string)p.GetValue(obj);
+                        if (s == null) p.SetValue(obj, "");
+                    }
+                    else if (ptype == typeof(DateTime))
+                    {
+                        DateTime d = (DateTime)p.GetValue(obj);
+                        if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeValue);
+                    }
+                }
+            }
+
+            return obj;
         }
     }
 

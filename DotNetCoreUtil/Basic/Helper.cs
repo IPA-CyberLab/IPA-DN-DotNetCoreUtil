@@ -223,6 +223,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             }
             catch { return ""; }
         }
+
+        public static bool IsNullable(this Type t) => Nullable.GetUnderlyingType(t) != null;
     }
 }
 

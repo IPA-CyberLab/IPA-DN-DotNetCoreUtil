@@ -652,5 +652,8 @@ namespace IPA.DN.CoreUtil.Basic
             tran.Dispose();
             tran = null;
         }
+
+        // データベースのテーブルのクラスで Non NULL を強制する
+        public static object DbEnforceNonNull(object obj) => Util.DbEnforceNonNull(obj);
     }
 }
