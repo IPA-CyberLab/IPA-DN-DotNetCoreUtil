@@ -177,6 +177,11 @@ namespace IPA.DN.CoreUtil.Basic
             w.Start();
 
             background_thread = new Thread(background_thread_proc);
+            try
+            {
+                background_thread.Priority = ThreadPriority.Highest;
+            }
+            catch { }
             background_thread.IsBackground = true;
             background_thread.Start();
         }
