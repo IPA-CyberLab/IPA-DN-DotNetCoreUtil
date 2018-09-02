@@ -10,6 +10,7 @@ using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Security.Authentication;
 using System.Web;
 using System.IO;
 using System.Drawing;
@@ -21,6 +22,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -120,7 +122,10 @@ namespace IPA.DN.CoreUtil.WebApi
                             foreach (int port in config.HttpPortsList) opt.ListenLocalhost(port);
                             foreach (int port in config.HttpsPortsList) opt.ListenLocalhost(port, lo =>
                             {
-                                lo.UseHttps();
+                                lo.UseHttps(so =>
+                                {
+                                    so.SslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                                });
                             });
                         }
                         else
@@ -128,7 +133,10 @@ namespace IPA.DN.CoreUtil.WebApi
                             foreach (int port in config.HttpPortsList) opt.ListenAnyIP(port);
                             foreach (int port in config.HttpsPortsList) opt.ListenAnyIP(port, lo =>
                             {
-                                lo.UseHttps();
+                                lo.UseHttps(so =>
+                                {
+                                    so.SslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                                });
                             });
                         }
                     })
