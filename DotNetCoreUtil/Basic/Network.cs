@@ -2747,28 +2747,34 @@ namespace IPA.DN.CoreUtil.Basic
         object unix_asyncmode_lock = new object();
         public void Disconnect()
         {
-            if (Env.IsUnix)
+            try
             {
-                lock (unix_asyncmode_lock)
+                if (Env.IsUnix)
                 {
-                    if (this.asyncMode)
+                    lock (unix_asyncmode_lock)
                     {
-                        this.asyncMode = false;
-
-                        if (this.SockEvent != null)
+                        if (this.asyncMode)
                         {
-                            lock (this.SockEvent.unix_socklist)
+                            this.asyncMode = false;
+
+                            if (this.SockEvent != null)
                             {
-                                this.SockEvent.unix_socklist.Remove(this);
+                                lock (this.SockEvent.unix_socklist)
+                                {
+                                    this.SockEvent.unix_socklist.Remove(this);
+                                }
+
+                                SockEvent se = this.SockEvent;
+                                this.SockEvent = null;
+
+                                se.Set();
                             }
-
-                            SockEvent se = this.SockEvent;
-                            this.SockEvent = null;
-
-                            se.Set();
                         }
                     }
                 }
+            }
+            catch
+            {
             }
 
             try
