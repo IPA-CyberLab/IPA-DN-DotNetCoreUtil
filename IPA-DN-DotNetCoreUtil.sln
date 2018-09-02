@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2042
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetCoreUtil", "DotNetCoreUtil\DotNetCoreUtil.csproj", "{4F452CF9-6F7E-4492-84D8-56EE7D52B3DE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetCoreUtil", "DotNetCoreUtil\IPA-DN-DotNetCoreUtil.csproj", "{4F452CF9-6F7E-4492-84D8-56EE7D52B3DE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetCoreUtilTestApp", "DotNetCoreUtilTestApp\DotNetCoreUtilTestApp.csproj", "{F441FA5E-4B2C-43B3-943B-A925A680D94C}"
 EndProject

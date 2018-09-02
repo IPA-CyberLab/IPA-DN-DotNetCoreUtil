@@ -851,7 +851,7 @@ namespace DotNetCoreUtilTestApp
             HttpServerBuilderConfig http_cfg = new HttpServerBuilderConfig()
             {
                 DebugToConsole = false,
-                ports_list = new List<int>(new int[] { 80 }),
+                HttpPortsList = new List<int>(new int[] { 80 }),
             };
             JsonRpcServerConfig rpc_cfg = new JsonRpcServerConfig()
             {

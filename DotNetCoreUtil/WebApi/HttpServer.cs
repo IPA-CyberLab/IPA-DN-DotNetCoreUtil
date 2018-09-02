@@ -76,7 +76,8 @@ namespace IPA.DN.CoreUtil.WebApi
 
     public class HttpServerBuilderConfig
     {
-        public List<int> ports_list = new List<int>(new int[] { 88, 8080 });
+        public List<int> HttpPortsList = new List<int>(new int[] { 88, 8080 });
+        public List<int> HttpsPortsList = new List<int>(new int[] { 8081 });
         public string ContentsRoot = Env.AppRootDir.CombinePath("wwwroot");
         public bool LocalHostOnly = false;
         public bool DebugToConsole = true;
@@ -115,9 +116,21 @@ namespace IPA.DN.CoreUtil.WebApi
                     .UseKestrel(opt =>
                     {
                         if (config.LocalHostOnly)
-                            foreach (int port in config.ports_list) opt.ListenLocalhost(port);
+                        {
+                            foreach (int port in config.HttpPortsList) opt.ListenLocalhost(port);
+                            foreach (int port in config.HttpsPortsList) opt.ListenLocalhost(port, lo =>
+                            {
+                                lo.UseHttps();
+                            });
+                        }
                         else
-                            foreach (int port in config.ports_list) opt.ListenAnyIP(port);
+                        {
+                            foreach (int port in config.HttpPortsList) opt.ListenAnyIP(port);
+                            foreach (int port in config.HttpsPortsList) opt.ListenAnyIP(port, lo =>
+                            {
+                                lo.UseHttps();
+                            });
+                        }
                     })
                     .UseWebRoot(config.ContentsRoot)
                     .UseContentRoot(config.ContentsRoot)
