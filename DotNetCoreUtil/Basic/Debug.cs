@@ -586,18 +586,17 @@ namespace IPA.DN.CoreUtil.Basic
                 {
                     List<string> o = new List<string>();
 
-                    {
-                        ThreadPool.GetAvailableThreads(out int workers, out int compports);
-                        o.Add($"Avail: {workers}:{compports}");
-                    }
-                    {
-                        ThreadPool.GetMaxThreads(out int workers, out int compports);
-                        o.Add($"Max: {workers}:{compports}");
-                    }
-                    {
-                        ThreadPool.GetMinThreads(out int workers, out int compports);
-                        o.Add($"Min: {workers}:{compports}");
-                    }
+                    ThreadPool.GetAvailableThreads(out int avail_workers, out int avail_ports);
+                    ThreadPool.GetMaxThreads(out int max_workers, out int max_ports);
+                    ThreadPool.GetMinThreads(out int min_workers, out int min_ports);
+
+                    o.Add($"CurrentWorkers: {max_workers - avail_workers}");
+                    o.Add($"Max: {max_workers}");
+                    o.Add($"Min: {min_workers}");
+
+                    o.Add($"CurrentPorts: {max_ports - avail_ports}");
+                    o.Add($"Max: {max_ports}");
+                    o.Add($"Min: {min_ports}");
 
                     return Str.CombineStringArray(o.ToArray(), ", ");
                 });
