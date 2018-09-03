@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Web;
 using System.IO;
+using System.Reflection;
 using System.Drawing;
 
 using IPA.DN.CoreUtil.Helper.Basic;
@@ -653,7 +654,100 @@ namespace IPA.DN.CoreUtil.Basic
             tran = null;
         }
 
+        // データベースのテーブルのクラスで値を上書きする
+        public static T DbOverwriteValues<T>(T dst, T src)
+        {
+            return (T)DbOverwriteValues((object)dst, (object)src);
+        }
+        public static object DbOverwriteValues(object dst, object src)
+        {
+            if (dst.GetType() != src.GetType())
+            {
+                throw new ApplicationException("DbOverwriteValues: dst.GetType() != src.GetType()");
+            }
+            object ret = Util.CloneObject(dst);
+            Type t = dst.GetType();
+            var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var p in props)
+            {
+                var ptype = p.PropertyType;
+                object value = p.GetValue(src);
+                if (value != null)
+                {
+                    bool ok = true;
+                    if (ptype == typeof(DateTime))
+                    {
+                        DateTime d = (DateTime)p.GetValue(src);
+                        if (Util.IsZero(d))
+                        {
+                            ok = false;
+                        }
+                    }
+                    else if (ptype == typeof(int))
+                    {
+                        int i = (int)p.GetValue(src);
+                        if (i == 0) ok = false;
+                    }
+                    else if (ptype == typeof(long))
+                    {
+                        long i = (long)p.GetValue(src);
+                        if (i == 0) ok = false;
+                    }
+                    else if (ptype == typeof(decimal))
+                    {
+                        decimal i = (decimal)p.GetValue(src);
+                        if (i == 0) ok = false;
+                    }
+                    else if (ptype == typeof(double))
+                    {
+                        double i = (double)p.GetValue(src);
+                        if (i == 0) ok = false;
+                    }
+                    else if (ptype == typeof(float))
+                    {
+                        float i = (float)p.GetValue(src);
+                        if (i == 0) ok = false;
+                    }
+
+                    if (ok)
+                    {
+                        p.SetValue(ret, value);
+                    }
+                }
+            }
+
+            return ret;
+        }
+
         // データベースのテーブルのクラスで Non NULL を強制する
-        public static object DbEnforceNonNull(object obj) => Util.DbEnforceNonNull(obj);
+        public static object DbEnforceNonNull(object obj)
+        {
+            if (obj == null) return null;
+
+            Type t = obj.GetType();
+
+            var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var p in props)
+            {
+                var ptype = p.PropertyType;
+                if (ptype.IsNullable() == false)
+                {
+                    if (ptype == typeof(string))
+                    {
+                        string s = (string)p.GetValue(obj);
+                        if (s == null) p.SetValue(obj, "");
+                    }
+                    else if (ptype == typeof(DateTime))
+                    {
+                        DateTime d = (DateTime)p.GetValue(obj);
+                        if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeValue);
+                    }
+                }
+            }
+
+            return obj;
+        }
     }
 }

@@ -3,26 +3,15 @@
 // Copyright (C) 1997-2010 Daiyuu Nobori. All Rights Reserved.
 // Copyright (C) 2004-2010 SoftEther Corporation. All Rights Reserved.
 
-using System;
-using System.Threading;
-using System.Data;
-using System.Data.Sql;
-using System.Data.SqlClient;
-using System.Data.SqlTypes;
-using System.Text;
-using System.Configuration;
-using System.Collections;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Web;
-using System.IO;
-using System.Drawing;
-using System.Diagnostics;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.NetworkInformation;
-using System.Runtime.InteropServices;
 using IPA.DN.CoreUtil.Basic.BigInt;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace IPA.DN.CoreUtil.Basic
 {
