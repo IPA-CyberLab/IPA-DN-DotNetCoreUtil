@@ -387,8 +387,16 @@ namespace IPA.DN.CoreUtil.Basic
         void thread_proc(object param)
         {
             Thread.CurrentThread.IsBackground = true;
+            try
+            {
+                Thread.CurrentThread.Priority = ThreadPriority.Highest;
+            }
+            catch
+            {
+            }
             IntervalManager m = new IntervalManager(this.Interval);
             long last_value = 0;
+            long last_tick = Time.Tick64;
             while (true)
             {
                 int wait_interval = m.GetNextInterval(out int span);
@@ -398,9 +406,14 @@ namespace IPA.DN.CoreUtil.Basic
 
                 long now_value = this.IncrementMe;
                 long diff_value = now_value - last_value;
-                last_value = now_value;
 
-                double r = (double)diff_value * 1000.0 / (double)span;
+                last_value = now_value;
+                long now_time = Time.Tick64;
+                long span2 = now_time - last_tick;
+                last_tick = now_time;
+                span2 = Math.Max(span2, 1);
+
+                double r = (double)diff_value * 1000.0 / (double)span2;
 
                 Dbg.WriteLine($"{this.Name}: {Str.ToStr3((long)r)} / sec");
             }
