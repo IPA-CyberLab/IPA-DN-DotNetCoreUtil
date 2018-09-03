@@ -394,12 +394,11 @@ namespace IPA.DN.CoreUtil.Basic
             catch
             {
             }
-            IntervalManager m = new IntervalManager(this.Interval);
             long last_value = 0;
             long last_tick = Time.Tick64;
             while (true)
             {
-                int wait_interval = m.GetNextInterval(out int span);
+                int wait_interval = this.Interval;
                 if (halt_flag) break;
                 halt_event.Wait(wait_interval);
                 if (halt_flag) break;
