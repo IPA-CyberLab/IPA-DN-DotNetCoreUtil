@@ -1007,6 +1007,9 @@ namespace IPA.DN.CoreUtil.Basic
         public static void DoNothing()
         {
         }
+        public static void DoNothing(object o)
+        {
+        }
         public static System.Threading.Tasks.Task DoNothingAsync()
         {
             return System.Threading.Tasks.Task.CompletedTask;
