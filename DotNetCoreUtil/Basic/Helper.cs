@@ -247,41 +247,50 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             return Util.CopyByte(tmp, 0, ret);
         }
 
-        public static async Task<int> ReadAsyncWithTimeout(this NetworkStream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken))
+        public static async Task<int> ReadAsyncWithTimeout(this NetworkStream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout == null) timeout = stream.ReadTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
-            cancel.ThrowIfCancellationRequested();
-            Task<int> sock_task = stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset));
-            Task delay_task = Task.Delay(timeout ?? Timeout.Infinite, cancel);
-            await Task.WhenAny(sock_task, delay_task);
-            cancel.ThrowIfCancellationRequested();
-            if (sock_task.IsCompleted == false)
+
+            try
+            {
+                int ret = await TaskUtil.DoAsyncWithTimeout<int>(() =>
+                {
+                    return stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset));
+                }, (int)timeout, cancel, cancel_tokens);
+
+                if (ret <= 0)
+                {
+                    throw new EndOfStreamException("The NetworkStream is disconnected.");
+                }
+
+                return ret;
+            }
+            catch
             {
                 stream.TryCloseNonBlock();
-                throw new TimeoutException();
+                throw;
             }
-            if (sock_task.Result <= 0)
-            {
-                stream.TryCloseNonBlock();
-                throw new EndOfStreamException("The NetworkStream is disconnected.");
-            }
-            return sock_task.Result;
         }
 
-        public static async Task WriteAsyncWithTimeout(this NetworkStream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken))
+        public static async Task WriteAsyncWithTimeout(this NetworkStream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout == null) timeout = stream.WriteTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
-            cancel.ThrowIfCancellationRequested();
-            Task sock_task = stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset));
-            Task delay_task = Task.Delay(timeout ?? Timeout.Infinite, cancel);
-            await Task.WhenAny(sock_task, delay_task);
-            cancel.ThrowIfCancellationRequested();
-            if (sock_task.IsCompleted == false)
+
+            try
+            {
+                await TaskUtil.DoAsyncWithTimeout<int>(async () =>
+                {
+                    await stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset));
+                    return 0;
+                }, (int)timeout, cancel, cancel_tokens);
+
+            }
+            catch
             {
                 stream.TryCloseNonBlock();
-                throw new TimeoutException();
+                throw;
             }
         }
     }

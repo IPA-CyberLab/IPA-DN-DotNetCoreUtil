@@ -714,6 +714,91 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         public static CancellationToken CurrentTaskVmGracefulCancel => (CancellationToken)ThreadData.CurrentThreadData.DataList["taskvm_current_graceful_cancel"];
+
+        // 何らかのタスクをタイムアウトおよびキャンセル付きで実施する
+        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<Task<TResult>> proc, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        {
+            if (timeout < 0) timeout = Timeout.Infinite;
+            if (timeout == 0) throw new TimeoutException("timeout == 0");
+
+            List<Task> wait_tasks = new List<Task>();
+            Task timeout_task = null;
+            CancellationTokenSource timeout_cts = null;
+
+            if (timeout != Timeout.Infinite)
+            {
+                timeout_cts = new CancellationTokenSource();
+                timeout_task = Task.Delay(timeout, timeout_cts.Token);
+
+                wait_tasks.Add(timeout_task);
+            }
+
+            try
+            {
+                if (cancel.CanBeCanceled)
+                {
+                    cancel.ThrowIfCancellationRequested();
+
+                    wait_tasks.Add(Task.Delay(Timeout.Infinite, cancel));
+                }
+
+                foreach (CancellationToken c in cancel_tokens)
+                {
+                    if (c.CanBeCanceled)
+                    {
+                        c.ThrowIfCancellationRequested();
+
+                        wait_tasks.Add(Task.Delay(Timeout.Infinite, c));
+                    }
+                }
+
+                Task<TResult> proc_task = proc();
+
+                if (proc_task.IsCompleted)
+                {
+                    return proc_task.Result;
+                }
+
+                wait_tasks.Add(proc_task);
+
+                await Task.WhenAny(wait_tasks.ToArray());
+
+                foreach (CancellationToken c in cancel_tokens)
+                {
+                    c.ThrowIfCancellationRequested();
+                }
+
+                cancel.ThrowIfCancellationRequested();
+
+                if (proc_task.IsCompleted)
+                {
+                    return proc_task.Result;
+                }
+
+                throw new TimeoutException();
+            }
+            finally
+            {
+                if (timeout_cts != null)
+                {
+                    try
+                    {
+                        timeout_cts.Cancel();
+                    }
+                    catch
+                    {
+                    }
+                    try
+                    {
+                        timeout_task.Dispose();
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+        }
     }
 
     public class TaskVmAbortException : Exception
