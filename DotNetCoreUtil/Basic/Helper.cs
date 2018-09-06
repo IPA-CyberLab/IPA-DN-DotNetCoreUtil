@@ -293,6 +293,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
                 throw;
             }
         }
+
+        public static void Go(this Task task) { }
     }
 }
 

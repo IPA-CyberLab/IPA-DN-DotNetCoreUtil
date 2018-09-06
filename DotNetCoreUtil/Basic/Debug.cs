@@ -632,7 +632,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             return thread_pool_stat_reporter.CreateOrGet(() =>
             {
-                return new IntervalReporter("ThreadStat", print_proc: () =>
+                return new IntervalReporter("<ThreadStat>", print_proc: () =>
                 {
                     List<string> o = new List<string>();
 
