@@ -604,11 +604,11 @@ namespace IPA.DN.CoreUtil.Basic
 
                     int num_tasks = TaskUtil.GetQueuedTasksCount();
 
+                    o.Add($"Worker Threads: {max_workers - avail_workers} (max: {max_workers})");
+
+                    o.Add($"I/O Ports: {max_ports - avail_ports} (max: {max_ports})");
+
                     o.Add($"Pending Tasks: {num_tasks}");
-
-                    o.Add($"Worker Threads: {max_workers - avail_workers}/{max_workers}");
-
-                    o.Add($"I/O Ports: {max_ports - avail_ports}/{max_ports}");
 
                     return Str.CombineStringArray(o.ToArray(), ", ");
                 });
