@@ -798,7 +798,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             if (g_DebugReportNumCurrentThreads_flag.IsFirstCall)
             {
-                GlobalIntervalReporter.Singleton.ReportRefObject("threads", NumCurrentThreads);
+                GlobalIntervalReporter.Singleton.ReportRefObject("NumThreads", NumCurrentThreads);
             }
         }
 
