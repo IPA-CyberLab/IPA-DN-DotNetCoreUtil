@@ -414,8 +414,14 @@ namespace IPA.DN.CoreUtil.Basic
 
                 double r = (double)diff_value * 1000.0 / (double)span2;
 
-                Dbg.WriteLine($"{this.Name}: {Str.ToStr3((long)r)} / sec");
+                string name = this.Name;
+                string value = $"{Str.ToStr3((long)r)} / sec";
+
+                GlobalIntervalReporter.Singleton.Report(name, value);
+                //Dbg.WriteLine($"{name}: {value}");
             }
+
+            GlobalIntervalReporter.Singleton.Report(this.Name, null);
         }
 
         public void Dispose()
@@ -492,21 +498,23 @@ namespace IPA.DN.CoreUtil.Basic
 
         void print()
         {
-            StringWriter w = new StringWriter();
-            w.WriteLine("-----");
+            List<string> o = new List<string>();
             lock (table)
             {
                 foreach (string name in table.Keys)
                 {
                     var r = table[name];
-                    w.WriteLine($"{name}({r.Value.ver}): {r.Value.value}");
+                    o.Add($"{name}: {r.Value.value}");
                 }
             }
-            Dbg.WriteLine(w.ToString().TrimCrlf());
+            string s = Str.CombineStringArray2(", ", o.ToArray());
+
+            Dbg.WriteLine(s);
         }
 
         void main_thread(object param)
         {
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
             Thread.CurrentThread.IsBackground = true;
             IntervalManager m = new IntervalManager(Interval);
             while (true)
