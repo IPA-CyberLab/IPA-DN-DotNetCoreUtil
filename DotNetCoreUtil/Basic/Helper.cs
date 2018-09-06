@@ -294,7 +294,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             }
         }
 
-        public static void Go(this Task task) { }
+        public static void LaissezFaire(this Task task) { }
     }
 }
 
