@@ -474,7 +474,6 @@ namespace IPA.DN.CoreUtil.Basic
 
         public void ReportRefObject(string name, object ref_obj)
         {
-            if (Dbg.IsDebugMode == false) return;
             name = name.NonNullTrim();
             lock (table2)
             {

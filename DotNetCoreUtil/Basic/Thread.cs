@@ -791,6 +791,17 @@ namespace IPA.DN.CoreUtil.Basic
 
     public class ThreadObj
     {
+        public readonly static RefInt NumCurrentThreads = new RefInt();
+
+        static Once g_DebugReportNumCurrentThreads_flag;
+        public static void DebugReportNumCurrentThreads()
+        {
+            if (g_DebugReportNumCurrentThreads_flag.IsFirstCall)
+            {
+                GlobalIntervalReporter.Singleton.ReportRefObject("threads", NumCurrentThreads);
+            }
+        }
+
         static int defaultStackSize = 100000;
 
         static LocalDataStoreSlot currentObjSlot = Thread.AllocateDataSlot();
@@ -874,6 +885,7 @@ namespace IPA.DN.CoreUtil.Basic
             waitInit = new EventWaitHandle(false, EventResetMode.AutoReset);
             waitEnd = new EventWaitHandle(false, EventResetMode.ManualReset);
             waitInitForUser = new EventWaitHandle(false, EventResetMode.ManualReset);
+            NumCurrentThreads.Increment();
             this.thread = new Thread(new ParameterizedThreadStart(commonThreadProc), stacksize);
             this.thread.Start(this);
             waitInit.WaitOne();
@@ -906,6 +918,7 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 stopped = true;
                 waitEnd.Set();
+                NumCurrentThreads.Decrement();
             }
         }
 
