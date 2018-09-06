@@ -240,14 +240,14 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             }, null);
         }
 
-        public static async Task<byte[]> ReadAsyncWithTimeout(this NetworkStream stream, int max_size = 65536, int? timeout = null, CancellationToken cancel = default(CancellationToken))
+        public static async Task<byte[]> ReadAsyncWithTimeout(this Stream stream, int max_size = 65536, int? timeout = null, CancellationToken cancel = default(CancellationToken))
         {
             byte[] tmp = new byte[max_size];
             int ret = await stream.ReadAsyncWithTimeout(tmp, 0, tmp.Length, timeout, cancel);
             return Util.CopyByte(tmp, 0, ret);
         }
 
-        public static async Task<int> ReadAsyncWithTimeout(this NetworkStream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task<int> ReadAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout == null) timeout = stream.ReadTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
@@ -273,7 +273,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             }
         }
 
-        public static async Task WriteAsyncWithTimeout(this NetworkStream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task WriteAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int ?count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout == null) timeout = stream.WriteTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
