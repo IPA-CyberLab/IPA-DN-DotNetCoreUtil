@@ -462,6 +462,7 @@ namespace IPA.DN.CoreUtil.Basic
     {
         public const int Interval = 1000;
         SortedList<string, Ref<(int ver, string value)>> table = new SortedList<string, Ref<(int ver, string value)>>();
+        SortedList<string, object> table2 = new SortedList<string, object>();
         ThreadObj thread;
 
         public static GlobalIntervalReporter Singleton { get => SingletonFactory.New<GlobalIntervalReporter>(); }
@@ -469,6 +470,25 @@ namespace IPA.DN.CoreUtil.Basic
         public GlobalIntervalReporter()
         {
             thread = new ThreadObj(main_thread);
+        }
+
+        public void ReportRefObject(string name, object ref_obj)
+        {
+            if (Dbg.IsDebugMode == false) return;
+            name = name.NonNullTrim();
+            lock (table2)
+            {
+                if (table2.ContainsKey(name))
+                {
+                    if (ref_obj == null) table2.Remove(name);
+                    table2[name] = ref_obj;
+                }
+                else
+                {
+                    if (ref_obj == null) return;
+                    table2.Add(name, ref_obj);
+                }
+            }
         }
 
         public void Report(string name, object obj)
@@ -505,6 +525,17 @@ namespace IPA.DN.CoreUtil.Basic
                 {
                     var r = table[name];
                     o.Add($"{name}: {r.Value.value}");
+                }
+                foreach (string name in table2.Keys)
+                {
+                    object r = table2[name];
+                    try
+                    {
+                        o.Add($"{name}: {r.ToString()}");
+                    }
+                    catch
+                    {
+                    }
                 }
             }
             string s = Str.CombineStringArray2(", ", o.ToArray());
