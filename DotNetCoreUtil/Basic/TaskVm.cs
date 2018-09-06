@@ -565,6 +565,28 @@ namespace IPA.DN.CoreUtil.Basic
             return "Hello";
         }
 
+        public static int GetQueuedTasksCount()
+        {
+            try
+            {
+                Type t1 = Type.GetType("System.Threading.ThreadPoolGlobals");
+                FieldInfo f1 = t1.GetField("workQueue");
+                object o = f1.GetValue(null);
+                Type t2 = o.GetType();
+                FieldInfo f2 = t2.GetField("workItems", BindingFlags.Instance | BindingFlags.NonPublic);
+                object o2 = f2.GetValue(o);
+                Type t3 = o2.GetType();
+                PropertyInfo f3 = t3.GetProperty("Count");
+                int ret = (int)f3.GetValue(o2);
+
+                return ret;
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
         public static object ConvertTask(object src_task_object, Type old_task_type, Type new_task_type)
         {
             Type src_task_def = typeof(Task<>).MakeGenericType(old_task_type);

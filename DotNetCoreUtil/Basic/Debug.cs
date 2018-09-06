@@ -594,7 +594,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             return thread_pool_stat_reporter.CreateOrGet(() =>
             {
-                return new IntervalReporter("ThreadPool Status", print_proc: () =>
+                return new IntervalReporter("ThreadStat", print_proc: () =>
                 {
                     List<string> o = new List<string>();
 
@@ -602,13 +602,13 @@ namespace IPA.DN.CoreUtil.Basic
                     ThreadPool.GetMaxThreads(out int max_workers, out int max_ports);
                     ThreadPool.GetMinThreads(out int min_workers, out int min_ports);
 
-                    o.Add($"CurrentWorkers: {max_workers - avail_workers}");
-                    o.Add($"Max: {max_workers}");
-                    o.Add($"Min: {min_workers}");
+                    int num_tasks = TaskUtil.GetQueuedTasksCount();
 
-                    o.Add($"CurrentPorts: {max_ports - avail_ports}");
-                    o.Add($"Max: {max_ports}");
-                    o.Add($"Min: {min_ports}");
+                    o.Add($"Pending Tasks: {num_tasks}");
+
+                    o.Add($"Worker Threads: {max_workers - avail_workers}/{max_workers}");
+
+                    o.Add($"I/O Ports: {max_ports - avail_ports}/{max_ports}");
 
                     return Str.CombineStringArray(o.ToArray(), ", ");
                 });
