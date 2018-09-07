@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -7,6 +8,7 @@ using System.Data.SqlTypes;
 using System.Text;
 using System.Configuration;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Web;
@@ -820,9 +822,10 @@ namespace IPA.DN.CoreUtil.Basic
 
         ThreadProc proc;
         Thread thread;
-        EventWaitHandle waitInit;
         EventWaitHandle waitEnd;
+        AsyncManualResetEvent waitEndAsync;
         EventWaitHandle waitInitForUser;
+        AsyncManualResetEvent waitInitForUserAsync;
         public Thread Thread
         {
             get { return thread; }
@@ -882,13 +885,13 @@ namespace IPA.DN.CoreUtil.Basic
             this.proc = threadProc;
             this.userObject = userObject;
             this.index = index;
-            waitInit = new EventWaitHandle(false, EventResetMode.AutoReset);
             waitEnd = new EventWaitHandle(false, EventResetMode.ManualReset);
+            waitEndAsync = new AsyncManualResetEvent();
             waitInitForUser = new EventWaitHandle(false, EventResetMode.ManualReset);
+            waitInitForUserAsync = new AsyncManualResetEvent();
             NumCurrentThreads.Increment();
             this.thread = new Thread(new ParameterizedThreadStart(commonThreadProc), stacksize);
             this.thread.Start(this);
-            waitInit.WaitOne();
         }
 
         public static int DefaultStackSize
@@ -908,8 +911,6 @@ namespace IPA.DN.CoreUtil.Basic
         {
             Thread.SetData(currentObjSlot, this);
 
-            waitInit.Set();
-
             try
             {
                 this.proc(this.userObject);
@@ -917,8 +918,9 @@ namespace IPA.DN.CoreUtil.Basic
             finally
             {
                 stopped = true;
-                waitEnd.Set();
                 NumCurrentThreads.Decrement();
+                waitEnd.Set();
+                waitEndAsync.Set();
             }
         }
 
@@ -933,11 +935,17 @@ namespace IPA.DN.CoreUtil.Basic
         public static void NoticeInited()
         {
             GetCurrentThreadObj().waitInitForUser.Set();
+            GetCurrentThreadObj().waitInitForUserAsync.Set();
         }
 
         public void WaitForInit()
         {
             waitInitForUser.WaitOne();
+        }
+
+        public Task WaitForInitAsync()
+        {
+            return waitInitForUserAsync.WaitAsync();
         }
 
         public void WaitForEnd(int timeout)
@@ -947,6 +955,11 @@ namespace IPA.DN.CoreUtil.Basic
         public void WaitForEnd()
         {
             waitEnd.WaitOne();
+        }
+
+        public Task WaitForEndAsync()
+        {
+            return waitEndAsync.WaitAsync();
         }
 
         public static void Sleep(int millisec)
@@ -967,6 +980,102 @@ namespace IPA.DN.CoreUtil.Basic
         public static void ProcessWorkQueue(ThreadProc thread_proc, int num_worker_threads, object[] tasks)
         {
             WorkerQueuePrivate q = new WorkerQueuePrivate(thread_proc, num_worker_threads, tasks);
+        }
+    }
+
+    public static class StillRunningThreadRegister
+    {
+        public static int RegularWatchInterval = 1 * 1000;
+
+        static ConcurrentDictionary<string, Func<bool>> callbacks_list = new ConcurrentDictionary<string, Func<bool>>();
+
+        static AutoResetEvent ev = new AutoResetEvent(true);
+
+        static StillRunningThreadRegister()
+        {
+            ThreadObj t = new ThreadObj(thread_proc);
+        }
+
+        public static string RegisterRefInt(RefInt r)
+        {
+            return RegisterCallback(() =>
+            {
+                return (r.Value != 0);
+            });
+        }
+
+        public static string RegisterRefBool(RefBool r)
+        {
+            return RegisterCallback(() =>
+            {
+                return r.Value;
+            });
+        }
+
+        public static string RegisterCallback(Func<bool> proc)
+        {
+            string key = Str.NewGuid();
+
+            ManualResetEventSlim ev = new ManualResetEventSlim(false);
+            Once once_flag = new Once();
+
+            callbacks_list[key] = new Func<bool>(() =>
+            {
+                if (once_flag.IsFirstCall)
+                {
+                    ev.Set();
+                }
+                return proc();
+            });
+
+            NotifyStatusChanges();
+
+            ev.Wait();
+
+            return key;
+        }
+
+        public static void Unregister(string key)
+        {
+            callbacks_list.TryRemove(key, out _);
+        }
+
+        public static void NotifyStatusChanges()
+        {
+            ev.Set();
+        }
+
+        static void thread_proc(object param)
+        {
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
+
+            while (true)
+            {
+                var procs = callbacks_list.Values;
+
+                bool prevent = false;
+
+                foreach (var proc in procs)
+                {
+                    bool ret = false;
+                    try
+                    {
+                        ret = proc();
+                    }
+                    catch
+                    {
+                    }
+
+                    if (ret)
+                    {
+                        prevent = true;
+                    }
+                }
+
+                Thread.CurrentThread.IsBackground = !prevent;
+
+                ev.WaitOne(RegularWatchInterval);
+            }
         }
     }
 }

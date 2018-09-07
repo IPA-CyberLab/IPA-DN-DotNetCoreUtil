@@ -189,6 +189,20 @@ namespace IPA.DN.CoreUtil.Basic
         public int Decrement() => Interlocked.Decrement(ref this.Value);
     }
 
+    // RefBool クラス
+    public class RefBool
+    {
+        public RefBool() : this(false) { }
+        public RefBool(bool value)
+        {
+            this.Value = value;
+        }
+        public bool Value;
+        public void Set(bool value) => this.Value = value;
+        public bool Get() => this.Value;
+        public override string ToString() => this.Value.ToString();
+    }
+
     // Ref クラス
     public class Ref<T>
     {
