@@ -23,6 +23,8 @@ using System.Net.Mime;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
+using IPA.DN.CoreUtil.Helper.Basic;
+
 #pragma warning disable 0618
 
 namespace IPA.DN.CoreUtil.Basic
@@ -833,33 +835,52 @@ namespace IPA.DN.CoreUtil.Basic
         object userObject;
         int index;
         public int Index { get => this.index; }
+        public string Name { get; }
 
-        public ThreadObj(ThreadProc threadProc)
+        public ThreadObj(ThreadProc threadProc, object userObject = null, int stacksize = 0, int index = 0, string name = null)
         {
-            init(threadProc, null, 0, 0);
+            if (stacksize == 0)
+            {
+                stacksize = defaultStackSize;
+            }
+
+            if (name.IsEmpty())
+            {
+                try
+                {
+                    name = threadProc.Target.ToString() + "." + threadProc.Method.Name + "()";
+                }
+                catch
+                {
+                    try
+                    {
+                        name = threadProc.Method.DeclaringType + "." + threadProc.Method.Name + "()";
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            this.Name = name;
+
+            this.proc = threadProc;
+            this.userObject = userObject;
+            this.index = index;
+            waitEnd = new EventWaitHandle(false, EventResetMode.ManualReset);
+            waitEndAsync = new AsyncManualResetEvent();
+            waitInitForUser = new EventWaitHandle(false, EventResetMode.ManualReset);
+            waitInitForUserAsync = new AsyncManualResetEvent();
+            NumCurrentThreads.Increment();
+            this.thread = new Thread(new ParameterizedThreadStart(commonThreadProc), stacksize);
+            if (this.Name.IsFilled())
+            {
+                this.thread.Name = this.Name;
+            }
+            this.thread.Start(this);
         }
 
-        public ThreadObj(ThreadProc threadProc, int stacksize)
-        {
-            init(threadProc, null, stacksize, 0);
-        }
-
-        public ThreadObj(ThreadProc threadProc, object userObject)
-        {
-            init(threadProc, userObject, 0, 0);
-        }
-
-        public ThreadObj(ThreadProc threadProc, object userObject, int stacksize)
-        {
-            init(threadProc, userObject, stacksize, 0);
-        }
-
-        public ThreadObj(ThreadProc threadProc, object userObject, int stacksize, int index)
-        {
-            init(threadProc, userObject, stacksize, index);
-        }
-
-        public static ThreadObj Start(ThreadProc proc, object param)
+        public static ThreadObj Start(ThreadProc proc, object param = null)
         {
             return new ThreadObj(proc, param);
         }
@@ -873,25 +894,6 @@ namespace IPA.DN.CoreUtil.Basic
                 ret.Add(t);
             }
             return ret.ToArray();
-        }
-
-        void init(ThreadProc threadProc, object userObject, int stacksize, int index)
-        {
-            if (stacksize == 0)
-            {
-                stacksize = defaultStackSize;
-            }
-
-            this.proc = threadProc;
-            this.userObject = userObject;
-            this.index = index;
-            waitEnd = new EventWaitHandle(false, EventResetMode.ManualReset);
-            waitEndAsync = new AsyncManualResetEvent();
-            waitInitForUser = new EventWaitHandle(false, EventResetMode.ManualReset);
-            waitInitForUserAsync = new AsyncManualResetEvent();
-            NumCurrentThreads.Increment();
-            this.thread = new Thread(new ParameterizedThreadStart(commonThreadProc), stacksize);
-            this.thread.Start(this);
         }
 
         public static int DefaultStackSize
