@@ -25,19 +25,20 @@ namespace IPA.DN.CoreUtil.Basic
     {
         internal Stopwatch Sw;
         internal long Freq;
-        internal DateTime FirstDateTime;
+        internal DateTimeOffset FirstDateTimeOffset;
 
         public TimeHelper()
         {
-            FirstDateTime = DateTime.Now;
+            FirstDateTimeOffset = DateTimeOffset.Now;
+            //FirstDateTimeOffset = 
             Sw = new Stopwatch();
             Sw.Start();
             Freq = Stopwatch.Frequency;
         }
 
-        public DateTime GetDateTime()
+        public DateTimeOffset GetDateTimeOffset()
         {
-            return FirstDateTime + this.Sw.Elapsed;
+            return FirstDateTimeOffset + this.Sw.Elapsed;
         }
     }
 
@@ -86,11 +87,28 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        static public DateTime NowDateTime
+        static public DateTime NowDateTimeLocal
         {
             get
             {
-                return h.GetDateTime();
+                return h.GetDateTimeOffset().LocalDateTime;
+            }
+        }
+
+
+        static public DateTime NowDateTimeUtc
+        {
+            get
+            {
+                return h.GetDateTimeOffset().UtcDateTime;
+            }
+        }
+
+        static public DateTimeOffset NowDateTimeOffset
+        {
+            get
+            {
+                return h.GetDateTimeOffset();
             }
         }
     }

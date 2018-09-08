@@ -1105,7 +1105,7 @@ namespace DotNetCoreUtilTestApp
                     }
                 }
 
-                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
+                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTimeLocal.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
             }
         }
 
