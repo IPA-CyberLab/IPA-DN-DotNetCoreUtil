@@ -96,6 +96,7 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         public DateTime DateTime => (DateTime)Object;
+        public DateTimeOffset DateTimeOffset => (DateTimeOffset)Object;
         public string String => (string)Object;
         public double Double => (double)Object;
         public int Int => (int)Object;
@@ -523,8 +524,15 @@ namespace IPA.DN.CoreUtil.Basic
                 p.Value = d;
                 return p;
             }
+            else if (t == typeof(System.DateTimeOffset))
+            {
+                DateTimeOffset d = (DateTimeOffset)o;
+                SqlParameter p = new SqlParameter(name, SqlDbType.DateTimeOffset);
+                p.Value = d;
+                return p;
+            }
 
-            throw new ArgumentException();
+            throw new ArgumentException($"Unsupported type: '{t.Name}'");
         }
 
         // リソースの解放
@@ -684,6 +692,14 @@ namespace IPA.DN.CoreUtil.Basic
                             ok = false;
                         }
                     }
+                    else if (ptype == typeof(DateTimeOffset))
+                    {
+                        DateTimeOffset d = (DateTimeOffset)p.GetValue(src);
+                        if (Util.IsZero(d))
+                        {
+                            ok = false;
+                        }
+                    }
                     else if (ptype == typeof(int))
                     {
                         int i = (int)p.GetValue(src);
@@ -743,6 +759,11 @@ namespace IPA.DN.CoreUtil.Basic
                     {
                         DateTime d = (DateTime)p.GetValue(obj);
                         if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeValue);
+                    }
+                    else if (ptype == typeof(DateTimeOffset))
+                    {
+                        DateTimeOffset d = (DateTimeOffset)p.GetValue(obj);
+                        if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeOffsetValue);
                     }
                 }
             }

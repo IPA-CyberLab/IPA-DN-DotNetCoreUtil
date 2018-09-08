@@ -115,7 +115,7 @@ namespace DotNetCoreUtilTestApp
 
         static void Main(string[] args)
         {
-            "Test Program".Print();
+            $"Test Program {DateTimeOffset.Now.ToDtStr()}".Print();
 
             Dbg.SetDebugMode();
 
@@ -128,7 +128,7 @@ namespace DotNetCoreUtilTestApp
 
             //async_test();
 
-            //db_test();
+            db_test();
 
             //DbTest.db_test();
 
@@ -157,7 +157,7 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            jsonrpc_client_server_both_test();
+            //jsonrpc_client_server_both_test();
 
             //http_client_test();
 
@@ -1036,19 +1036,38 @@ namespace DotNetCoreUtilTestApp
             o.ObjectToJson(true).Print();
         }
 
+        public class T1
+        {
+            public DateTimeOffset Dt { get; set; }
+        }
+
+        public class T2
+        {
+            public DateTime Dt { get; set; }
+        }
+
         public static void db_test()
         {
             Cfg<DBTestSettings> cfg = new Cfg<DBTestSettings>();
 
             Database db = new Database(cfg.ConfigSafe.DBConnectStr);
 
+            DateTimeOffset now = DateTimeOffset.Now;
+
             db.Tran(() =>
             {
-                db.Query("select * from test");
+                var d = now;
 
-                Data d = db.ReadAllData();
+                db.QueryWithNoReturn("insert into dttest (dt1, dt2) values (@, @)", d, d);
 
-                Json.Serialize(d).Print();
+                db.Query("select * from dttest order by dt1");
+
+                var data = db.ReadAllData();
+
+                foreach (var r in data.RowList)
+                {
+                    Con.WriteLine($"{r["dt1"].DateTimeOffset}, {r["dt2"].DateTime}");
+                }
 
                 return true;
             });

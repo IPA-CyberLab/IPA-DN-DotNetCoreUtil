@@ -253,6 +253,7 @@ namespace IPA.DN.CoreUtil.Basic
     public static class Util
     {
         public static readonly DateTime ZeroDateTimeValue = new DateTime(1800, 1, 1);
+        public static readonly DateTimeOffset ZeroDateTimeOffsetValue = new DateTimeOffset(1800, 1, 1, 0, 0, 0, new TimeSpan(0));
 
         // サイズ定数
         public const int SizeOfInt32 = 4;
@@ -734,10 +735,24 @@ namespace IPA.DN.CoreUtil.Basic
             return dt;
         }
 
+        public static DateTimeOffset NormalizeDateTime(DateTimeOffset dt)
+        {
+            if (IsZero(dt)) return Util.ZeroDateTimeOffsetValue;
+            return dt;
+        }
+
         // DateTime がゼロかどうか検査する
         public static bool IsZero(DateTime dt)
         {
-            if (dt.Ticks == 0 || dt == Util.ZeroDateTimeValue)
+            if (dt.Ticks == 0 || dt == Util.ZeroDateTimeValue || dt.ToLocalTime() <= Util.ZeroDateTimeValue || dt.ToUniversalTime() <= Util.ZeroDateTimeValue)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool IsZero(DateTimeOffset dt)
+        {
+            if (dt.Ticks == 0 || dt <= Util.ZeroDateTimeValue || dt.UtcDateTime <= Util.ZeroDateTimeValue || dt.LocalDateTime <= Util.ZeroDateTimeValue)
             {
                 return true;
             }
