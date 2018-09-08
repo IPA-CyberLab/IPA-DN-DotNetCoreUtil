@@ -1663,16 +1663,6 @@ namespace IPA.DN.CoreUtil.Basic
         {
             get { return recvNum; }
         }
-        internal Cert remoteCert;
-        public Cert RemoteCert
-        {
-            get { return remoteCert; }
-        }
-        internal Cert localCert;
-        public Cert LocalCert
-        {
-            get { return localCert; }
-        }
         internal bool ignoreRecvErr;
         public bool IgnoreLastRecvError
         {
@@ -1705,8 +1695,6 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
         internal Event hEvent;
-        internal RC4 sendKey, recvKey;
-        internal Fifo sendFifo, recvFifo;
 
         public SockEvent SockEvent = null;
 
@@ -1954,155 +1942,6 @@ namespace IPA.DN.CoreUtil.Basic
             return sock;
         }
 
-        // セキュア通信をクライアントモードで開始する
-        public void StartSecureClient()
-        {
-            if (this.connected == false || this.socket == null || this.listenMode != false || this.type != SockType.Tcp || this.secureMode)
-            {
-                throw new InvalidOperationException();
-            }
-
-            Pack p = new Pack();
-            // 乱数を送信
-            byte[] rand = Secure.Rand(Secure.Rand32() % 64 + 64);
-            p.AddData("Rand", rand);
-            p.AddStr("Protocol", SecureProtocolKey);
-            if (SendPack(p) == false)
-            {
-                throw new IOException();
-            }
-
-            // 結果を受信
-            p = RecvPack(65536);
-            if (p == null)
-            {
-                throw new IOException();
-            }
-
-            string protocol = p.GetStr("Protocol");
-            if (Str.StrCmpi(protocol, SecureProtocolKey) == false)
-            {
-                throw new IOException();
-            }
-
-            Cert cert = p.GetCert("Cert");
-            byte[] randSign = p.GetData("RandSign");
-            if (cert == null || randSign == null)
-            {
-                throw new IOException();
-            }
-
-            // サーバー証明書で署名データを確認する
-            if (cert.RsaPublicKey.VerifyData(rand, randSign) == false)
-            {
-                throw new System.Security.SecurityException();
-            }
-
-            // 共通鍵を作成して送信
-            byte[] sendKeyData = Secure.Rand(20);
-            byte[] recvKeyData = Secure.Rand(20);
-
-            byte[] sendKeyDataEncrypted = cert.RsaPublicKey.Encrypt(sendKeyData);
-            byte[] recvKeyDataEncrypted = cert.RsaPublicKey.Encrypt(recvKeyData);
-
-            p = new Pack();
-            p.AddData("ServerToClientKeyEncrypted", recvKeyDataEncrypted);
-            p.AddData("ClientToServerKeyEncrypted", sendKeyDataEncrypted);
-            if (SendPack(p) == false)
-            {
-                throw new IOException();
-            }
-
-            // 両方の鍵で乱数を暗号化する
-            sendKey = new RC4(sendKeyData);
-            recvKey = new RC4(recvKeyData);
-            sendKey.Encrypt(rand);
-            recvKey.Encrypt(rand);
-
-            this.localCert = null;
-            this.remoteCert = cert;
-
-            this.secureMode = true;
-
-            sendFifo = new Fifo();
-            recvFifo = new Fifo();
-        }
-
-        // セキュア通信をサーバーモードで開始する
-        public void StartSecureServer(Cert cert, Rsa key)
-        {
-            if (this.connected == false || this.socket == null || this.listenMode != false || this.type != SockType.Tcp || this.secureMode)
-            {
-                throw new InvalidOperationException();
-            }
-
-            // パケットを受信
-            Pack p = RecvPack(65536);
-            if (p == null)
-            {
-                throw new IOException();
-            }
-
-            // セキュア通信を開始するかどうか確認する
-            string protocol = p.GetStr("Protocol");
-            if (Str.StrCmpi(protocol, SecureProtocolKey) == false)
-            {
-                throw new IOException();
-            }
-
-            // 乱数を取得する
-            byte[] rand = p.GetData("Rand");
-            if (rand == null)
-            {
-                throw new IOException();
-            }
-
-            // サーバーの証明書を送信する
-            p = new Pack();
-            p.AddStr("Protocol", SecureProtocolKey);
-            p.AddCert("Cert", cert);
-
-            // 署名データを付加する
-            p.AddData("RandSign", key.SignData(rand));
-            if (SendPack(p) == false)
-            {
-                throw new IOException();
-            }
-
-            // クライアントから共通鍵を受信する
-            p = RecvPack(65536);
-            if (p == null)
-            {
-                throw new IOException();
-            }
-
-            byte[] sendKeyDataEncrypted = p.GetData("ServerToClientKeyEncrypted");
-            byte[] recvKeyDataEncrypted = p.GetData("ClientToServerKeyEncrypted");
-            if (sendKeyDataEncrypted == null || recvKeyDataEncrypted == null)
-            {
-                throw new IOException();
-            }
-
-            // 共通鍵を解読する
-            byte[] sendKeyData = key.Decrypt(sendKeyDataEncrypted);
-            byte[] recvKeyData = key.Decrypt(recvKeyDataEncrypted);
-
-            this.sendKey = new RC4(sendKeyData);
-            this.recvKey = new RC4(recvKeyData);
-
-            // 両方の鍵で乱数を暗号化する
-            sendKey.Encrypt(rand);
-            recvKey.Encrypt(rand);
-
-            this.remoteCert = null;
-            this.localCert = cert;
-
-            this.secureMode = true;
-
-            sendFifo = new Fifo();
-            recvFifo = new Fifo();
-        }
-
         // Pack の送信
         public bool SendPack(Pack p)
         {
@@ -2185,12 +2024,8 @@ namespace IPA.DN.CoreUtil.Basic
         // TCP すべて受信
         public byte[] RecvAll(int size)
         {
-            return RecvAll(size, this.secureMode);
-        }
-        public byte[] RecvAll(int size, bool secure)
-        {
             byte[] data = new byte[size];
-            bool ret = RecvAll(data, secure);
+            bool ret = RecvAll(data);
             if (ret)
             {
                 return data;
@@ -2202,25 +2037,13 @@ namespace IPA.DN.CoreUtil.Basic
         }
         public bool RecvAll(byte[] data)
         {
-            return RecvAll(data, this.secureMode);
-        }
-        public bool RecvAll(byte[] data, bool secure)
-        {
-            return RecvAll(data, data.Length, secure);
+            return RecvAll(data, 0, data.Length);
         }
         public bool RecvAll(byte[] data, int size)
         {
-            return RecvAll(data, size, this.secureMode);
-        }
-        public bool RecvAll(byte[] data, int size, bool secure)
-        {
-            return RecvAll(data, 0, size, secure);
+            return RecvAll(data, 0, size);
         }
         public bool RecvAll(byte[] data, int offset, int size)
-        {
-            return RecvAll(data, offset, size, this.secureMode);
-        }
-        public bool RecvAll(byte[] data, int offset, int size, bool secure)
         {
             int recv_size, sz, ret;
             if (size == 0)
@@ -2238,7 +2061,7 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 sz = size - recv_size;
 
-                ret = Recv(data, offset + recv_size, sz, secure);
+                ret = Recv(data, offset + recv_size, sz);
                 if (ret <= 0)
                 {
                     return false;
@@ -2255,12 +2078,8 @@ namespace IPA.DN.CoreUtil.Basic
         // TCP 受信
         public byte[] Recv(int size)
         {
-            return Recv(size, this.secureMode);
-        }
-        public byte[] Recv(int size, bool secure)
-        {
             byte[] data = new byte[size];
-            int ret = Recv(data, secure);
+            int ret = Recv(data);
             if (ret >= 1)
             {
                 Array.Resize<byte>(ref data, ret);
@@ -2277,25 +2096,13 @@ namespace IPA.DN.CoreUtil.Basic
         }
         public int Recv(byte[] data)
         {
-            return Recv(data, this.secureMode);
-        }
-        public int Recv(byte[] data, bool secure)
-        {
-            return Recv(data, data.Length, secure);
+            return Recv(data, 0, data.Length);
         }
         public int Recv(byte[] data, int size)
         {
-            return Recv(data, size, this.secureMode);
-        }
-        public int Recv(byte[] data, int size, bool secure)
-        {
-            return Recv(data, 0, size, secure);
+            return Recv(data, 0, size);
         }
         public int Recv(byte[] data, int offset, int size)
-        {
-            return Recv(data, offset, size, this.secureMode);
-        }
-        public int Recv(byte[] data, int offset, int size, bool secure)
         {
             Socket s;
 
@@ -2303,29 +2110,6 @@ namespace IPA.DN.CoreUtil.Basic
                 this.socket == null)
             {
                 return 0;
-            }
-            if (secure && this.secureMode == false)
-            {
-                return 0;
-            }
-
-            if (secure)
-            {
-                byte[] tmp = Recv(size, false);
-                if (tmp == null)
-                {
-                    return 0;
-                }
-                if (tmp.Length == 0)
-                {
-                    return SockLater;
-                }
-
-                byte[] srcData = recvKey.Decrypt(tmp);
-
-                Util.CopyByte(data, offset, srcData, 0, srcData.Length);
-
-                return srcData.Length;
             }
 
             // 受信
@@ -2374,25 +2158,13 @@ namespace IPA.DN.CoreUtil.Basic
         // TCP 送信
         public int Send(byte[] data)
         {
-            return Send(data, data.Length, this.secureMode);
-        }
-        public int Send(byte[] data, bool secure)
-        {
-            return Send(data, data.Length, secure);
+            return Send(data, 0, data.Length);
         }
         public int Send(byte[] data, int size)
         {
-            return Send(data, size, this.secureMode);
-        }
-        public int Send(byte[] data, int size, bool secure)
-        {
-            return Send(data, 0, size, secure);
+            return Send(data, 0, size);
         }
         public int Send(byte[] data, int offset, int size)
-        {
-            return Send(data, offset, size, this.secureMode);
-        }
-        public int Send(byte[] data, int offset, int size, bool secure)
         {
             Socket s;
             size = Math.Min(size, MaxSendBufMemSize);
@@ -2400,28 +2172,6 @@ namespace IPA.DN.CoreUtil.Basic
                 this.socket == null)
             {
                 return 0;
-            }
-            if (secure && this.secureMode == false)
-            {
-                return 0;
-            }
-
-            if (secure)
-            {
-                RC4 rc4 = (RC4)sendKey.Clone();
-
-                byte[] encData = rc4.Encrypt(data, offset, size);
-
-                int r = Send(encData, false);
-
-                if (r <= 0)
-                {
-                    return r;
-                }
-
-                sendKey.SkipEncrypt(r);
-
-                return r;
             }
 
             // 送信
@@ -2475,25 +2225,13 @@ namespace IPA.DN.CoreUtil.Basic
         // TCP すべて送信
         public bool SendAll(byte[] data)
         {
-            return SendAll(data, data.Length, this.secureMode);
-        }
-        public bool SendAll(byte[] data, bool secure)
-        {
-            return SendAll(data, data.Length, secure);
+            return SendAll(data, 0, data.Length);
         }
         public bool SendAll(byte[] data, int size)
         {
-            return SendAll(data, size, this.secureMode);
-        }
-        public bool SendAll(byte[] data, int size, bool secure)
-        {
-            return SendAll(data, 0, size, secure);
+            return SendAll(data, 0, size);
         }
         public bool SendAll(byte[] data, int offset, int size)
-        {
-            return SendAll(data, offset, size, this.secureMode);
-        }
-        public bool SendAll(byte[] data, int offset, int size, bool secure)
         {
             if (this.asyncMode)
             {
@@ -2508,7 +2246,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             while (true)
             {
-                int ret = Send(data, offset + sent_size, size - sent_size, secure);
+                int ret = Send(data, offset + sent_size, size - sent_size);
                 if (ret <= 0)
                 {
                     return false;
@@ -2522,11 +2260,7 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // TCP 接続受諾
-        public Sock Accept()
-        {
-            return Accept(false);
-        }
-        public Sock Accept(bool getHostName)
+        public Sock Accept(bool getHostName = false)
         {
             if (this.listenMode == false || this.type != SockType.Tcp || this.serverMode == false)
             {
@@ -2594,15 +2328,7 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // TCP 待ち受け
-        public static Sock Listen(int port)
-        {
-            return Listen(port, false);
-        }
-        public static Sock Listen(int port, bool localOnly)
-        {
-            return Listen(port, localOnly, false);
-        }
-        public static Sock Listen(int port, bool localOnly, bool ipv6)
+        public static Sock Listen(int port, bool localOnly = false, bool ipv6 = false)
         {
             Socket s;
 
@@ -2641,19 +2367,7 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // TCP 接続
-        public static Sock Connect(string hostName, int port)
-        {
-            return Connect(hostName, port, 0);
-        }
-        public static Sock Connect(string hostName, int port, int timeout)
-        {
-            return Connect(hostName, port, timeout, false);
-        }
-        public static Sock Connect(string hostName, int port, int timeout, bool use46)
-        {
-            return Connect(hostName, port, timeout, use46, false);
-        }
-        public static Sock Connect(string hostName, int port, int timeout, bool use46, bool no_cache)
+        public static Sock Connect(string hostName, int port, int timeout = 0, bool use46 = false, bool no_cache = false)
         {
             if (timeout == 0)
             {
