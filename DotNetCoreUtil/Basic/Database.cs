@@ -23,6 +23,7 @@ using System.Web;
 using System.IO;
 using System.Reflection;
 using System.Drawing;
+using Dapper;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
@@ -95,7 +96,8 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public DateTime DateTime => (DateTime)Object;
+        public DateTime DateTime => ((DateTime)Object).NormalizeDateTime();
+        public DateTimeOffset DateTimeOffset => ((DateTimeOffset)Object).NormalizeDateTimeOffset();
         public string String => (string)Object;
         public double Double => (double)Object;
         public int Int => (int)Object;
@@ -267,7 +269,8 @@ namespace IPA.DN.CoreUtil.Basic
         SqlConnection con = null;
         SqlTransaction tran = null;
         SqlDataReader reader = null;
-        public int CommandTimeout = 30;
+        public const int DefaultCommandTimeoutSecs = 60;
+        public int CommandTimeoutSecs { get; set; } = DefaultCommandTimeoutSecs;
 
         public static readonly DeadlockRetryConfig DefaultDeadlockRetryConfig = new DeadlockRetryConfig(4000, 10);
 
@@ -309,10 +312,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             using (SqlBulkCopy bc = new SqlBulkCopy(this.con, SqlBulkCopyOptions.Default, tran))
             {
-                if (CommandTimeout != 30)
-                {
-                    bc.BulkCopyTimeout = CommandTimeout;
-                }
+                bc.BulkCopyTimeout = CommandTimeoutSecs;
                 bc.DestinationTableName = tableName;
                 bc.WriteToServer(dt);
             }
@@ -441,10 +441,7 @@ namespace IPA.DN.CoreUtil.Basic
                 cmd.Parameters.Add(p);
             }
 
-            if (this.CommandTimeout != 30)
-            {
-                cmd.CommandTimeout = this.CommandTimeout;
-            }
+            cmd.CommandTimeout = this.CommandTimeoutSecs;
 
             return cmd;
         }
@@ -519,12 +516,21 @@ namespace IPA.DN.CoreUtil.Basic
             else if (t == typeof(System.DateTime))
             {
                 DateTime d = (DateTime)o;
+                d = d.NormalizeDateTime();
                 SqlParameter p = new SqlParameter(name, SqlDbType.DateTime);
                 p.Value = d;
                 return p;
             }
+            else if (t == typeof(System.DateTimeOffset))
+            {
+                DateTimeOffset d = (DateTimeOffset)o;
+                d = d.NormalizeDateTimeOffset();
+                SqlParameter p = new SqlParameter(name, SqlDbType.DateTimeOffset);
+                p.Value = d;
+                return p;
+            }
 
-            throw new ArgumentException();
+            throw new ArgumentException($"Unsupported type: '{t.Name}'");
         }
 
         // リソースの解放
@@ -684,6 +690,14 @@ namespace IPA.DN.CoreUtil.Basic
                             ok = false;
                         }
                     }
+                    else if (ptype == typeof(DateTimeOffset))
+                    {
+                        DateTimeOffset d = (DateTimeOffset)p.GetValue(src);
+                        if (Util.IsZero(d))
+                        {
+                            ok = false;
+                        }
+                    }
                     else if (ptype == typeof(int))
                     {
                         int i = (int)p.GetValue(src);
@@ -742,7 +756,12 @@ namespace IPA.DN.CoreUtil.Basic
                     else if (ptype == typeof(DateTime))
                     {
                         DateTime d = (DateTime)p.GetValue(obj);
-                        if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeValue);
+                        if (d.IsZeroDateTime()) p.SetValue(obj, Util.ZeroDateTimeValue);
+                    }
+                    else if (ptype == typeof(DateTimeOffset))
+                    {
+                        DateTimeOffset d = (DateTimeOffset)p.GetValue(obj);
+                        if (d.IsZeroDateTime()) p.SetValue(obj, Util.ZeroDateTimeOffsetValue);
                     }
                 }
             }

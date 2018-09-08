@@ -57,14 +57,14 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 get
                 {
-                    lastAccessedDateTime = Time.NowDateTime;
+                    lastAccessedDateTime = Time.NowDateTimeUtc;
                     return this.value;
                 }
                 set
                 {
                     this.value = value;
-                    updatedDateTime = Time.NowDateTime;
-                    lastAccessedDateTime = Time.NowDateTime;
+                    updatedDateTime = Time.NowDateTimeUtc;
+                    lastAccessedDateTime = Time.NowDateTimeUtc;
                 }
             }
 
@@ -72,7 +72,7 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 this.key = key;
                 this.value = value;
-                lastAccessedDateTime = updatedDateTime = createdDateTime = Time.NowDateTime;
+                lastAccessedDateTime = updatedDateTime = createdDateTime = Time.NowDateTimeUtc;
             }
 
             public override int GetHashCode()
@@ -205,7 +205,7 @@ namespace IPA.DN.CoreUtil.Basic
             lock (lockObj)
             {
                 List<Entry> o = new List<Entry>();
-                DateTime expire = Time.NowDateTime - this.expireSpan;
+                DateTime expire = Time.NowDateTimeUtc - this.expireSpan;
 
                 foreach (Entry e in list.Values)
                 {

@@ -2779,11 +2779,11 @@ namespace IPA.DN.CoreUtil.Basic
 
                 using (Ping p = new Ping())
                 {
-                    DateTime startDateTime = Time.NowDateTime;
+                    DateTime startDateTime = Time.NowDateTimeUtc;
 
                     PingReply ret = p.Send(target, timeout, data);
 
-                    DateTime endDateTime = Time.NowDateTime;
+                    DateTime endDateTime = Time.NowDateTimeUtc;
 
                     TimeSpan span = endDateTime - startDateTime;
 

@@ -4350,6 +4350,42 @@ namespace IPA.DN.CoreUtil.Basic
             return ret;
         }
 
+        public static string DateTimeToDtstr(DateTimeOffset dt, bool with_msecs = false, DtstrOption option = DtstrOption.All, bool with_nanosecs = false)
+        {
+            long ticks = dt.Ticks % 10000000;
+            if (ticks >= 9999999) ticks = 9999999;
+
+            if (dt.IsZeroDateTime())
+            {
+                return "";
+            }
+
+            string msecStr = "";
+            if (with_nanosecs)
+            {
+                msecStr = ((decimal)ticks / (decimal)10000000).ToString(".0000000");
+            }
+            else if (with_msecs)
+            {
+                msecStr = ((decimal)ticks / (decimal)10000000).ToString(".000");
+            }
+
+            string ret = dt.ToString("yyyy/MM/dd HH:mm:ss") + ((with_msecs || with_nanosecs) ? "." + msecStr.Split('.')[1] : "");
+
+            if (option == DtstrOption.DateOnly)
+            {
+                ret = ret.ToToken(" ")[0];
+            }
+            else if (option == DtstrOption.TimeOnly)
+            {
+                ret = ret.ToToken(" ")[1];
+            }
+
+            ret += " " + dt.ToString("%K");
+
+            return ret;
+        }
+
         // 文字列置換
         public static string Base64ToSafe64(string str)
         {
