@@ -176,7 +176,7 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static bool IsZeroDateTime(this DateTimeOffset dt) => Util.IsZero(dt);
 
         public static DateTime NormalizeDateTime(this DateTime dt) => Util.NormalizeDateTime(dt);
-        public static DateTimeOffset NormalizeDateTime(this DateTimeOffset dt) => Util.NormalizeDateTime(dt);
+        public static DateTimeOffset NormalizeDateTimeOffset(this DateTimeOffset dt) => Util.NormalizeDateTime(dt);
 
         public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth, bool compact = false) => Json.Serialize(obj, include_null, escape_html, max_depth, compact);
         public static T JsonToObject<T>(this string str, bool include_null = false, int? max_depth = Json.DefaultMaxDepth) => Json.Deserialize<T>(str, include_null, max_depth);

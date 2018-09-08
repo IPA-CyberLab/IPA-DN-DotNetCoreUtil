@@ -95,8 +95,8 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public DateTime DateTime => (DateTime)Object;
-        public DateTimeOffset DateTimeOffset => (DateTimeOffset)Object;
+        public DateTime DateTime => ((DateTime)Object).NormalizeDateTime();
+        public DateTimeOffset DateTimeOffset => ((DateTimeOffset)Object).NormalizeDateTimeOffset();
         public string String => (string)Object;
         public double Double => (double)Object;
         public int Int => (int)Object;
@@ -520,6 +520,7 @@ namespace IPA.DN.CoreUtil.Basic
             else if (t == typeof(System.DateTime))
             {
                 DateTime d = (DateTime)o;
+                d = d.NormalizeDateTime();
                 SqlParameter p = new SqlParameter(name, SqlDbType.DateTime);
                 p.Value = d;
                 return p;
@@ -527,6 +528,7 @@ namespace IPA.DN.CoreUtil.Basic
             else if (t == typeof(System.DateTimeOffset))
             {
                 DateTimeOffset d = (DateTimeOffset)o;
+                d = d.NormalizeDateTimeOffset();
                 SqlParameter p = new SqlParameter(name, SqlDbType.DateTimeOffset);
                 p.Value = d;
                 return p;
@@ -758,12 +760,12 @@ namespace IPA.DN.CoreUtil.Basic
                     else if (ptype == typeof(DateTime))
                     {
                         DateTime d = (DateTime)p.GetValue(obj);
-                        if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeValue);
+                        if (d.IsZeroDateTime()) p.SetValue(obj, Util.ZeroDateTimeValue);
                     }
                     else if (ptype == typeof(DateTimeOffset))
                     {
                         DateTimeOffset d = (DateTimeOffset)p.GetValue(obj);
-                        if (d.Ticks == 0) p.SetValue(obj, Util.ZeroDateTimeOffsetValue);
+                        if (d.IsZeroDateTime()) p.SetValue(obj, Util.ZeroDateTimeOffsetValue);
                     }
                 }
             }
