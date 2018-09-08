@@ -1089,7 +1089,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             if (a.AddressFamily != b.AddressFamily)
             {
-                throw new ArgumentException("a.AddressFamily != b.AddressFamily");
+                return false;
             }
 
             return Util.CompareByte(a.GetAddressBytes(), b.GetAddressBytes());
@@ -1104,7 +1104,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             if (a.AddressFamily != b.AddressFamily)
             {
-                throw new ArgumentException("a.AddressFamily != b.AddressFamily");
+                return a.AddressFamily.CompareTo(b.AddressFamily);
             }
 
             return Util.CompareByteRetInt(a.GetAddressBytes(), b.GetAddressBytes());
