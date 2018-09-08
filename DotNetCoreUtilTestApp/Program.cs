@@ -56,6 +56,8 @@ using YamlDotNet.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Routing;
 
+using Dapper;
+
 #pragma warning disable 162
 
 namespace DotNetCoreUtilTestApp
@@ -1054,11 +1056,15 @@ namespace DotNetCoreUtilTestApp
 
             DateTimeOffset now = DateTimeOffset.Now;
 
+            var d = now;
+            var x = new { dt1 = d, dt2 = d };
+
             db.Tran(() =>
             {
-                var d = now;
 
-                db.QueryWithNoReturn("insert into dttest (dt1, dt2) values (@, @)", d, d);
+                //db.QueryWithNoReturn("insert into dttest (dt1, dt2) values (@, @)", d, d);
+
+                db.Connection.Execute("insert into dttest (dt1, dt2) values (@dt1, @dt2)", new { dt1 = d, dt2 = d }, db.Transaction, db.CommandTimeoutSecs);
 
                 db.Query("select * from dttest order by dt1");
 

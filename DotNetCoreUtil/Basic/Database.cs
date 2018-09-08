@@ -23,6 +23,7 @@ using System.Web;
 using System.IO;
 using System.Reflection;
 using System.Drawing;
+using Dapper;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
@@ -268,7 +269,8 @@ namespace IPA.DN.CoreUtil.Basic
         SqlConnection con = null;
         SqlTransaction tran = null;
         SqlDataReader reader = null;
-        public int CommandTimeout = 30;
+        public const int DefaultCommandTimeoutSecs = 60;
+        public int CommandTimeoutSecs { get; set; } = DefaultCommandTimeoutSecs;
 
         public static readonly DeadlockRetryConfig DefaultDeadlockRetryConfig = new DeadlockRetryConfig(4000, 10);
 
@@ -310,10 +312,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             using (SqlBulkCopy bc = new SqlBulkCopy(this.con, SqlBulkCopyOptions.Default, tran))
             {
-                if (CommandTimeout != 30)
-                {
-                    bc.BulkCopyTimeout = CommandTimeout;
-                }
+                bc.BulkCopyTimeout = CommandTimeoutSecs;
                 bc.DestinationTableName = tableName;
                 bc.WriteToServer(dt);
             }
@@ -442,10 +441,7 @@ namespace IPA.DN.CoreUtil.Basic
                 cmd.Parameters.Add(p);
             }
 
-            if (this.CommandTimeout != 30)
-            {
-                cmd.CommandTimeout = this.CommandTimeout;
-            }
+            cmd.CommandTimeout = this.CommandTimeoutSecs;
 
             return cmd;
         }
