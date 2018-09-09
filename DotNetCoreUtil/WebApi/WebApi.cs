@@ -10,6 +10,7 @@ using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Web;
 using System.IO;
 using System.Net;
@@ -141,6 +142,8 @@ namespace IPA.DN.CoreUtil.WebApi
 
         HttpClientHandler client_handler = new HttpClientHandler();
 
+        public X509CertificateCollection ClientCerts { get => this.client_handler.ClientCertificates; }
+
         public HttpClient Client { get; private set; }
 
         public WebApi()
@@ -246,15 +249,16 @@ namespace IPA.DN.CoreUtil.WebApi
             res.EnsureSuccessStatusCode();
         }
 
-        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, string post_content_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
+        public async Task<WebRet> RequestWithQuery(WebApiMethods method, string url, string post_contents_type = "application/x-www-form-urlencoded", params (string name, string value)[] query_list)
         {
+            if (post_contents_type.IsEmpty()) post_contents_type = "application/x-www-form-urlencoded";
             HttpRequestMessage r = CreateWebRequest(method, url, query_list);
 
             if (method == WebApiMethods.POST || method == WebApiMethods.PUT)
             {
                 string qs = BuildQueryString(query_list);
 
-                r.Content = new StringContent(qs, this.RequestEncoding, post_content_type);
+                r.Content = new StringContent(qs, this.RequestEncoding, post_contents_type);
             }
 
             using (HttpResponseMessage res = await this.Client.SendAsync(r, HttpCompletionOption.ResponseContentRead))

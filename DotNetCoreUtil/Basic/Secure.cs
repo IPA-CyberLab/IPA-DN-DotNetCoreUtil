@@ -504,6 +504,17 @@ namespace IPA.DN.CoreUtil.Basic
 
             return hash.GetHexBytes().IsSameByte(hash2.GetHexBytes());
         }
+
+        // PKCS 証明書の読み込み
+        public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadPkcs12(byte[] data, string password)
+        {
+            password = password.NonNull();
+            return new System.Security.Cryptography.X509Certificates.X509Certificate2(data, password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.MachineKeySet);
+        }
+        public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadPkcs12(string filename, string password)
+        {
+            return LoadPkcs12(IO.ReadFile(filename), password);
+        }
     }
 
     public static class ExeSignChecker
