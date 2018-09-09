@@ -800,7 +800,7 @@ namespace IPA.DN.CoreUtil.Basic
         static Once g_DebugReportNumCurrentThreads_flag;
         public static void DebugReportNumCurrentThreads()
         {
-            if (g_DebugReportNumCurrentThreads_flag.IsFirstCall)
+            if (g_DebugReportNumCurrentThreads_flag.IsFirstCall())
             {
                 GlobalIntervalReporter.Singleton.ReportRefObject("NumThreads", NumCurrentThreads);
             }
@@ -1024,7 +1024,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             callbacks_list[key] = new Func<bool>(() =>
             {
-                if (once_flag.IsFirstCall)
+                if (once_flag.IsFirstCall())
                 {
                     ev.Set();
                 }

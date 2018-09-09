@@ -2824,12 +2824,53 @@ namespace IPA.DN.CoreUtil.Basic
             return str;
         }
 
-        // 文字列の置換
-        public static string ReplaceStr(string str, string oldKeyword, string newKeyword)
+        // 指定した文字列が出現する位置のリストを取得
+        public static int[] FindStringIndexes(string str, string keyword, bool case_sensitive = false)
         {
-            return ReplaceStr(str, oldKeyword, newKeyword, false);
+            List<int> ret = new List<int>();
+
+            int len_string, len_keyword;
+            if (str == null || keyword == null)
+            {
+                return null;
+            }
+
+            int i, j, num;
+
+            len_string = str.Length;
+            len_keyword = keyword.Length;
+
+            i = j = num = 0;
+
+            while (true)
+            {
+                i = SearchStr(str, keyword, i, case_sensitive);
+                if (i == -1)
+                {
+                    break;
+                }
+
+                ret.Add(i);
+
+                num++;
+
+                i += len_keyword;
+                j = i;
+            }
+
+            return ret.ToArray();
         }
-        public static string ReplaceStr(string str, string oldKeyword, string newKeyword, bool caseSensitive)
+
+        // 指定した文字列が出現する回数のカウント
+        public static int GetCountSearchKeywordInStr(string str, string keyword, bool case_sensitive = false)
+        {
+            var r = FindStringIndexes(str, keyword, case_sensitive);
+            if (r == null) return 0;
+            return r.Length;
+        }
+
+        // 文字列の置換
+        public static string ReplaceStr(string str, string oldKeyword, string newKeyword, bool caseSensitive = false)
         {
             int len_string, len_old, len_new;
             if (str == null || oldKeyword == null || newKeyword == null)

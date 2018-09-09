@@ -99,6 +99,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static void WriteTextFile(this string s, string filename, Encoding enc = null, bool writeBom = false) { if (enc == null) enc = Str.Utf8Encoding; Str.WriteTextFile(filename, s, enc, writeBom); }
         public static bool StartsWithMulti(this string str, StringComparison comp, params string[] keys) => Str.StartsWithMulti(str, comp, keys);
         public static int FindStringsMulti(this string str, int findStartIndex, StringComparison comp, out int foundKeyIndex, params string[] keys) => Str.FindStrings(str, findStartIndex, comp, out foundKeyIndex, keys);
+        public static int GetCountSearchKeywordInStr(this string str, string keyword, bool case_sensitive = false) => Str.GetCountSearchKeywordInStr(str, keyword, case_sensitive);
+        public static int[] FindStringIndexes(this string str, string keyword, bool case_sensitive = false) => Str.FindStringIndexes(str, keyword, case_sensitive);
         public static string RemoveSpace(this string str) { Str.RemoveSpace(ref str); return str; }
         public static string Normalize(this string str, bool space = true, bool toHankaku = true, bool toZenkaku = false, bool toZenkakuKana = true) { Str.NormalizeString(ref str, space, toHankaku, toZenkaku, toZenkakuKana); return str; }
         public static string EncodeUrl(this string str, Encoding e) => Str.ToUrl(str, e);

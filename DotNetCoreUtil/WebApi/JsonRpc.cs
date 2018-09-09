@@ -870,7 +870,7 @@ namespace IPA.DN.CoreUtil.WebApi
         Once dispose_once;
         public void Dispose()
         {
-            if (dispose_once.IsFirstCall)
+            if (dispose_once.IsFirstCall())
             {
                 this.WebApi.Dispose();
                 this.WebApi = null;

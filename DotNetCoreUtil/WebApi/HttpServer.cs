@@ -187,7 +187,7 @@ namespace IPA.DN.CoreUtil.WebApi
 
         public async Task StopAsync()
         {
-            if (stop_flag.IsFirstCall)
+            if (stop_flag.IsFirstCall())
             {
                 cancel.TryCancelNoBlock();
             }

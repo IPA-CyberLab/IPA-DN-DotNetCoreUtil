@@ -5,6 +5,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Data;
 using System.Data.Sql;
 using System.Data.SqlClient;
@@ -1173,10 +1174,57 @@ namespace IPA.DN.CoreUtil.Basic
     public struct Once
     {
         volatile private int flag;
-        public bool IsFirstCall => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
+        public bool IsFirstCall() => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
         public bool IsSet => (this.flag != 0);
     }
 
+    // 再試行ヘルパー
+    public class RetryHelper<T>
+    {
+        public int DefaultRetryInterval { get; set; }
+        public int DefaultTryCount { get; set; }
+
+        public RetryHelper(int default_retry_interval, int default_try_count)
+        {
+            this.DefaultRetryInterval = default_retry_interval;
+            this.DefaultTryCount = default_try_count;
+        }
+
+        public async Task<T> RunAsync(Func<Task<T>> proc, int? retry_interval = null, int? try_count = null)
+        {
+            if (retry_interval == null) retry_interval = DefaultRetryInterval;
+            if (try_count == null) try_count = DefaultTryCount;
+            try_count = Math.Max((int)try_count, 1);
+            retry_interval = Math.Max((int)retry_interval, 0);
+
+            Exception first_exception = null;
+
+            for (int i = 0; i < try_count; i++)
+            {
+                try
+                {
+                    if (i >= 1) Dbg.WriteLine("Retrying...");
+                    T ret = await proc();
+                    return ret;
+                }
+                catch (Exception ex)
+                {
+                    if (first_exception == null)
+                    {
+                        first_exception = ex;
+                    }
+
+                    Dbg.WriteLine($"RetryHelper: round {i} error. Retrying in {retry_interval} msecs...");
+
+                    await Task.Delay((int)retry_interval);
+                }
+            }
+
+            throw first_exception;
+        }
+    }
+
+    // シングルトン
     public struct Singleton<T> where T: class
     {
         static object lockobj = new object();

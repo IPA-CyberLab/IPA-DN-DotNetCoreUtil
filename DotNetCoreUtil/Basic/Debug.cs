@@ -426,7 +426,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public void Dispose()
         {
-            if (d.IsFirstCall)
+            if (d.IsFirstCall())
             {
                 halt_flag = true;
                 halt_event.Set();
@@ -619,7 +619,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public void Dispose()
         {
-            if (d.IsFirstCall)
+            if (d.IsFirstCall())
             {
                 halt_flag = true;
                 halt_event.Set();

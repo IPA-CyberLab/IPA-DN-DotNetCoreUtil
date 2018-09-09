@@ -49,6 +49,11 @@ namespace IPA.DN.CoreUtil.Basic
             return this.IPAddress.ToString();
         }
 
+        public virtual string GetZeroPaddingFullString()
+        {
+            throw new NotImplementedException();
+        }
+
         public virtual string GetBinaryString()
         {
             byte[] tmp = this.GetBytes();
@@ -299,6 +304,11 @@ namespace IPA.DN.CoreUtil.Basic
 
             byte[] tmp = FullRoute.BigIntToByte(b1, AddressFamily.InterNetwork);
             return new IPv4Addr(IPAddr.PadBytes(tmp, 4));
+        }
+
+        public override string GetZeroPaddingFullString()
+        {
+            return $"{Bytes[0]:D3}.{Bytes[1]:D3}.{Bytes[2]:D3}.{Bytes[3]:D3}";
         }
     }
 

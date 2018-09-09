@@ -42,7 +42,7 @@ namespace IPA.DN.CoreUtil.WebApi
         public byte[] Data { get; }
         public string MediaType { get; }
         public string CharSet { get; }
-        public Encoding DefaultEncoding { get; } = Str.Utf8Encoding;
+        public Encoding DefaultEncoding { get; } = null;
         public WebApi Api { get; }
 
         public WebRet(WebApi webapi, string url, string contents_type, byte[] data)
@@ -72,6 +72,11 @@ namespace IPA.DN.CoreUtil.WebApi
             }
             catch
             {
+            }
+
+            if (this.DefaultEncoding == null)
+            {
+                this.DefaultEncoding = webapi.RequestEncoding;
             }
 
             this.Data = data.NonNull();
@@ -323,7 +328,7 @@ namespace IPA.DN.CoreUtil.WebApi
         Once dispose_once;
         public void Dispose()
         {
-            if (dispose_once.IsFirstCall)
+            if (dispose_once.IsFirstCall())
             {
                 this.Client.Dispose();
                 this.Client = null;
