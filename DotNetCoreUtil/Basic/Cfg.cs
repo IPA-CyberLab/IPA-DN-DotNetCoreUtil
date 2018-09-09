@@ -104,7 +104,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         void polling_thread(object param)
         {
-            ThreadObj.Current.Thread.IsBackground = true;
+            Thread.CurrentThread.IsBackground = true;
 
             long read_interval = this.ReadPollingIntervalSecs * 1000;
             long update_interval = this.UpdatePollingIntervalSecs * 1000;

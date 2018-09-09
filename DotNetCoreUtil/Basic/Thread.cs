@@ -837,7 +837,7 @@ namespace IPA.DN.CoreUtil.Basic
         public int Index { get => this.index; }
         public string Name { get; }
 
-        public ThreadObj(ThreadProc threadProc, object userObject = null, int stacksize = 0, int index = 0, string name = null)
+        public ThreadObj(ThreadProc threadProc, object userObject = null, int stacksize = 0, int index = 0, string name = null, bool is_background = false)
         {
             if (stacksize == 0)
             {
@@ -877,20 +877,21 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 this.thread.Name = this.Name;
             }
+            this.thread.IsBackground = is_background;
             this.thread.Start(this);
         }
 
-        public static ThreadObj Start(ThreadProc proc, object param = null)
+        public static ThreadObj Start(ThreadProc proc, object param = null, bool is_background = false)
         {
-            return new ThreadObj(proc, param);
+            return new ThreadObj(proc, param, is_background: is_background);
         }
 
-        public static ThreadObj[] StartMany(int num, ThreadProc proc, object param = null)
+        public static ThreadObj[] StartMany(int num, ThreadProc proc, object param = null, bool is_background = false)
         {
             List<ThreadObj> ret = new List<ThreadObj>();
             for (int i = 0; i < num; i++)
             {
-                ThreadObj t = new ThreadObj(proc, param, 0, i);
+                ThreadObj t = new ThreadObj(proc, param, 0, i, is_background: is_background);
                 ret.Add(t);
             }
             return ret.ToArray();
