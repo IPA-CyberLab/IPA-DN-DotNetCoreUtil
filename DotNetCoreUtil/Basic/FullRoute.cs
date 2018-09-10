@@ -14,7 +14,6 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
-using IPA.DN.CoreUtil.Basic.BigInt;
 
 #pragma warning disable 162
 
@@ -31,7 +30,7 @@ namespace IPA.DN.CoreUtil.Basic
             return Bytes;
         }
 
-        public virtual BigInteger GetBigInt()
+        public virtual BigNumber GetBigInt()
         {
             return FullRoute.ByteToBigInt(this.Bytes, this.AddressFamily);
         }
@@ -289,7 +288,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public override IPAddr Add(int i)
         {
-            BigInteger b1 = this.GetBigInt();
+            BigNumber b1 = this.GetBigInt();
 
             b1 += i;
 
@@ -314,12 +313,12 @@ namespace IPA.DN.CoreUtil.Basic
 
     public class IPv6Addr : IPAddr
     {
-        readonly static BigInteger max_ipv6;
+        readonly static BigNumber max_ipv6;
 
         static IPv6Addr()
         {
-            BigInteger a = new BigInteger(0x100000000UL);
-            BigInteger b;
+            BigNumber a = new BigNumber(0x100000000UL);
+            BigNumber b;
 
             b = a * a * a * a;
 
@@ -368,7 +367,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public override IPAddr Add(int i)
         {
-            BigInteger b1 = this.GetBigInt();
+            BigNumber b1 = this.GetBigInt();
 
             //byte[] a1 = FullRoute.BigIntToByte(b1, AddressFamily.InterNetworkV6);
 
@@ -1757,7 +1756,7 @@ namespace IPA.DN.CoreUtil.Basic
                     IPAddress mask = IPUtil.IntToSubnetMask4(e.SubnetLength);
                     mask = IPUtil.IPNot(mask);
 
-                    BigInteger bi = a.GetBigInt() + new IPv4Addr(mask).GetBigInt() + 1;
+                    BigNumber bi = a.GetBigInt() + new IPv4Addr(mask).GetBigInt() + 1;
 
                     b = new IPv4Addr(IPAddr.PadBytes(FullRoute.BigIntToByte(bi, AddressFamily.InterNetwork), 4));
                 }
@@ -1766,7 +1765,7 @@ namespace IPA.DN.CoreUtil.Basic
                     IPAddress mask = IPUtil.IntToSubnetMask6(e.SubnetLength);
                     mask = IPUtil.IPNot(mask);
 
-                    BigInteger bi = a.GetBigInt() + (new IPv6Addr(mask).GetBigInt()) + 1;
+                    BigNumber bi = a.GetBigInt() + (new IPv6Addr(mask).GetBigInt()) + 1;
 
                     b = new IPv6Addr(IPAddr.PadBytes(FullRoute.BigIntToByte(bi, AddressFamily.InterNetworkV6), 16));
                 }
@@ -2000,7 +1999,7 @@ namespace IPA.DN.CoreUtil.Basic
                 w.WriteLine("#Range_Start_IP,Range_End_IP,Range_Start_Decimal{0},Range_End_Decimal{0},NumberOfIPs{0},CountryCode,CountryName", v6str);
             }
 
-            BigInteger max64bit = new BigInteger(0xffffffffffffffffUL);
+            BigNumber max64bit = new BigNumber(0xffffffffffffffffUL);
             max64bit += 1UL;
 
             foreach (FullSpaceEntry e in this.List)
@@ -2553,7 +2552,7 @@ namespace IPA.DN.CoreUtil.Basic
             w.WriteLine();
         }
 
-        public static BigInteger ByteToBigInt(byte[] data, AddressFamily af)
+        public static BigNumber ByteToBigInt(byte[] data, AddressFamily af)
         {
             if (af == AddressFamily.InterNetwork)
             {
@@ -2565,7 +2564,7 @@ namespace IPA.DN.CoreUtil.Basic
                 uint a1 = BitConverter.ToUInt32(Util.EndianRetByte(data), 0);
                 long b1 = (long)((ulong)a1);
 
-                return new BigInteger(b1);
+                return new BigNumber(b1);
             }
             else if (af == AddressFamily.InterNetworkV6)
             {
@@ -2584,19 +2583,19 @@ namespace IPA.DN.CoreUtil.Basic
                 long b3 = (long)((ulong)a3);
                 long b4 = (long)((ulong)a4);
 
-                BigInteger c1 = new BigInteger(b1);
+                BigNumber c1 = new BigNumber(b1);
                 c1 *= 0x100000000UL;
                 c1 *= 0x100000000UL;
                 c1 *= 0x100000000UL;
 
-                BigInteger c2 = new BigInteger(b2);
+                BigNumber c2 = new BigNumber(b2);
                 c2 *= 0x100000000UL;
                 c2 *= 0x100000000UL;
 
-                BigInteger c3 = new BigInteger(b3);
+                BigNumber c3 = new BigNumber(b3);
                 c3 *= 0x100000000UL;
 
-                BigInteger c4 = new BigInteger(b4);
+                BigNumber c4 = new BigNumber(b4);
 
                 return c1 + c2 + c3 + c4;
             }
@@ -2606,7 +2605,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static byte[] BigIntToByte(BigInteger bi, AddressFamily af)
+        public static byte[] BigIntToByte(BigNumber bi, AddressFamily af)
         {
             if (af == AddressFamily.InterNetwork)
             {
@@ -2617,10 +2616,10 @@ namespace IPA.DN.CoreUtil.Basic
             }
             else if (af == AddressFamily.InterNetworkV6)
             {
-                BigInteger c4 = bi % 0x100000000UL;
-                BigInteger c3 = (bi / 0x100000000UL) % 0x100000000UL;
-                BigInteger c2 = (bi / 0x100000000UL / 0x100000000UL) % 0x100000000UL;
-                BigInteger c1 = (bi / 0x100000000UL / 0x100000000UL / 0x100000000UL) % 0x100000000UL;
+                BigNumber c4 = bi % 0x100000000UL;
+                BigNumber c3 = (bi / 0x100000000UL) % 0x100000000UL;
+                BigNumber c2 = (bi / 0x100000000UL / 0x100000000UL) % 0x100000000UL;
+                BigNumber c1 = (bi / 0x100000000UL / 0x100000000UL / 0x100000000UL) % 0x100000000UL;
 
                 long b1 = c1.LongValue();
                 uint a1 = (uint)((ulong)b1);

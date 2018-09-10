@@ -22,7 +22,6 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.Runtime.InteropServices;
 using System.Reflection;
-using IPA.DN.CoreUtil.Basic.BigInt;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
@@ -5081,7 +5080,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             return str;
         }
-        public static string ToStr3(BigInteger v)
+        public static string ToStr3(BigNumber v)
         {
             bool neg = false;
 
