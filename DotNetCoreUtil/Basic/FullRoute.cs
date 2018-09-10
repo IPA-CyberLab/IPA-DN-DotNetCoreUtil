@@ -30,9 +30,9 @@ namespace IPA.DN.CoreUtil.Basic
             return Bytes;
         }
 
-        public virtual BigNumber GetBigInt()
+        public virtual BigNumber GetBigNumber()
         {
-            return FullRoute.ByteToBigInt(this.Bytes, this.AddressFamily);
+            return FullRoute.ByteToBigNumber(this.Bytes, this.AddressFamily);
         }
 
         public virtual IPAddress IPAddress
@@ -288,7 +288,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public override IPAddr Add(int i)
         {
-            BigNumber b1 = this.GetBigInt();
+            BigNumber b1 = this.GetBigNumber();
 
             b1 += i;
 
@@ -301,13 +301,16 @@ namespace IPA.DN.CoreUtil.Basic
                 b1 = 0xffffffffUL;
             }
 
-            byte[] tmp = FullRoute.BigIntToByte(b1, AddressFamily.InterNetwork);
+            byte[] tmp = FullRoute.BigNumberToByte(b1, AddressFamily.InterNetwork);
             return new IPv4Addr(IPAddr.PadBytes(tmp, 4));
         }
 
         public override string GetZeroPaddingFullString()
         {
-            return $"{Bytes[0]:D3}.{Bytes[1]:D3}.{Bytes[2]:D3}.{Bytes[3]:D3}";
+            return $"{Bytes[0]:X2}{Bytes[1]:X2}:{Bytes[2]:X2}{Bytes[3]:X2}:" +
+                $"{Bytes[4]:X2}{Bytes[5]:X2}:{Bytes[6]:X2}{Bytes[7]:X2}:" +
+                $"{Bytes[8]:X2}{Bytes[9]:X2}:{Bytes[10]:X2}{Bytes[11]:X2}:" +
+                $"{Bytes[12]:X2}{Bytes[13]:X2}:{Bytes[14]:X2}{Bytes[15]:X2}";
         }
     }
 
@@ -367,7 +370,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public override IPAddr Add(int i)
         {
-            BigNumber b1 = this.GetBigInt();
+            BigNumber b1 = this.GetBigNumber();
 
             //byte[] a1 = FullRoute.BigIntToByte(b1, AddressFamily.InterNetworkV6);
 
@@ -384,8 +387,13 @@ namespace IPA.DN.CoreUtil.Basic
                 b1 = max_ipv6;
             }
 
-            byte[] tmp = FullRoute.BigIntToByte(b1, AddressFamily.InterNetworkV6);
+            byte[] tmp = FullRoute.BigNumberToByte(b1, AddressFamily.InterNetworkV6);
             return new IPv6Addr(tmp);
+        }
+
+        public override string GetZeroPaddingFullString()
+        {
+            return $"{Bytes[0]:D3}.{Bytes[1]:D3}.{Bytes[2]:D3}.{Bytes[3]:D3}";
         }
     }
 
@@ -1756,18 +1764,18 @@ namespace IPA.DN.CoreUtil.Basic
                     IPAddress mask = IPUtil.IntToSubnetMask4(e.SubnetLength);
                     mask = IPUtil.IPNot(mask);
 
-                    BigNumber bi = a.GetBigInt() + new IPv4Addr(mask).GetBigInt() + 1;
+                    BigNumber bi = a.GetBigNumber() + new IPv4Addr(mask).GetBigNumber() + 1;
 
-                    b = new IPv4Addr(IPAddr.PadBytes(FullRoute.BigIntToByte(bi, AddressFamily.InterNetwork), 4));
+                    b = new IPv4Addr(IPAddr.PadBytes(FullRoute.BigNumberToByte(bi, AddressFamily.InterNetwork), 4));
                 }
                 else if (full_route.AddressFamily == AddressFamily.InterNetworkV6)
                 {
                     IPAddress mask = IPUtil.IntToSubnetMask6(e.SubnetLength);
                     mask = IPUtil.IPNot(mask);
 
-                    BigNumber bi = a.GetBigInt() + (new IPv6Addr(mask).GetBigInt()) + 1;
+                    BigNumber bi = a.GetBigNumber() + (new IPv6Addr(mask).GetBigNumber()) + 1;
 
-                    b = new IPv6Addr(IPAddr.PadBytes(FullRoute.BigIntToByte(bi, AddressFamily.InterNetworkV6), 16));
+                    b = new IPv6Addr(IPAddr.PadBytes(FullRoute.BigNumberToByte(bi, AddressFamily.InterNetworkV6), 16));
                 }
                 else
                 {
@@ -2029,15 +2037,15 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (this.AddressFamily == AddressFamily.InterNetworkV6)
                 {
-                    data2.Add((e.IPStart.GetBigInt() / max64bit).ToString());
-                    data2.Add((e.IPEnd.GetBigInt() / max64bit).ToString());
-                    data2.Add(((e.IPEnd.GetBigInt() - e.IPStart.GetBigInt() + 1) / max64bit).ToString());
+                    data2.Add((e.IPStart.GetBigNumber() / max64bit).ToString());
+                    data2.Add((e.IPEnd.GetBigNumber() / max64bit).ToString());
+                    data2.Add(((e.IPEnd.GetBigNumber() - e.IPStart.GetBigNumber() + 1) / max64bit).ToString());
                 }
                 else
                 {
-                    data2.Add(e.IPStart.GetBigInt().ToString());
-                    data2.Add(e.IPEnd.GetBigInt().ToString());
-                    data2.Add((e.IPEnd.GetBigInt() - e.IPStart.GetBigInt() + 1).ToString());
+                    data2.Add(e.IPStart.GetBigNumber().ToString());
+                    data2.Add(e.IPEnd.GetBigNumber().ToString());
+                    data2.Add((e.IPEnd.GetBigNumber() - e.IPStart.GetBigNumber() + 1).ToString());
                 }
 
                 foreach (string s in data)
@@ -2552,7 +2560,7 @@ namespace IPA.DN.CoreUtil.Basic
             w.WriteLine();
         }
 
-        public static BigNumber ByteToBigInt(byte[] data, AddressFamily af)
+        public static BigNumber ByteToBigNumber(byte[] data, AddressFamily af)
         {
             if (af == AddressFamily.InterNetwork)
             {
@@ -2605,7 +2613,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static byte[] BigIntToByte(BigNumber bi, AddressFamily af)
+        public static byte[] BigNumberToByte(BigNumber bi, AddressFamily af)
         {
             if (af == AddressFamily.InterNetwork)
             {

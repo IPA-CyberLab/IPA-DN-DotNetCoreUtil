@@ -379,11 +379,11 @@ namespace IPA.DN.CoreUtil.Basic
             KeyValuePair<IPAddress, IPAddress> minmax1 = GetMinMaxIPFromSubnet(ip1, IPUtil.SubnetMaskToInt(subnet1));
             KeyValuePair<IPAddress, IPAddress> minmax2 = GetMinMaxIPFromSubnet(ip2, IPUtil.SubnetMaskToInt(subnet2));
 
-            BigNumber min1 = IPAddr.FromBytes(minmax1.Key.GetAddressBytes()).GetBigInt();
-            BigNumber max1 = IPAddr.FromBytes(minmax1.Value.GetAddressBytes()).GetBigInt();
+            BigNumber min1 = IPAddr.FromBytes(minmax1.Key.GetAddressBytes()).GetBigNumber();
+            BigNumber max1 = IPAddr.FromBytes(minmax1.Value.GetAddressBytes()).GetBigNumber();
 
-            BigNumber min2 = IPAddr.FromBytes(minmax2.Key.GetAddressBytes()).GetBigInt();
-            BigNumber max2 = IPAddr.FromBytes(minmax2.Value.GetAddressBytes()).GetBigInt();
+            BigNumber min2 = IPAddr.FromBytes(minmax2.Key.GetAddressBytes()).GetBigNumber();
+            BigNumber max2 = IPAddr.FromBytes(minmax2.Value.GetAddressBytes()).GetBigNumber();
 
             if (min2 >= min1 && min2 <= max1 && max1 >= min2 && max1 <= max2)
             {
@@ -432,9 +432,9 @@ namespace IPA.DN.CoreUtil.Basic
                 IPAddress mask = IPUtil.IntToSubnetMask4(subnet_len);
                 mask = IPUtil.IPNot(mask);
 
-                BigNumber bi = new IPv4Addr(network_address).GetBigInt() + (new IPv4Addr(mask).GetBigInt());
+                BigNumber bi = new IPv4Addr(network_address).GetBigNumber() + (new IPv4Addr(mask).GetBigNumber());
 
-                IPAddress end = new IPv4Addr(FullRoute.BigIntToByte(bi, AddressFamily.InterNetwork)).IPAddress;
+                IPAddress end = new IPv4Addr(FullRoute.BigNumberToByte(bi, AddressFamily.InterNetwork)).IPAddress;
 
                 return new KeyValuePair<IPAddress, IPAddress>(network_address, end);
             }
@@ -443,9 +443,9 @@ namespace IPA.DN.CoreUtil.Basic
                 IPAddress mask = IPUtil.IntToSubnetMask6(subnet_len);
                 mask = IPUtil.IPNot(mask);
 
-                BigNumber bi = new IPv6Addr(network_address).GetBigInt() + (new IPv6Addr(mask).GetBigInt());
+                BigNumber bi = new IPv6Addr(network_address).GetBigNumber() + (new IPv6Addr(mask).GetBigNumber());
 
-                IPAddress end = new IPv6Addr(FullRoute.BigIntToByte(bi, AddressFamily.InterNetworkV6)).IPAddress;
+                IPAddress end = new IPv6Addr(FullRoute.BigNumberToByte(bi, AddressFamily.InterNetworkV6)).IPAddress;
 
                 return new KeyValuePair<IPAddress, IPAddress>(network_address, end);
             }
@@ -460,10 +460,10 @@ namespace IPA.DN.CoreUtil.Basic
         {
             IPAddr aa = IPAddr.FromBytes(a.GetAddressBytes());
 
-            BigNumber bi = aa.GetBigInt();
+            BigNumber bi = aa.GetBigNumber();
             bi += i;
 
-            byte[] data = FullRoute.BigIntToByte(bi, a.AddressFamily);
+            byte[] data = FullRoute.BigNumberToByte(bi, a.AddressFamily);
 
             return new IPAddress(data);
         }
