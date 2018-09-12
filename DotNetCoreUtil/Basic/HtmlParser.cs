@@ -111,7 +111,7 @@ namespace IPA.DN.CoreUtil.Basic
 
     public static class HtmlParser
     {
-        public static HtmlDocument LoadHtml(string body)
+        public static HtmlDocument ParseHtml(string body)
         {
             HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
             doc.LoadHtml(body);

@@ -9,6 +9,7 @@ using System.Text;
 using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Security.Cryptography;
 using System.Web;
 using System.IO;
@@ -199,6 +200,8 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
         public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
 
+        public static void ParseUrl(this string url_string, out Uri uri, out NameValueCollection query_string) => Str.ParseUrl(url_string, out uri, out query_string);
+
         //public static void AddArrayItemsToList<T>(this IEnumerable<T> items, List<T> list) => Util.AddArrayItemsToList<T>(items, list);
         //public static void AddArrayItemsToList(this IEnumerable items, IList list) => Util.AddArrayItemsToList(items, list);
         //public static void AddArrayItemsToList(this IList list, IEnumerable items) => Util.AddArrayItemsToList(items, list);
@@ -217,6 +220,16 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         {
             if (encoding == null) encoding = Str.Utf8Encoding;
             return (await h.Body.ReadToEndAsync(max_request_body_len, cancel)).GetString_UTF8();
+        }
+
+        public static string GetStrOrEmpty(this NameValueCollection d, string key)
+        {
+            try
+            {
+                if (d == null) return "";
+                return d[key].NonNull();
+            }
+            catch { return ""; }
         }
 
         public static string GetStrOrEmpty<T>(this IDictionary<string, T> d, string key)

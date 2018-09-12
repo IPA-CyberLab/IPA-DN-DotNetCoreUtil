@@ -13,6 +13,7 @@ using System.Text;
 using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Security.Cryptography;
 using System.Net;
 using System.Web;
@@ -5312,6 +5313,14 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 return false;
             }
+        }
+
+        public static void ParseUrl(string url_string, out Uri uri, out NameValueCollection query_string)
+        {
+            if (url_string.IsEmpty()) throw new ApplicationException("url_string is empty.");
+            if (url_string.StartsWith("/")) url_string = "http://null" + url_string;
+            uri = new Uri(url_string);
+            query_string = HttpUtility.ParseQueryString(uri.Query.NonNull());
         }
     }
 
