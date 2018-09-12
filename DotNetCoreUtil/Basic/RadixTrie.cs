@@ -37,6 +37,8 @@ namespace IPA.DN.CoreUtil.Basic
     /// </summary>
     public class RadixNode
     {
+        public RadixNode() { }
+
         public RadixNode(RadixNode parent)
         {
             Label = new byte[0];

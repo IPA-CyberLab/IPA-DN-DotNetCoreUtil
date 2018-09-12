@@ -41,13 +41,14 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static string Serialize(object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth, bool compact = false)
+        public static string Serialize(object obj, bool include_null = false, bool escape_html = false, int? max_depth = Json.DefaultMaxDepth, bool compact = false, bool reference_handling = false)
         {
             JsonSerializerSettings setting = new JsonSerializerSettings()
             {
                 MaxDepth = max_depth,
                 NullValueHandling = include_null ? NullValueHandling.Include : NullValueHandling.Ignore,
                 ReferenceLoopHandling = ReferenceLoopHandling.Error,
+                PreserveReferencesHandling = reference_handling ? PreserveReferencesHandling.All : PreserveReferencesHandling.None,
                 StringEscapeHandling = escape_html ? StringEscapeHandling.EscapeHtml : StringEscapeHandling.Default,
                 
             };
@@ -69,12 +70,12 @@ namespace IPA.DN.CoreUtil.Basic
             return JsonConvert.DeserializeObject(str, type, setting);
         }
 
-        public static T ConvertObject<T>(object src, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
-            => (T)ConvertObject(src, typeof(T), include_null, max_depth);
+        public static T ConvertObject<T>(object src, bool include_null = false, int? max_depth = Json.DefaultMaxDepth, bool reference_handling = false)
+            => (T)ConvertObject(src, typeof(T), include_null, max_depth, reference_handling);
 
-        public static object ConvertObject(object src, Type type, bool include_null = false, int? max_depth = Json.DefaultMaxDepth)
+        public static object ConvertObject(object src, Type type, bool include_null = false, int? max_depth = Json.DefaultMaxDepth, bool reference_handling = false)
         {
-            string str = Serialize(src, include_null, false, max_depth, true);
+            string str = Serialize(src, include_null, false, max_depth, true, reference_handling);
             return Deserialize(str, type, max_depth: max_depth);
         }
 

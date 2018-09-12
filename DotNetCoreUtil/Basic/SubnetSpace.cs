@@ -71,7 +71,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public ulong CalcNumIP()
+        public ulong CalcNumIPs()
         {
             if (Address.AddressFamily == AddressFamily.InterNetwork)
             {
@@ -128,6 +128,8 @@ namespace IPA.DN.CoreUtil.Basic
 
         readonly int address_size;
         object lockobject = new object();
+
+        public SubnetSpace() { }
 
         public SubnetSpace(AddressFamily address_family)
         {
@@ -205,7 +207,7 @@ namespace IPA.DN.CoreUtil.Basic
                 return null;
             }
 
-            byte[] key = address.GetAddressBytes();
+            byte[] key = IPAddr.FromAddress(address).GetBinaryBytes();
             RadixNode n = trie.Lookup(key);
             if (n == null)
             {
