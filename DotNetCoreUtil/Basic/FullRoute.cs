@@ -15,6 +15,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 
+using Newtonsoft.Json;
+
 #pragma warning disable 162
 
 namespace IPA.DN.CoreUtil.Basic
@@ -30,11 +32,13 @@ namespace IPA.DN.CoreUtil.Basic
             return Bytes;
         }
 
+
         public virtual BigNumber GetBigNumber()
         {
             return FullRoute.ByteToBigNumber(this.Bytes, this.AddressFamily);
         }
 
+        [JsonIgnore]
         public virtual IPAddress IPAddress
         {
             get
@@ -175,6 +179,11 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 throw new ApplicationException("Not an IP address.");
             }
+        }
+
+        public static IPAddr FromAddress(IPAddress address)
+        {
+            return FromBytes(address.GetAddressBytes());
         }
 
         public static IPAddr FromBytes(byte[] b)

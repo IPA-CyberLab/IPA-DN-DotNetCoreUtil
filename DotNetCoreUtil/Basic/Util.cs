@@ -1364,4 +1364,24 @@ namespace IPA.DN.CoreUtil.Basic
             return ret;
         }
     }
+
+    public class Distinct<T>
+    {
+        Dictionary<T, T> d = new Dictionary<T, T>();
+
+        public T AddOrGet(T obj)
+        {
+            if (d.ContainsKey(obj))
+            {
+                return d[obj];
+            }
+            else
+            {
+                d.Add(obj, obj);
+                return obj;
+            }
+        }
+
+        public T[] Values { get => d.Keys.ToArrayList(); }
+    }
 }

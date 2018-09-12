@@ -81,6 +81,12 @@ namespace IPA.DN.CoreUtil.Basic
                 n = n.Parent;
             }
         }
+
+        public override string ToString()
+        {
+            if (this.Object != null) this.Object.ToString();
+            return base.ToString();
+        }
     }
 
 

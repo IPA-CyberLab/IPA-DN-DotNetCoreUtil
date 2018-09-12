@@ -203,6 +203,13 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
         public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
 
+        public static T GetFirstOrNull<T>(this List<T> list) => (list == null ? default(T) : (list.Count == 0 ? default(T) : list[0]));
+        public static T GetFirstOrNull<T>(this T[] list) => (list == null ? default(T) : (list.Length == 0 ? default(T) : list[0]));
+
+        public static List<T> ToList<T>(this IEnumerable<T> i) => new List<T>(i);
+
+        public static IPAddress ToIPAddress(this string s) => IPUtil.StrToIP(s);
+
         public static void ParseUrl(this string url_string, out Uri uri, out NameValueCollection query_string) => Str.ParseUrl(url_string, out uri, out query_string);
 
         //public static void AddArrayItemsToList<T>(this IEnumerable<T> items, List<T> list) => Util.AddArrayItemsToList<T>(items, list);
