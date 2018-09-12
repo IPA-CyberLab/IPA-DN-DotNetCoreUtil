@@ -352,6 +352,18 @@ namespace IPA.DN.CoreUtil.Basic
             return ret.ToArray();
         }
 
+        //// IEnumerable の項目を List に追加
+        //public static void AddArrayItemsToList<T>(IEnumerable<T> items, List<T> list)
+        //{
+        //    foreach (var o in items)
+        //        list.Add(o);
+        //}
+        //public static void AddArrayItemsToList(IEnumerable items, IList list)
+        //{
+        //    foreach (var o in items)
+        //        list.Add(o);
+        //}
+
         // オブジェクトのハッシュ値を計算
         public static ulong GetObjectHash(object o)
         {
@@ -1159,6 +1171,18 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 blackhole.AddLast(obj);
             }
+        }
+
+        // Enum の値一覧を取得する
+        public static T[] GetEnumValuesList<T>()
+        {
+            List<T> ret = new List<T>();
+            return (T[])Enum.GetValues(typeof(T));
+/*            foreach (T v in Enum.GetValues(typeof(T)))
+            {
+                ret.Add(v);
+            }
+            return ret.ToArray();*/
         }
     }
 

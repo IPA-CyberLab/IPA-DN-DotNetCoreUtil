@@ -466,14 +466,14 @@ namespace IPA.DN.CoreUtil.WebApi
         {
             try
             {
-                string rpc_method = route_data.Values.GetStringNonNull("rpc_method");
+                string rpc_method = route_data.Values.GetStrOrEmpty("rpc_method");
                 if (rpc_method.IsEmpty())
                 {
                     await response.SendStringContents($"This is a JSON-RPC server.\r\nAPI: {Api.GetType().AssemblyQualifiedName}\r\nNow: {DateTime.Now.ToDtStr(with_nanosecs: true)}", cancel: this.CancelToken);
                 }
                 else
                 {
-                    string args = route_data.Values.GetStringNonNull("rpc_param");
+                    string args = route_data.Values.GetStrOrEmpty("rpc_param");
 
                     if (args.IsEmpty())
                     {

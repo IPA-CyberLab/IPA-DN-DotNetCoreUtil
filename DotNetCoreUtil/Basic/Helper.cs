@@ -49,9 +49,9 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static bool IsFilled(this string s) => !Str.IsEmptyStr(s);
         public static bool ToBool(this string s) => Str.StrToBool(s);
         public static byte[] ToByte(this string s) => Str.StrToByte(s);
-        public static DateTime ToDate(this string s, bool to_utc = false) => Str.StrToDate(s, to_utc);
-        public static DateTime Time(this string s, bool to_utc = false) => Str.StrToTime(s, to_utc);
-        public static DateTime ToDateTime(this string s, bool to_utc = false) => Str.StrToDateTime(s, to_utc);
+        public static DateTime ToDate(this string s, bool to_utc = false, bool empty_to_zero_dt = false) => Str.StrToDate(s, to_utc, empty_to_zero_dt);
+        public static DateTime ToTime(this string s, bool to_utc = false, bool empty_to_zero_dt = false) => Str.StrToTime(s, to_utc, empty_to_zero_dt);
+        public static DateTime ToDateTime(this string s, bool to_utc = false, bool empty_to_zero_dt = false) => Str.StrToDateTime(s, to_utc, empty_to_zero_dt);
         public static object ToEnum(this string s, object default_value) => Str.StrToEnum(s, default_value);
         public static int ToInt(this string s) => Str.StrToInt(s);
         public static long ToLong(this string s) => Str.StrToLong(s);
@@ -199,7 +199,9 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
         public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
 
-        public static string GetStrOrEmpty(this SortedDictionary<string, string> d, string key) => (d.ContainsKey(key) ? d[key].NonNull() : "");
+        //public static void AddArrayItemsToList<T>(this IEnumerable<T> items, List<T> list) => Util.AddArrayItemsToList<T>(items, list);
+        //public static void AddArrayItemsToList(this IEnumerable items, IList list) => Util.AddArrayItemsToList(items, list);
+        //public static void AddArrayItemsToList(this IList list, IEnumerable items) => Util.AddArrayItemsToList(items, list);
 
         public static string TryGetContentsType(this HttpContentHeaders h) => (h == null ? "" : h.ContentType == null ? "" : h.ContentType.ToString().NonNull());
 
@@ -217,15 +219,16 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             return (await h.Body.ReadToEndAsync(max_request_body_len, cancel)).GetString_UTF8();
         }
 
-        public static string GetStringNonNull(this IDictionary<string, object> d, string name)
+        public static string GetStrOrEmpty<T>(this IDictionary<string, T> d, string key)
         {
             try
             {
                 if (d == null) return "";
-                if (d.ContainsKey(name) == false) return "";
-                object o = d[name];
+                if (d.ContainsKey(key) == false) return "";
+                object o = d[key];
                 if (o == null) return "";
-                return (string)o;
+                if (o is string) return (string)o;
+                return o.ToString();
             }
             catch { return ""; }
         }

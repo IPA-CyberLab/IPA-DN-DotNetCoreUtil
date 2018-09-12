@@ -14,6 +14,7 @@ using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Net;
 using System.Web;
 using System.IO;
 using System.Drawing;
@@ -2223,8 +2224,16 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // HTML デコード
-        public static string FromHtml(string str)
+        public static string FromHtml(string str, bool normalize_multi_spaces = false)
         {
+            str = str.NonNull();
+
+            if (normalize_multi_spaces)
+            {
+                string[] strs = str.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                str = strs.Combine(" ").Trim();
+            }
+
             str = Str.ReplaceStr(str, HtmlCrlf, "\r\n", false);
 
             str = str.Replace(HtmlSpacing, " ");
@@ -2237,11 +2246,7 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // HTML エンコード
-        public static string ToHtml(string str)
-        {
-            return ToHtml(str, false);
-        }
-        public static string ToHtml(string str, bool forceAllSpaceToTag)
+        public static string ToHtml(string str, bool forceAllSpaceToTag = false)
         {
             // 改行を正規化
             str = NormalizeCrlf(str);
@@ -3830,15 +3835,10 @@ namespace IPA.DN.CoreUtil.Basic
                 return false;
             }
         }
-        public static DateTime StrToDateTime(string str, bool toUtc)
+        public static DateTime StrToDateTime(string str, bool toUtc = false, bool empty_to_zero_dt = false)
         {
-            if (toUtc)
-                return StrToDateTime(str).ToUniversalTime();
-            else
-                return StrToDateTime(str);
-        }
-        public static DateTime StrToDateTime(string str)
-        {
+            if (empty_to_zero_dt && str.IsEmpty()) return Util.ZeroDateTimeValue;
+            DateTime ret = new DateTime(0);
             if (Str.IsEmptyStr(str)) return Util.ZeroDateTimeValue;
 
             Str.NormalizeString(ref str, true, true, false, false);
@@ -3874,7 +3874,7 @@ namespace IPA.DN.CoreUtil.Basic
                 DateTime dt1 = StrToDate(tokens[0]);
                 DateTime dt2 = StrToTime(tokens[1]);
 
-                return dt1.Date + dt2.TimeOfDay;
+                ret = dt1.Date + dt2.TimeOfDay;
             }
             else if (tokens.Length == 1)
             {
@@ -3884,7 +3884,7 @@ namespace IPA.DN.CoreUtil.Basic
                     DateTime dt1 = StrToDate(tokens[0].Substring(0, 8));
                     DateTime dt2 = StrToTime(tokens[0].Substring(8));
 
-                    return dt1.Date + dt2.TimeOfDay;
+                    ret = dt1.Date + dt2.TimeOfDay;
                 }
                 else if (tokens[0].Length == 12)
                 {
@@ -3892,18 +3892,24 @@ namespace IPA.DN.CoreUtil.Basic
                     DateTime dt1 = StrToDate(tokens[0].Substring(0, 6));
                     DateTime dt2 = StrToTime(tokens[0].Substring(6));
 
-                    return dt1.Date + dt2.TimeOfDay;
+                    ret = dt1.Date + dt2.TimeOfDay;
                 }
                 else
                 {
                     // 日付のみ
                     DateTime dt1 = StrToDate(tokens[0]);
 
-                    return dt1.Date;
+                    ret = dt1.Date;
                 }
             }
+            else
+            {
+                throw new ArgumentException(str);
+            }
 
-            throw new ArgumentException();
+            if (toUtc) ret = ret.ToUniversalTime();
+
+            return ret;
         }
 
         // 文字列を時刻に変換する
@@ -3920,15 +3926,12 @@ namespace IPA.DN.CoreUtil.Basic
                 return false;
             }
         }
-        public static DateTime StrToTime(string str, bool toUtc)
+        public static DateTime StrToTime(string str, bool toUtc = false, bool empty_to_zero_dt = false)
         {
-            if (toUtc)
-                return StrToTime(str).ToUniversalTime();
-            else
-                return StrToTime(str);
-        }
-        public static DateTime StrToTime(string str)
-        {
+            if (empty_to_zero_dt && str.IsEmpty()) return Util.ZeroDateTimeValue;
+
+            DateTime ret = new DateTime(0);
+
             string[] sps =
                 {
                     "/",
@@ -3985,10 +3988,10 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (hour < 0 || hour >= 25 || minute < 0 || minute >= 60 || second < 0 || second >= 60 || msecond < 0 || msecond >= 1000)
                 {
-                    throw new ArgumentException();
+                    throw new ArgumentException(str);
                 }
 
-                return new DateTime(2000, 1, 1, hour, minute, second, msecond).AddTicks(add_ticks);
+                ret = new DateTime(2000, 1, 1, hour, minute, second, msecond).AddTicks(add_ticks);
             }
             else if (tokens.Length == 2)
             {
@@ -4010,10 +4013,10 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (hour < 0 || hour >= 25 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
                 {
-                    throw new ArgumentException();
+                    throw new ArgumentException(str);
                 }
 
-                return new DateTime(2000, 1, 1, hour, minute, second);
+                ret = new DateTime(2000, 1, 1, hour, minute, second);
             }
             else if (tokens.Length == 1)
             {
@@ -4048,13 +4051,22 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (hour < 0 || hour >= 25 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
                 {
-                    throw new ArgumentException();
+                    throw new ArgumentException(str);
                 }
 
-                return new DateTime(2000, 1, 1, hour, minute, second);
+                ret = new DateTime(2000, 1, 1, hour, minute, second);
+            }
+            else
+            {
+                throw new ArgumentException(str);
             }
 
-            throw new ArgumentException();
+            if (toUtc)
+            {
+                ret = ret.ToUniversalTime();
+            }
+
+            return ret;
         }
 
         // 文字列を日付に変換する
@@ -4071,15 +4083,10 @@ namespace IPA.DN.CoreUtil.Basic
                 return false;
             }
         }
-        public static DateTime StrToDate(string str, bool toUtc)
+        public static DateTime StrToDate(string str, bool toUtc = false, bool empty_to_zero_dt = false)
         {
-            if (toUtc)
-                return StrToDate(str).ToUniversalTime();
-            else
-                return StrToDate(str);
-        }
-        public static DateTime StrToDate(string str)
-        {
+            if (empty_to_zero_dt && str.IsEmpty()) return Util.ZeroDateTimeValue;
+
             string[] sps =
                 {
                     "/",
@@ -4106,6 +4113,8 @@ namespace IPA.DN.CoreUtil.Basic
             }
 
             string[] tokens;
+
+            DateTime ret = new DateTime(0);
 
             tokens = str.Split(sps, StringSplitOptions.RemoveEmptyEntries);
             if (tokens.Length == 3)
@@ -4138,10 +4147,10 @@ namespace IPA.DN.CoreUtil.Basic
 
                 if (year < 1800 || year >= 2100 || month <= 0 || month >= 13 || day <= 0 || day >= 32)
                 {
-                    throw new ArgumentException();
+                    throw new ArgumentException(str);
                 }
 
-                return new DateTime(year, month, day);
+                ret = new DateTime(year, month, day);
             }
             else if (tokens.Length == 1)
             {
@@ -4157,10 +4166,10 @@ namespace IPA.DN.CoreUtil.Basic
 
                     if (year < 1800 || year >= 2100 || month <= 0 || month >= 13 || day <= 0 || day >= 32)
                     {
-                        throw new ArgumentException();
+                        throw new ArgumentException(str);
                     }
 
-                    return new DateTime(year, month, day);
+                    ret = new DateTime(year, month, day);
                 }
                 else if (str.Length == 6)
                 {
@@ -4174,14 +4183,23 @@ namespace IPA.DN.CoreUtil.Basic
 
                     if (year < 1800 || year >= 2100 || month <= 0 || month >= 13 || day <= 0 || day >= 32)
                     {
-                        throw new ArgumentException();
+                        throw new ArgumentException(str);
                     }
 
-                    return new DateTime(year, month, day);
+                    ret = new DateTime(year, month, day);
                 }
             }
+            else
+            {
+                throw new ArgumentException(str);
+            }
 
-            throw new ArgumentException();
+            if (toUtc)
+            {
+                ret = ret.ToUniversalTime();
+            }
+
+            return ret;
         }
 
         // 時刻を文字列に変換する
