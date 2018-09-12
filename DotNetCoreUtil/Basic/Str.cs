@@ -3375,33 +3375,6 @@ namespace IPA.DN.CoreUtil.Basic
             return sb.ToString();
         }
 
-        // オブジェクトをクローンする
-        public static object CloneObject(object o)
-        {
-            return BinaryToObject(ObjectToBinary(o));
-        }
-
-        // オブジェクトをバイナリに変換する
-        public static byte[] ObjectToBinary(object o)
-        {
-            BinaryFormatter f = new BinaryFormatter();
-            MemoryStream ms = new MemoryStream();
-            f.Serialize(ms, o);
-
-            return ms.ToArray();
-        }
-
-        // バイナリをオブジェクトに変換する
-        public static object BinaryToObject(byte[] data)
-        {
-            BinaryFormatter f = new BinaryFormatter();
-            MemoryStream ms = new MemoryStream();
-            ms.Write(data, 0, data.Length);
-            ms.Position = 0;
-
-            return f.Deserialize(ms);
-        }
-
         // 複数の文字列を結合する
         public static string CombineStringArray2(string sepstr, params string[] strs)
         {

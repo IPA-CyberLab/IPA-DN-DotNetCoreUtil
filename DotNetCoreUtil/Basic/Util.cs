@@ -25,6 +25,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
@@ -73,7 +74,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public static void SetCurrentThreadLanguageClass(CoreLanguageClass lang)
         {
-            ThreadData.CurrentThreadData.DataList["current_thread_language"] = lang;
+            ThreadData.CurrentThreadData["current_thread_language"] = lang;
         }
 
         public static CoreLanguageClass CurrentThreadLanguageClass
@@ -103,7 +104,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             try
             {
-                lang = (CoreLanguageClass)ThreadData.CurrentThreadData.DataList["current_thread_language"];
+                lang = (CoreLanguageClass)ThreadData.CurrentThreadData["current_thread_language"];
             }
             catch
             {
@@ -1003,8 +1004,35 @@ namespace IPA.DN.CoreUtil.Basic
             return ms.ToArray();
         }
 
+        // オブジェクトをクローンする
+        public static object CloneObject_UsingBinary(object o)
+        {
+            return BinaryToObject(ObjectToBinary(o));
+        }
+
+        // オブジェクトをバイナリに変換する
+        public static byte[] ObjectToBinary(object o)
+        {
+            BinaryFormatter f = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream();
+            f.Serialize(ms, o);
+
+            return ms.ToArray();
+        }
+
+        // バイナリをオブジェクトに変換する
+        public static object BinaryToObject(byte[] data)
+        {
+            BinaryFormatter f = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream();
+            ms.Write(data, 0, data.Length);
+            ms.Position = 0;
+
+            return f.Deserialize(ms);
+        }
+
         // オブジェクトの内容をクローンする
-        public static object CloneObject(object o)
+        public static object CloneObject_UsingXml(object o)
         {
             byte[] data = Util.ObjectToXml(o);
 

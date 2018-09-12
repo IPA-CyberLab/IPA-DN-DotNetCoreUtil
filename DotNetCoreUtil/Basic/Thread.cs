@@ -757,9 +757,7 @@ namespace IPA.DN.CoreUtil.Basic
     {
         static LocalDataStoreSlot slot = Thread.AllocateDataSlot();
 
-        public readonly Dictionary<string, object> DataList = new Dictionary<string, object>();
-
-        public static ThreadData CurrentThreadData
+        public static ConcurrentDictionary<string, object> CurrentThreadData
         {
             get
             {
@@ -767,13 +765,13 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static ThreadData GetCurrentThreadData()
+        public static ConcurrentDictionary<string, object> GetCurrentThreadData()
         {
-            ThreadData t;
+            ConcurrentDictionary<string, object> t;
 
             try
             {
-                t = (ThreadData)Thread.GetData(slot);
+                t = (ConcurrentDictionary<string, object>)Thread.GetData(slot);
             }
             catch
             {
@@ -782,7 +780,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             if (t == null)
             {
-                t = new ThreadData();
+                t = new ConcurrentDictionary<string, object>();
 
                 Thread.SetData(slot, t);
             }

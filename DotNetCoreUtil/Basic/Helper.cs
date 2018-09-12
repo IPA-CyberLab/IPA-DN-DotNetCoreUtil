@@ -156,13 +156,16 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static bool IsSameByte(this byte[] a, byte[] b) => Util.CompareByte(a, b);
         public static int MemCmp(this byte[] a, byte[] b) => Util.CompareByteRetInt(a, b);
 
+        public static void SaveToFile(this byte[] data, string filename, int offset = 0, int size = 0, bool do_nothing_if_same_contents = false)
+            => IO.SaveFile(filename, data, offset, (size == 0 ? data.Length - offset : size), do_nothing_if_same_contents);
+
         public static void InnerDebug(this object o, string instance_base_name = "") => Dbg.WriteObject(o, instance_base_name);
         public static void InnerPrint(this object o, string instance_base_name = "") => Dbg.PrintObjectInnerString(o, instance_base_name);
         public static string GetInnerStr(this object o, string instance_base_name = "") => Dbg.GetObjectInnerString(o, instance_base_name);
         public static string ObjectToXmlPublic(this object o, Type t = null) => Str.ObjectToXMLSimple(o, t ?? o.GetType());
-        public static object CloneSerializableObject(this object o) => Str.CloneObject(o);
-        public static byte[] ObjectToBinary(this object o) => Str.ObjectToBinary(o);
-        public static object BinaryToObject(this byte[] b) => Str.BinaryToObject(b);
+        public static object CloneSerializableObject(this object o) => Util.CloneObject_UsingBinary(o);
+        public static byte[] ObjectToBinary(this object o) => Util.ObjectToBinary(o);
+        public static object BinaryToObject(this byte[] b) => Util.BinaryToObject(b);
         public static object Print(this object s, bool newline = true) { Console.Write((s == null ? "null" : s.ToString()) + (newline ? Env.NewLine : "")); return s; }
         public static object Debug(this object s) { Dbg.WriteLine((s == null ? "null" : s.ToString())); return s; }
         public static ulong GetObjectHash(this object o) => Util.GetObjectHash(o);

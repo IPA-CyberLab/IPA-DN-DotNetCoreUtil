@@ -735,7 +735,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static CancellationToken CurrentTaskVmGracefulCancel => (CancellationToken)ThreadData.CurrentThreadData.DataList["taskvm_current_graceful_cancel"];
+        public static CancellationToken CurrentTaskVmGracefulCancel => (CancellationToken)ThreadData.CurrentThreadData["taskvm_current_graceful_cancel"];
 
         // 何らかのタスクをタイムアウトおよびキャンセル付きで実施する
         public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<Task<TResult>> proc, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
@@ -1047,7 +1047,7 @@ namespace IPA.DN.CoreUtil.Basic
             sync_ctx = new TaskVmSynchronizationContext(this);
             SynchronizationContext.SetSynchronizationContext(sync_ctx);
 
-            ThreadData.CurrentThreadData.DataList["taskvm_current_graceful_cancel"] = this.GracefulCancel;
+            ThreadData.CurrentThreadData["taskvm_current_graceful_cancel"] = this.GracefulCancel;
 
             //Dbg.WriteCurrentThreadId("before task_proc()");
 

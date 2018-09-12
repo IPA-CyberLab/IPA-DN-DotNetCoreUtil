@@ -69,16 +69,34 @@ namespace IPA.DN.CoreUtil.Basic
             Debug.WriteLine(str);
         }
 
-        public static void Where(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
+        public static long Where(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null, long last_tick = 0)
         {
             if (Dbg.IsDebugMode)
-                WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
+            {
+                long now = Time.Tick64;
+                long diff = now - last_tick;
+                WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
+                return now;
+            }
+            else
+            {
+                return 0;
+            }
         }
 
-        public static void WhereThread(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
+        public static long WhereThread(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null, long last_tick = 0)
         {
             if (Dbg.IsDebugMode)
-                WriteLine($"Thread[{ThreadObj.CurrentThreadId}]: {Path.GetFileName(filename)}:{line} in {caller}()" + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
+            {
+                long now = Time.Tick64;
+                long diff = now - last_tick;
+                WriteLine($"Thread[{ThreadObj.CurrentThreadId}]: {Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (Str.IsFilledStr(msg) ? (": " + msg) : ""));
+                return now;
+            }
+            else
+            {
+                return 0;
+            }
         }
 
         public static string GetObjectInnerString(object obj, string instance_base_name = "")

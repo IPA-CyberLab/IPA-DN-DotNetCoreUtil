@@ -671,7 +671,7 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 throw new ApplicationException("DbOverwriteValues: dst.GetType() != src.GetType()");
             }
-            object ret = Util.CloneObject(dst);
+            object ret = Util.CloneObject_UsingXml(dst);
             Type t = dst.GetType();
             var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
