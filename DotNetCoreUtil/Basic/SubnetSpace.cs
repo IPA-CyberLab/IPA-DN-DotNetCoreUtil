@@ -126,7 +126,6 @@ namespace IPA.DN.CoreUtil.Basic
         public AddressFamily AddressFamily;
         public RadixTrie Trie;
 
-        readonly int address_size;
         object lockobject = new object();
 
         public SubnetSpace() { }
@@ -134,7 +133,6 @@ namespace IPA.DN.CoreUtil.Basic
         public SubnetSpace(AddressFamily address_family)
         {
             this.AddressFamily = address_family;
-            this.address_size = IPAddr.GetAddressSizeFromAddressFamily(this.AddressFamily);
         }
 
         // サブネット情報を投入する
