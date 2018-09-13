@@ -1384,4 +1384,79 @@ namespace IPA.DN.CoreUtil.Basic
 
         public T[] Values { get => d.Keys.ToArrayList(); }
     }
+
+    public class DelayLoader<T> : IDisposable
+    {
+        Func<long, (T, long)> load_proc;
+        int retry_interval;
+        int update_interval;
+        ThreadObj thread;
+        ManualResetEventSlim halt_event = new ManualResetEventSlim();
+        bool halt_flag = false;
+
+        public T Data { get; private set; }
+
+        public DelayLoader(Func<long, (T data, long data_timestamp)> load_proc, int retry_interval = 1000, int update_interval = 1000)
+        {
+            this.load_proc = load_proc;
+            this.retry_interval = retry_interval;
+            this.update_interval = update_interval;
+
+            this.thread = new ThreadObj(thread_proc, is_background: true);
+        }
+
+        void thread_proc(object param)
+        {
+            long last_timestamp = 0;
+
+            (T data, long data_timestamp) ret;
+
+            LABEL_RETRY:
+            try
+            {
+                // データの読み込み
+                ret = load_proc(last_timestamp);
+            }
+            catch (Exception ex)
+            {
+                Dbg.WriteLine(ex.ToString());
+
+                halt_event.Wait(retry_interval);
+
+                if (halt_flag)
+                {
+                    return;
+                }
+
+                goto LABEL_RETRY;
+            }
+
+            if (ret.data != null)
+            {
+                // 読み込んだデータをグローバルにセット
+                last_timestamp = ret.data_timestamp;
+                this.Data = ret.data;
+            }
+
+            // 次回まで待機
+            halt_event.Wait(update_interval);
+            if (halt_flag)
+            {
+                return;
+            }
+
+            goto LABEL_RETRY;
+        }
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                halt_flag = true;
+                halt_event.Set();
+                thread.WaitForEnd();
+            }
+        }
+    }
 }
