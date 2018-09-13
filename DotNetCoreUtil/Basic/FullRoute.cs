@@ -1071,11 +1071,11 @@ namespace IPA.DN.CoreUtil.Basic
         {
             FullRouteCountryList ret = new FullRouteCountryList();
 
-            string[] cclist = IPInfo.GetCountryCodes();
+            string[] cclist = FullRouteIPInfo.GetCountryCodes();
 
             foreach (string cc in cclist)
             {
-                string name = IPInfo.SearchCountry(cc);
+                string name = FullRouteIPInfo.SearchCountry(cc);
 
                 if (Str.InStr(name, ","))
                 {
@@ -2780,7 +2780,7 @@ namespace IPA.DN.CoreUtil.Basic
 
                     foreach (IPAddr a in o)
                     {
-                        IPInfo.Search(a.IPAddress);
+                        FullRouteIPInfo.Search(a.IPAddress);
                     }
 
                     end = Time.Tick64;

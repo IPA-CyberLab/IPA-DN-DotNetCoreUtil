@@ -24,7 +24,7 @@ using System.Net.Mail;
 
 namespace IPA.DN.CoreUtil.Basic
 {
-    public class IPInfoEntry : IComparable<IPInfoEntry>
+    public class FullRouteIPInfoEntry : IComparable<FullRouteIPInfoEntry>
     {
         public uint From;
         public uint To;
@@ -32,7 +32,7 @@ namespace IPA.DN.CoreUtil.Basic
         public uint Assigned = 0;
         public string Country2, Country3 = "", CountryFull;
 
-        public int CompareTo(IPInfoEntry other)
+        public int CompareTo(FullRouteIPInfoEntry other)
         {
             if (this.From > other.From)
             {
@@ -46,9 +46,9 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
-    public class IPInfoCache
+    public class FullRouteIPInfoCache
     {
-        public List<IPInfoEntry> EntryList = new List<IPInfoEntry>();
+        public List<FullRouteIPInfoEntry> EntryList = new List<FullRouteIPInfoEntry>();
         public DateTime TimeStamp;
         public Dictionary<string, string> CountryCodeToName = new Dictionary<string, string>();
 
@@ -56,7 +56,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             CountryCodeToName.Clear();
 
-            foreach (IPInfoEntry e in this.EntryList)
+            foreach (FullRouteIPInfoEntry e in this.EntryList)
             {
                 if (CountryCodeToName.ContainsKey(e.Country2) == false)
                 {
@@ -65,9 +65,9 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public static IPInfoCache CreateFromDownload(string url)
+        public static FullRouteIPInfoCache CreateFromDownload(string url)
         {
-            IPInfoCache ret = new IPInfoCache();
+            FullRouteIPInfoCache ret = new FullRouteIPInfoCache();
             ret.TimeStamp = DateTime.Now;
 
             // Download CSV
@@ -86,7 +86,7 @@ namespace IPA.DN.CoreUtil.Basic
                     {
                         if (ce.Count >= 7)
                         {
-                            IPInfoEntry e = new IPInfoEntry();
+                            FullRouteIPInfoEntry e = new FullRouteIPInfoEntry();
 
                             e.From = Str.StrToUInt(ce[2]);
                             e.To = Str.StrToUInt(ce[3]);
@@ -139,7 +139,7 @@ namespace IPA.DN.CoreUtil.Basic
             b.WriteInt64((ulong)this.TimeStamp.Ticks);
             b.WriteInt((uint)this.EntryList.Count);
 
-            foreach (IPInfoEntry e in this.EntryList)
+            foreach (FullRouteIPInfoEntry e in this.EntryList)
             {
                 b.WriteInt(e.From);
                 b.WriteInt(e.To);
@@ -157,7 +157,7 @@ namespace IPA.DN.CoreUtil.Basic
             return b;
         }
 
-        public static IPInfoCache LoadFromFile(string filename)
+        public static FullRouteIPInfoCache LoadFromFile(string filename)
         {
             Buf b = Buf.ReadFromFile(filename);
             b.SeekToBegin();
@@ -165,7 +165,7 @@ namespace IPA.DN.CoreUtil.Basic
             return LoadFromBuf(b);
         }
 
-        public static IPInfoCache LoadFromBuf(Buf b)
+        public static FullRouteIPInfoCache LoadFromBuf(Buf b)
         {
             b.Seek(b.Size - 20, SeekOrigin.Begin);
             byte[] hash = b.Read(20);
@@ -177,7 +177,7 @@ namespace IPA.DN.CoreUtil.Basic
                 throw new ApplicationException("Invalid Hash");
             }
 
-            IPInfoCache ret = new IPInfoCache();
+            FullRouteIPInfoCache ret = new FullRouteIPInfoCache();
 
             ret.TimeStamp = new DateTime((long)b.ReadInt64());
             int num = (int)b.ReadInt();
@@ -185,7 +185,7 @@ namespace IPA.DN.CoreUtil.Basic
             int i;
             for (i = 0; i < num; i++)
             {
-                IPInfoEntry e = new IPInfoEntry();
+                FullRouteIPInfoEntry e = new FullRouteIPInfoEntry();
                 e.From = b.ReadInt();
                 e.To = b.ReadInt();
                 e.Registry = b.ReadStr();
@@ -215,7 +215,7 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
-    public static class IPInfo
+    public static class FullRouteIPInfo
     {
         public static readonly TimeSpan LifeTime = new TimeSpan(15, 0, 0, 0);
         public const long DownloadRetryMSecs = (3600 * 1000);
@@ -223,10 +223,10 @@ namespace IPA.DN.CoreUtil.Basic
         public const string Url = "http://files.open.ad.jp/ip-database/gzip/mapping_ipv4_to_country.csv.gz";
         public static readonly string CacheFileName;
         static readonly GlobalLock cache_file_global_lock = new GlobalLock("ipinfo_cache_file");
-        static IPInfoCache cache = null;
+        static FullRouteIPInfoCache cache = null;
         static object lockObj = new object();
 
-        static IPInfo()
+        static FullRouteIPInfo()
         {
 //             MutexSecurity sec = new MutexSecurity();
 //             sec.AddAccessRule(new MutexAccessRule("Everyone", MutexRights.FullControl, AccessControlType.Allow));
@@ -285,9 +285,9 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        static Cache<uint, IPInfoEntry> hit_cache = new Cache<uint, IPInfoEntry>(new TimeSpan(24, 0, 0), CacheType.UpdateExpiresWhenAccess);
+        static Cache<uint, FullRouteIPInfoEntry> hit_cache = new Cache<uint, FullRouteIPInfoEntry>(new TimeSpan(24, 0, 0), CacheType.UpdateExpiresWhenAccess);
 
-        public static IPInfoEntry Search(string ipStr)
+        public static FullRouteIPInfoEntry Search(string ipStr)
         {
             try
             {
@@ -298,11 +298,11 @@ namespace IPA.DN.CoreUtil.Basic
                 return null;
             }
         }
-        public static IPInfoEntry Search(IPAddress ip)
+        public static FullRouteIPInfoEntry Search(IPAddress ip)
         {
             uint ip32 = Util.Endian(IPUtil.IPToUINT(ip));
 
-            IPInfoEntry e;
+            FullRouteIPInfoEntry e;
             //e = hit_cache[ip32];
             //if (e == null)
             {
@@ -318,7 +318,7 @@ namespace IPA.DN.CoreUtil.Basic
             return e;
         }
 
-        public static IPInfoEntry SearchFast(uint ip32)
+        public static FullRouteIPInfoEntry SearchFast(uint ip32)
         {
             try
             {
@@ -329,7 +329,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
             try
             {
-                IPInfoCache c = cache;
+                FullRouteIPInfoCache c = cache;
 
                 if (c != null)
                 {
@@ -371,7 +371,7 @@ namespace IPA.DN.CoreUtil.Basic
                     int i;
                     for (i = pos_start; i < pos_end; i++)
                     {
-                        IPInfoEntry e = c.EntryList[i];
+                        FullRouteIPInfoEntry e = c.EntryList[i];
                         if (ip32 >= e.From && ip32 <= e.To)
                         {
                             return e;
@@ -386,7 +386,7 @@ namespace IPA.DN.CoreUtil.Basic
             return null;
         }
 
-        public static IPInfoEntry SearchWithoutHitCache(uint ip32)
+        public static FullRouteIPInfoEntry SearchWithoutHitCache(uint ip32)
         {
 
             try
@@ -400,11 +400,11 @@ namespace IPA.DN.CoreUtil.Basic
 
             try
             {
-                IPInfoCache current_cache = cache;
+                FullRouteIPInfoCache current_cache = cache;
 
                 if (current_cache != null)
                 {
-                    foreach (IPInfoEntry e in current_cache.EntryList)
+                    foreach (FullRouteIPInfoEntry e in current_cache.EntryList)
                     {
                         if (ip32 >= e.From && ip32 <= e.To)
                         {
@@ -435,7 +435,7 @@ namespace IPA.DN.CoreUtil.Basic
                     {
                         try
                         {
-                            cache = IPInfoCache.LoadFromFile(CacheFileName);
+                            cache = FullRouteIPInfoCache.LoadFromFile(CacheFileName);
                         }
                         catch
                         {
@@ -451,7 +451,7 @@ namespace IPA.DN.CoreUtil.Basic
                     {
                         if (nextDownloadRetry == 0 || (nextDownloadRetry <= Time.Tick64))
                         {
-                            IPInfoCache c2 = IPInfoCache.CreateFromDownload(Url);
+                            FullRouteIPInfoCache c2 = FullRouteIPInfoCache.CreateFromDownload(Url);
                             c2.SaveToFile(CacheFileName);
                             cache = c2;
                         }
