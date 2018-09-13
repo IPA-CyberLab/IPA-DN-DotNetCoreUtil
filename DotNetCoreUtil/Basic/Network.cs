@@ -405,6 +405,24 @@ namespace IPA.DN.CoreUtil.Basic
             return false;
         }
 
+        // IP 個数を計算
+        public static long CalcNumIPFromSubnetLen(AddressFamily af, int subnet_len)
+        {
+            if (af == AddressFamily.InterNetwork)
+            {
+                return (long)(1UL << (32 - subnet_len));
+            }
+            else
+            {
+                int v = 64 - subnet_len;
+                if (v < 0)
+                {
+                    v = 0;
+                }
+                return (long)(1UL << v);
+            }
+        }
+
         // 文字列を IP アドレスに変換
         public static IPAddress StrToIP(string str)
         {
