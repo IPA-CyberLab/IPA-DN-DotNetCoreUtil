@@ -17,22 +17,22 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil.Basic
 {
-    public class SubnetSpaceSubnet
+    public class SubnetSpaceSubnet<T> where T: class
     {
         public IPAddr Address;
         public int SubnetLength;
-        public List<object> DataList;
+        public List<T> DataList;
 
         [JsonIgnore]
         public object DataFirst { get => this.DataList.GetFirstOrNull(); }
 
-        internal List<(int sort_key, object data)> tmp_sort_list = new List<(int sort_key, object data)>();
+        internal List<(int sort_key, T data)> tmp_sort_list = new List<(int sort_key, T data)>();
 
         int hash_code;
 
         public SubnetSpaceSubnet() { }
 
-        public SubnetSpaceSubnet(IPAddr address, int subnet_len, List<object> data_list = null)
+        public SubnetSpaceSubnet(IPAddr address, int subnet_len, List<T> data_list = null)
         {
             this.Address = address;
             this.SubnetLength = subnet_len;
@@ -40,7 +40,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             if (this.DataList == null)
             {
-                this.DataList = new List<object>();
+                this.DataList = new List<T>();
             }
 
             if (this.SubnetLength > FullRoute.GetMaxSubnetSize(Address.AddressFamily))
@@ -94,7 +94,7 @@ namespace IPA.DN.CoreUtil.Basic
 
         public override bool Equals(object obj)
         {
-            SubnetSpaceSubnet other = obj as SubnetSpaceSubnet;
+            SubnetSpaceSubnet<T> other = obj as SubnetSpaceSubnet<T>;
             if (other == null) return false;
             return this.Address.Equals(other.Address) && (this.SubnetLength == other.SubnetLength);
         }
@@ -115,16 +115,16 @@ namespace IPA.DN.CoreUtil.Basic
             return target_str.StartsWith(subnet_str);
         }
 
-        public static int CompareBySubnetLength(SubnetSpaceSubnet x, SubnetSpaceSubnet y)
+        public static int CompareBySubnetLength(SubnetSpaceSubnet<T> x, SubnetSpaceSubnet<T> y)
         {
             return x.SubnetLength.CompareTo(y.SubnetLength);
         }
     }
 
-    public class SubnetSpace
+    public class SubnetSpace<T> where T : class
     {
         public AddressFamily AddressFamily;
-        public RadixTrie Trie;
+        public RadixTrie<SubnetSpaceSubnet<T>> Trie;
 
         object lockobject = new object();
 
@@ -136,23 +136,23 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // サブネット情報を投入する
-        public void SetSubnets((IPAddress address, int subnet_length, object data, int data_sort_key)[] items)
+        public void SetData((IPAddress address, int subnet_length, T data, int data_sort_key)[] items)
         {
             // 重複するものを 1 つにまとめる
-            Distinct<SubnetSpaceSubnet> distinct = new Distinct<SubnetSpaceSubnet>();
+            Distinct<SubnetSpaceSubnet<T>> distinct = new Distinct<SubnetSpaceSubnet<T>>();
 
             foreach (var item in items)
             {
-                SubnetSpaceSubnet s = new SubnetSpaceSubnet(IPAddr.FromAddress(item.address), item.subnet_length);
+                SubnetSpaceSubnet<T> s = new SubnetSpaceSubnet<T>(IPAddr.FromAddress(item.address), item.subnet_length);
 
                 s = distinct.AddOrGet(s);
 
                 s.tmp_sort_list.Add((item.data_sort_key, item.data));
             }
 
-            SubnetSpaceSubnet[] subnets = distinct.Values;
+            SubnetSpaceSubnet<T>[] subnets = distinct.Values;
 
-            foreach (SubnetSpaceSubnet subnet in subnets)
+            foreach (SubnetSpaceSubnet<T> subnet in subnets)
             {
                 // tmp_sort_list の内容を sort_key に基づきソートする
                 subnet.tmp_sort_list.Sort((a, b) =>
@@ -161,18 +161,18 @@ namespace IPA.DN.CoreUtil.Basic
                 });
 
                 // ソート済みオブジェクトを順に保存する
-                subnet.DataList = new List<object>();
+                subnet.DataList = new List<T>();
                 foreach (var a in subnet.tmp_sort_list)
                 {
                     subnet.DataList.Add(a.data);
                 }
             }
 
-            List<SubnetSpaceSubnet> subnets_list = subnets.ToList();
+            List<SubnetSpaceSubnet<T>> subnets_list = subnets.ToList();
 
-            subnets_list.Sort(SubnetSpaceSubnet.CompareBySubnetLength);
+            subnets_list.Sort(SubnetSpaceSubnet<T>.CompareBySubnetLength);
 
-            var trie = new RadixTrie();
+            var trie = new RadixTrie<SubnetSpaceSubnet<T>>();
 
             foreach (var subnet in subnets_list)
             {
@@ -188,14 +188,14 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // 検索をする
-        public SubnetSpaceSubnet Lookup(IPAddress address)
+        public SubnetSpaceSubnet<T> Lookup(IPAddress address)
         {
             if (address.AddressFamily != this.AddressFamily)
             {
                 throw new ApplicationException("addr.AddressFamily != this.AddressFamily");
             }
 
-            RadixTrie trie = null;
+            RadixTrie<SubnetSpaceSubnet<T>> trie = null;
             lock (lockobject)
             {
                 trie = this.Trie;
@@ -206,7 +206,7 @@ namespace IPA.DN.CoreUtil.Basic
             }
 
             byte[] key = IPAddr.FromAddress(address).GetBinaryBytes();
-            RadixNode n = trie.Lookup(key);
+            RadixNode<SubnetSpaceSubnet<T>> n = trie.Lookup(key);
             if (n == null)
             {
                 return null;
@@ -218,9 +218,7 @@ namespace IPA.DN.CoreUtil.Basic
                 return null;
             }
 
-            SubnetSpaceSubnet ret = (SubnetSpaceSubnet)n.Object;
-
-            return ret;
+            return n.Object;
         }
     }
 }

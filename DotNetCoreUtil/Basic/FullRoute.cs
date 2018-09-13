@@ -21,7 +21,7 @@ using Newtonsoft.Json;
 
 namespace IPA.DN.CoreUtil.Basic
 {
-    public abstract class IPAddr : IComparable<IPAddr>, IEquatable<IPAddr>
+    public class IPAddr : IComparable<IPAddr>, IEquatable<IPAddr>
     {
         public byte[] Bytes;
         public int Size;
@@ -96,7 +96,10 @@ namespace IPA.DN.CoreUtil.Basic
             return ret;
         }
 
-        public abstract IPAddr Add(int i);
+        public virtual IPAddr Add(int i)
+        {
+            throw new NotImplementedException();
+        }
 
         public static byte[] PadBytes(byte[] b, int size)
         {
