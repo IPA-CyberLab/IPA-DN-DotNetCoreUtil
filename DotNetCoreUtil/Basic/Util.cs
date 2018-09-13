@@ -1392,6 +1392,7 @@ namespace IPA.DN.CoreUtil.Basic
         int update_interval;
         ThreadObj thread;
         ManualResetEventSlim halt_event = new ManualResetEventSlim();
+        public readonly ManualResetEventSlim LoadCompleteEvent = new ManualResetEventSlim();
         bool halt_flag = false;
 
         public T Data { get; private set; }
@@ -1436,6 +1437,7 @@ namespace IPA.DN.CoreUtil.Basic
                 // 読み込んだデータをグローバルにセット
                 last_timestamp = ret.data_timestamp;
                 this.Data = ret.data;
+                LoadCompleteEvent.Set();
             }
 
             // 次回まで待機
