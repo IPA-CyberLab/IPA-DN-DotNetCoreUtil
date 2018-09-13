@@ -206,6 +206,22 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static T GetFirstOrNull<T>(this List<T> list) => (list == null ? default(T) : (list.Count == 0 ? default(T) : list[0]));
         public static T GetFirstOrNull<T>(this T[] list) => (list == null ? default(T) : (list.Length == 0 ? default(T) : list[0]));
 
+        public static TValue GetOrNew<TKey, TValue>(this IDictionary<TKey, TValue> d, TKey key) where TValue: new()
+        {
+            if (d.ContainsKey(key)) return d[key];
+            TValue n = new TValue();
+            d.Add(key, n);
+            return n;
+        }
+
+        public static TValue GetOrNew<TKey, TValue>(this IDictionary<TKey, TValue> d, TKey key, Func<TValue> new_proc) where TValue : new()
+        {
+            if (d.ContainsKey(key)) return d[key];
+            TValue n = new_proc();
+            d.Add(key, n);
+            return n;
+        }
+
         public static List<T> ToList<T>(this IEnumerable<T> i) => new List<T>(i);
 
         public static IPAddress ToIPAddress(this string s) => IPUtil.StrToIP(s);

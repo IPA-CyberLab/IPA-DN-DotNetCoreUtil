@@ -127,19 +127,41 @@ namespace IPA.DN.CoreUtil.Basic
     {
         public AddressFamily AddressFamily;
         public RadixTrie<SubnetSpaceSubnet<T>> Trie;
+        bool is_readonly = false;
 
-        object lockobject = new object();
-
-        public SubnetSpace() { }
+        public SubnetSpace()
+        {
+            is_readonly = true;
+        }
 
         public SubnetSpace(AddressFamily address_family)
         {
+            is_readonly = false;
             this.AddressFamily = address_family;
+        }
+
+        // バッチ処理のためサブネット情報を追加する
+        List<(IPAddress address, int subnet_length, T data, int data_sort_key)> batch_add_list = new List<(IPAddress address, int subnet_length, T data, int data_sort_key)>();
+        public void BatchAddOne(IPAddress address, int subnet_length, T data, int data_sort_key)
+        {
+            if (is_readonly) throw new ApplicationException("The SubnetSpace object is readonly.");
+
+            batch_add_list.Add((address, subnet_length, data, data_sort_key));
+        }
+
+        public void BatchAddFinish()
+        {
+            if (is_readonly) throw new ApplicationException("The SubnetSpace object is readonly.");
+
+            SetData(batch_add_list.ToArray());
+            batch_add_list.Clear();
         }
 
         // サブネット情報を投入する
         public void SetData((IPAddress address, int subnet_length, T data, int data_sort_key)[] items)
         {
+            if (is_readonly) throw new ApplicationException("The SubnetSpace object is readonly.");
+
             // 重複するものを 1 つにまとめる
             Distinct<SubnetSpaceSubnet<T>> distinct = new Distinct<SubnetSpaceSubnet<T>>();
 
@@ -156,10 +178,10 @@ namespace IPA.DN.CoreUtil.Basic
 
             foreach (SubnetSpaceSubnet<T> subnet in subnets)
             {
-                // tmp_sort_list の内容を sort_key に基づきソートする
+                // tmp_sort_list の内容を sort_key に基づき逆ソートする
                 subnet.tmp_sort_list.Sort((a, b) =>
                 {
-                    return a.sort_key.CompareTo(b.sort_key);
+                    return -a.sort_key.CompareTo(b.sort_key);
                 });
 
                 // ソート済みオブジェクトを順に保存する
@@ -183,10 +205,9 @@ namespace IPA.DN.CoreUtil.Basic
                 node.Object = subnet;
             }
 
-            lock (lockobject)
-            {
-                this.Trie = trie;
-            }
+            this.Trie = trie;
+
+            is_readonly = true;
         }
 
         // 検索をする
@@ -197,11 +218,8 @@ namespace IPA.DN.CoreUtil.Basic
                 throw new ApplicationException("addr.AddressFamily != this.AddressFamily");
             }
 
-            RadixTrie<SubnetSpaceSubnet<T>> trie = null;
-            lock (lockobject)
-            {
-                trie = this.Trie;
-            }
+            RadixTrie<SubnetSpaceSubnet<T>> trie = this.Trie;
+
             if (trie == null)
             {
                 return null;
