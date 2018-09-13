@@ -206,6 +206,19 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static T GetFirstOrNull<T>(this List<T> list) => (list == null ? default(T) : (list.Count == 0 ? default(T) : list[0]));
         public static T GetFirstOrNull<T>(this T[] list) => (list == null ? default(T) : (list.Length == 0 ? default(T) : list[0]));
 
+        public static void AddStringsByLines(this ISet<string> iset, string strings)
+        {
+            var lines = Str.GetLines(strings);
+            foreach (string line in lines)
+            {
+                string s = line.Trim();
+                if (s.IsFilled())
+                {
+                    iset.Add(s);
+                }
+            }
+        }
+
         public static TValue GetOrNew<TKey, TValue>(this IDictionary<TKey, TValue> d, TKey key) where TValue: new()
         {
             if (d.ContainsKey(key)) return d[key];
