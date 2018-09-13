@@ -24,13 +24,15 @@ namespace IPA.DN.CoreUtil.Basic
         public List<T> DataList;
 
         [JsonIgnore]
-        public object DataFirst { get => this.DataList.GetFirstOrNull(); }
+        public T DataFirst { get => this.DataList.GetFirstOrNull(); }
 
         internal List<(int sort_key, T data)> tmp_sort_list = new List<(int sort_key, T data)>();
 
         int hash_code;
 
         public SubnetSpaceSubnet() { }
+
+        public SubnetSpaceSubnet(IPAddr address, int subnet_len, T data) : this(address, subnet_len, new T[] { data }.ToList()) { }
 
         public SubnetSpaceSubnet(IPAddr address, int subnet_len, List<T> data_list = null)
         {
