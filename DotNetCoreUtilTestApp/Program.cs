@@ -29,7 +29,7 @@ using System.Net.Sockets;
 using System.Web;
 
 using IPA.DN.CoreUtil.Basic;
-using IPA.DN.CoreUtil.Basic.BigInt;
+//using IPA.DN.CoreUtil.Basic.BigInt;
 using IPA.DN.CoreUtil.WebApi;
 
 using Org.BouncyCastle;
@@ -130,7 +130,7 @@ namespace DotNetCoreUtilTestApp
 
             //async_test();
 
-            db_test();
+            //db_test();
 
             //DbTest.db_test();
 
@@ -170,6 +170,12 @@ namespace DotNetCoreUtilTestApp
             //jsonrpc_benchmark_test();
 
             //weak_task_test();
+
+            while (true)
+            {
+                byte[] r = Secure.Rand(64);
+                Str.ByteToHex(r).Print(false);
+            }
         }
 
         static void weak_task_test()
@@ -1589,7 +1595,7 @@ namespace DotNetCoreUtilTestApp
 
                     try
                     {
-                        IPInfoEntry e = IPInfo.Search(line);
+                        FullRouteIPInfoEntry e = FullRouteIPInfo.Search(line);
 
                         if (e == null)
                         {
