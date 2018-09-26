@@ -1272,7 +1272,7 @@ namespace IPA.DN.CoreUtil.Basic
                     return Encoding.GetEncoding("utf-32BE");
                 }
                 else if (data[0] == 0xff && data[1] == 0xfe && data[2] == 0x00 && data[3] == 0x00)
-                {
+                {//
                     bomNumBytes = 4;
                     return Encoding.GetEncoding("utf-32");
                 }
