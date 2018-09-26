@@ -173,8 +173,9 @@ namespace DotNetCoreUtilTestApp
 
             while (true)
             {
-                byte[] r = Secure.Rand(64);
+                byte[] r = Secure.Rand((uint)Secure.Rand31i() % 50);
                 Str.ByteToHex(r).Print(false);
+                Kernel.SleepThread(50);
             }
         }
 
