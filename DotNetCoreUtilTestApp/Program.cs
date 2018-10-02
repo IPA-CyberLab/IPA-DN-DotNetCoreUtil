@@ -138,7 +138,7 @@ namespace DotNetCoreUtilTestApp
 
             //jsonrpc_test_with_random_api();
 
-            //jsonrpc_http_server_test();
+            jsonrpc_http_server_test();
 
 
             //TaskUtil.Test();
@@ -171,12 +171,12 @@ namespace DotNetCoreUtilTestApp
 
             //weak_task_test();
 
-            while (true)
+            /*while (true)
             {
                 byte[] r = Secure.Rand((uint)Secure.Rand31i() % 50);
                 Str.ByteToHex(r).Print(false);
                 Kernel.SleepThread(50);
-            }
+            }*/
         }
 
         static void weak_task_test()
@@ -591,6 +591,7 @@ namespace DotNetCoreUtilTestApp
             public async Task<string> Test3(int a, int b, int c)
             {
                 //await TaskUtil.PreciseDelay(500);
+                Dbg.Where("Test3");
                 return Str.CombineStringArray2(",", a, b, c);
             }
 

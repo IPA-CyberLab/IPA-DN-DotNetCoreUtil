@@ -338,7 +338,17 @@ namespace IPA.DN.CoreUtil.WebApi
             {
                 this.CancelToken.ThrowIfCancellationRequested();
                 RpcMethodInfo method = this.Api.GetMethodInfo(req.Method);
-                JObject in_obj = (JObject)req.Params;
+                JObject in_obj;
+
+                if (req.Params is JObject)
+                {
+                    in_obj = (JObject)req.Params;
+                }
+                else
+                {
+                    in_obj = new JObject();
+                }
+
                 try
                 {
                     object ret_obj = await this.Api.InvokeMethod(req.Method, in_obj, method);
