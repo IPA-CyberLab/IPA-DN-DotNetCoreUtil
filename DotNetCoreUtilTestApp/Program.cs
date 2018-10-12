@@ -29,7 +29,7 @@ using System.Net.Sockets;
 using System.Web;
 
 using IPA.DN.CoreUtil.Basic;
-//using IPA.DN.CoreUtil.Basic.BigInt;
+using IPA.DN.CoreUtil.Basic.BigInt;
 using IPA.DN.CoreUtil.WebApi;
 
 using Org.BouncyCastle;
@@ -55,8 +55,6 @@ using IPA.DN.CoreUtil.Helper.SlackApi;
 using YamlDotNet.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Routing;
-
-using Dapper;
 
 #pragma warning disable 162
 
@@ -117,7 +115,14 @@ namespace DotNetCoreUtilTestApp
 
         static void Main(string[] args)
         {
-            $"Test Program {DateTimeOffset.Now.ToDtStr()}".Print();
+            byte[] a = new byte[] { 1, 2, 3, };
+
+            a.ObjectToJson().Print();
+//            a.Print();
+
+            return;
+
+            "Test Program".Print();
 
             Dbg.SetDebugMode();
 
@@ -138,7 +143,7 @@ namespace DotNetCoreUtilTestApp
 
             //jsonrpc_test_with_random_api();
 
-            jsonrpc_http_server_test();
+            //jsonrpc_http_server_test();
 
 
             //TaskUtil.Test();
@@ -159,7 +164,7 @@ namespace DotNetCoreUtilTestApp
 
             //Kernel.SleepThread(-1);
 
-            //jsonrpc_client_server_both_test();
+            jsonrpc_client_server_both_test();
 
             //http_client_test();
 
@@ -170,13 +175,6 @@ namespace DotNetCoreUtilTestApp
             //jsonrpc_benchmark_test();
 
             //weak_task_test();
-
-            /*while (true)
-            {
-                byte[] r = Secure.Rand((uint)Secure.Rand31i() % 50);
-                Str.ByteToHex(r).Print(false);
-                Kernel.SleepThread(50);
-            }*/
         }
 
         static void weak_task_test()
@@ -591,7 +589,6 @@ namespace DotNetCoreUtilTestApp
             public async Task<string> Test3(int a, int b, int c)
             {
                 //await TaskUtil.PreciseDelay(500);
-                Dbg.Where("Test3");
                 return Str.CombineStringArray2(",", a, b, c);
             }
 
@@ -1046,42 +1043,19 @@ namespace DotNetCoreUtilTestApp
             o.ObjectToJson(true).Print();
         }
 
-        public class T1
-        {
-            public DateTimeOffset Dt { get; set; }
-        }
-
-        public class T2
-        {
-            public DateTime Dt { get; set; }
-        }
-
         public static void db_test()
         {
             Cfg<DBTestSettings> cfg = new Cfg<DBTestSettings>();
 
             Database db = new Database(cfg.ConfigSafe.DBConnectStr);
 
-            DateTimeOffset now = DateTimeOffset.Now;
-
-            var d = now;
-            var x = new { dt1 = d, dt2 = d };
-
             db.Tran(() =>
             {
+                db.Query("select * from test");
 
-                //db.QueryWithNoReturn("insert into dttest (dt1, dt2) values (@, @)", d, d);
+                Data d = db.ReadAllData();
 
-                db.Connection.Execute("insert into dttest (dt1, dt2) values (@dt1, @dt2)", new { dt1 = d, dt2 = d }, db.Transaction, db.CommandTimeoutSecs);
-
-                db.Query("select * from dttest order by dt1");
-
-                var data = db.ReadAllData();
-
-                foreach (var r in data.RowList)
-                {
-                    Con.WriteLine($"{r["dt1"].DateTimeOffset}, {r["dt2"].DateTime}");
-                }
+                Json.Serialize(d).Print();
 
                 return true;
             });
@@ -1119,7 +1093,7 @@ namespace DotNetCoreUtilTestApp
                     }
                 }
 
-                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTimeLocal.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
+                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
             }
         }
 
@@ -1597,7 +1571,7 @@ namespace DotNetCoreUtilTestApp
 
                     try
                     {
-                        FullRouteIPInfoEntry e = FullRouteIPInfo.Search(line);
+                        IPInfoEntry e = IPInfo.Search(line);
 
                         if (e == null)
                         {
