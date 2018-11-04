@@ -29,7 +29,7 @@ using System.Net.Sockets;
 using System.Web;
 
 using IPA.DN.CoreUtil.Basic;
-using IPA.DN.CoreUtil.Basic.BigInt;
+//using IPA.DN.CoreUtil.Basic.BigInt;
 using IPA.DN.CoreUtil.WebApi;
 
 using Org.BouncyCastle;
@@ -115,6 +115,9 @@ namespace DotNetCoreUtilTestApp
 
         static void Main(string[] args)
         {
+            vc_project_maker(@"C:\Pack\net-snmp-5.7.3\net-snmp-5.7.3");
+            return;
+
             byte[] a = new byte[] { 1, 2, 3, };
 
             a.ObjectToJson().Print();
@@ -1093,7 +1096,7 @@ namespace DotNetCoreUtilTestApp
                     }
                 }
 
-                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTime.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
+                a.PostMessageAsync(channel_id, $"こんにちは！ \t{Time.NowDateTimeLocal.ToDtStr(true, DtstrOption.All, true)}", true).Wait();
             }
         }
 
@@ -1571,7 +1574,7 @@ namespace DotNetCoreUtilTestApp
 
                     try
                     {
-                        IPInfoEntry e = IPInfo.Search(line);
+                        FullRouteIPInfoEntry e = FullRouteIPInfo.Search(line);
 
                         if (e == null)
                         {
