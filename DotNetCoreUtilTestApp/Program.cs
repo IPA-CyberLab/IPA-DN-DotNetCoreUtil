@@ -26,6 +26,8 @@ using Microsoft.AspNetCore.Http;
 using System.Net;
 using System.Net.Sockets;
 
+using System.Diagnostics;
+
 using System.Web;
 
 using IPA.DN.CoreUtil.Basic;
@@ -115,7 +117,8 @@ namespace DotNetCoreUtilTestApp
 
         static void Main(string[] args)
         {
-            vc_project_maker(@"C:\Pack\net-snmp-5.7.3\net-snmp-5.7.3");
+            async_lock_test();
+
             return;
 
             byte[] a = new byte[] { 1, 2, 3, };
@@ -178,6 +181,41 @@ namespace DotNetCoreUtilTestApp
             //jsonrpc_benchmark_test();
 
             //weak_task_test();
+        }
+
+        static void async_lock_test()
+        {
+            AsyncLock k = new AsyncLock();
+
+            int number = 0;
+
+            async Task proc()
+            {
+                try
+                {
+                    int n = number++;
+                    while (true)
+                    {
+                        using (await k.LockWithAwait())
+                        {
+                            WriteLine($"{n}: start");
+                            await Task.Delay(Secure.Rand31i() % 10);
+                            WriteLine($"{n}: end");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ex.Print();
+                }
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                proc().LaissezFaire();
+            }
+
+            ThreadObj.Sleep(-1);
         }
 
         static void weak_task_test()
@@ -1909,6 +1947,626 @@ namespace DotNetCoreUtilTestApp
                 Console.WriteLine("async3 stop ID=" + ThreadObj.CurrentThreadId);
                 await Task.Delay(Secure.Rand31i() % 1000);
             }
+        }
+
+        static void bench_packet_exchange()
+        {
+            while (true)
+            {
+                int[] test_list = new int[] { 12 };
+                foreach (int i in test_list)
+                {
+                    packet_exchange_benchmark_class x = new packet_exchange_benchmark_class();
+
+                    long ret = x.Test(i);
+
+                    Console.WriteLine($"Test {i}: {ret}");
+                }
+            }
+        }
+    }
+
+    class packet_exchange_benchmark_class
+    {
+        class packet
+        {
+            public byte[] Data = new byte[1];
+        }
+
+        Queue<packet> q1 = new Queue<packet>();
+        Queue<packet> q2 = new Queue<packet>();
+        Queue<packet> q3 = new Queue<packet>();
+
+        const int num_packets = 1000000;
+        const int num_thread_ctx_switch = 100000;
+
+        public packet_exchange_benchmark_class()
+        {
+            for (int i = 0; i < num_packets; i++)
+            {
+                packet p = new packet();
+
+                q1.Enqueue(p);
+            }
+        }
+
+        int mode = 0;
+
+        public long Test(int i)
+        {
+            this.mode = i;
+
+            switch (i)
+            {
+                case 1:
+                    return test1();
+
+                case 2:
+                case 3:
+                    return test2();
+
+                case 4:
+                case 5:
+                    return test4(0).Result;
+
+                case 6:
+                case 7:
+                    {
+                        TaskVm<long, int> taskvm = new TaskVm<long, int>(test4);
+                        taskvm.Wait();
+                        return taskvm.Result;
+                    }
+
+                case 8:
+                    return test8();
+
+                case 9:
+                    return test9(0).Result;
+
+                case 10:
+                    {
+                        TaskVm<long, int> taskvm = new TaskVm<long, int>(test9);
+                        taskvm.Wait();
+                        return taskvm.Result;
+                    }
+
+                case 11:
+                    return test11(0).Result;
+
+                case 12:
+                    return test12();
+            }
+            return 0;
+        }
+
+        volatile bool[] t12_ev1 = new bool[num_thread_ctx_switch];
+        volatile bool[] t12_ev2 = new bool[num_thread_ctx_switch];
+
+        long test12()
+        {
+            bool start = false;
+            ThreadObj t1 = new ThreadObj(param =>
+            {
+                while (start == false) ;
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    t12_ev1[i] = true;
+                    while (t12_ev2[i] == false) ;
+                }
+            });
+            ThreadObj t2 = new ThreadObj(param =>
+            {
+                while (start == false) ;
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    while (t12_ev1[i] == false) ;
+                    t12_ev2[i] = true;
+                }
+            });
+
+            Thread.Sleep(100);
+
+            Stopwatch w = new Stopwatch();
+            w.Start();
+            start = true;
+            t1.WaitForEnd();
+            w.Stop();
+            t2.WaitForEnd();
+            return w.ElapsedMilliseconds;
+        }
+
+
+        async Task<long> test11(int a)
+        {
+            AsyncManualResetEvent start = new AsyncManualResetEvent();
+            AsyncAutoResetEvent[] ev1 = new AsyncAutoResetEvent[num_thread_ctx_switch];
+            AsyncAutoResetEvent[] ev2 = new AsyncAutoResetEvent[num_thread_ctx_switch];
+            for (int i = 0; i < num_thread_ctx_switch; i++)
+            {
+                ev1[i] = new AsyncAutoResetEvent();
+                ev2[i] = new AsyncAutoResetEvent();
+            }
+
+            async Task<long> tf1(int xx)
+            {
+                await start.WaitAsync();
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    ev1[i].Set();
+                    await ev2[i].WaitOneAsync();
+                }
+                return 0;
+            }
+
+            async Task<long> tf2(int xx)
+            {
+                await start.WaitAsync();
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    await ev1[i].WaitOneAsync();
+                    ev2[i].Set();
+                }
+                return 0;
+            }
+
+            TaskVm<long, int> taskvm1 = new TaskVm<long, int>(tf1);
+            TaskVm<long, int> taskvm2 = new TaskVm<long, int>(tf2);
+
+            Stopwatch w = new Stopwatch();
+            w.Start();
+            start.Set();
+            taskvm1.Wait();
+            w.Stop();
+            taskvm2.Wait();
+
+            await Task.CompletedTask;
+
+            return w.ElapsedMilliseconds;
+        }
+
+        async Task<long> test9(int a)
+        {
+            AsyncManualResetEvent start = new AsyncManualResetEvent();
+            AsyncAutoResetEvent[] ev1 = new AsyncAutoResetEvent[num_thread_ctx_switch];
+            AsyncAutoResetEvent[] ev2 = new AsyncAutoResetEvent[num_thread_ctx_switch];
+            for (int i = 0; i < num_thread_ctx_switch; i++)
+            {
+                ev1[i] = new AsyncAutoResetEvent();
+                ev2[i] = new AsyncAutoResetEvent();
+            }
+
+            async Task<long> tf1()
+            {
+                await start.WaitAsync();
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    ev1[i].Set();
+                    await ev2[i].WaitOneAsync();
+                }
+                return 0;
+            }
+
+            async Task<long> tf2()
+            {
+                await start.WaitAsync();
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    await ev1[i].WaitOneAsync();
+                    ev2[i].Set();
+                }
+                return 0;
+            }
+
+            Task<long> t1 = tf1();
+            Task<long> t2 = tf2();
+
+            Stopwatch w = new Stopwatch();
+            w.Start();
+            start.Set();
+            await t1;
+            w.Stop();
+            await t2;
+            return w.ElapsedMilliseconds;
+        }
+
+        long test8()
+        {
+            ManualResetEvent start = new ManualResetEvent(false);
+            AutoResetEvent[] ev1 = new AutoResetEvent[num_thread_ctx_switch];
+            AutoResetEvent[] ev2 = new AutoResetEvent[num_thread_ctx_switch];
+            for (int i = 0; i < num_thread_ctx_switch; i++)
+            {
+                ev1[i] = new AutoResetEvent(false);
+                ev2[i] = new AutoResetEvent(false);
+            }
+            ThreadObj t1 = new ThreadObj(param =>
+            {
+                start.WaitOne();
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    ev1[i].Set();
+                    ev2[i].WaitOne();
+                }
+            });
+            ThreadObj t2 = new ThreadObj(param =>
+            {
+                start.WaitOne();
+                for (int i = 0; i < num_thread_ctx_switch; i++)
+                {
+                    ev1[i].WaitOne();
+                    ev2[i].Set();
+                }
+            });
+
+            Thread.Sleep(100);
+
+            Stopwatch w = new Stopwatch();
+            w.Start();
+            start.Set();
+            t1.WaitForEnd();
+            w.Stop();
+            t2.WaitForEnd();
+            return w.ElapsedMilliseconds;
+        }
+
+
+        AsyncManualResetEvent test4_start = new AsyncManualResetEvent();
+        AsyncAutoResetEvent test4_ev1 = new AsyncAutoResetEvent();
+        AsyncAutoResetEvent test4_ev2 = new AsyncAutoResetEvent();
+        volatile bool test4_halt = false;
+
+        async Task<long> test4(int a)
+        {
+            Task t1 = test4_thread1();
+            Task t2 = test4_thread2();
+            Task t3 = test4_thread3();
+
+            Stopwatch w = new Stopwatch();
+            w.Start();
+
+            test4_start.Set();
+
+            await t3;
+
+            test4_halt = true;
+            test4_ev1.Set();
+            test4_ev2.Set();
+
+            w.Stop();
+
+            return w.ElapsedMilliseconds;
+        }
+
+        async Task test4_thread1()
+        {
+            await test4_start.WaitAsync();
+
+            while (true)
+            {
+                packet p;
+
+                if ((this.mode % 2) == 0)
+                {
+                    lock (q1)
+                    {
+                        if (q1.TryDequeue(out p) == false)
+                        {
+                            break;
+                        }
+                    }
+                    lock (q2)
+                    {
+                        q2.Enqueue(p);
+                        test4_ev1.Set();
+                    }
+                }
+                else
+                {
+                    lock (q1)
+                    {
+                        int num = 0;
+                        for (int i = 0; i < test2_num_each_packets; i++)
+                        {
+                            if (q1.TryDequeue(out p) == false)
+                            {
+                                break;
+                            }
+                            lock (q2)
+                            {
+                                num++;
+                                q2.Enqueue(p);
+                            }
+                        }
+                        if (num >= 1)
+                        {
+                            test4_ev1.Set();
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        async Task test4_thread2()
+        {
+            await test4_start.WaitAsync();
+
+            while (test4_halt == false)
+            {
+                await test4_ev1.WaitOneAsync();
+
+                if (test4_halt)
+                {
+                    break;
+                }
+
+                while (true)
+                {
+                    packet p;
+
+                    if ((this.mode % 2) == 0)
+                    {
+                        lock (q2)
+                        {
+                            if (q2.TryDequeue(out p) == false)
+                            {
+                                break;
+                            }
+                        }
+                        lock (q3)
+                        {
+                            q3.Enqueue(p);
+                            test4_ev2.Set();
+                        }
+                    }
+                    else
+                    {
+                        lock (q2)
+                        {
+                            int num = 0;
+                            for (int i = 0; i < test2_num_each_packets; i++)
+                            {
+                                if (q2.TryDequeue(out p) == false)
+                                {
+                                    break;
+                                }
+                                lock (q3)
+                                {
+                                    num++;
+                                    q3.Enqueue(p);
+                                }
+                            }
+                            if (num >= 1)
+                            {
+                                test4_ev2.Set();
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        async Task test4_thread3()
+        {
+            await test4_start.WaitAsync();
+
+            while (true)
+            {
+                await test4_ev2.WaitOneAsync();
+                lock (q3)
+                {
+                    if (q3.Count == num_packets)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+
+        ManualResetEventSlim test2_start = new ManualResetEventSlim(false);
+        AutoResetEvent test2_ev1 = new AutoResetEvent(false);
+        AutoResetEvent test2_ev2 = new AutoResetEvent(false);
+        volatile bool test2_halt = false;
+        int test2_num_each_packets = 100;
+
+        long test2()
+        {
+            ThreadObj t1 = new ThreadObj(test2_thread1);
+            ThreadObj t2 = new ThreadObj(test2_thread2);
+            ThreadObj t3 = new ThreadObj(test2_thread3);
+
+            Stopwatch w = new Stopwatch();
+            w.Start();
+
+            test2_start.Set();
+
+            t3.WaitForEnd();
+
+            test2_halt = true;
+            test2_ev1.Set();
+            test2_ev2.Set();
+
+
+            w.Stop();
+
+            return w.ElapsedMilliseconds;
+        }
+
+        void test2_thread1(object param)
+        {
+            test2_start.Wait();
+
+            while (true)
+            {
+                packet p;
+
+                if (this.mode == 2)
+                {
+                    lock (q1)
+                    {
+                        if (q1.TryDequeue(out p) == false)
+                        {
+                            break;
+                        }
+                    }
+                    lock (q2)
+                    {
+                        q2.Enqueue(p);
+                        test2_ev1.Set();
+                    }
+                }
+                else
+                {
+                    lock (q1)
+                    {
+                        int num = 0;
+                        for (int i = 0; i < test2_num_each_packets; i++)
+                        {
+                            if (q1.TryDequeue(out p) == false)
+                            {
+                                break;
+                            }
+                            lock (q2)
+                            {
+                                num++;
+                                q2.Enqueue(p);
+                            }
+                        }
+                        if (num >= 1)
+                        {
+                            test2_ev1.Set();
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        void test2_thread2(object param)
+        {
+            test2_start.Wait();
+
+            while (test2_halt == false)
+            {
+                test2_ev1.WaitOne();
+
+                if (test2_halt)
+                {
+                    break;
+                }
+
+                while (true)
+                {
+                    packet p;
+
+                    if (this.mode == 2)
+                    {
+                        lock (q2)
+                        {
+                            if (q2.TryDequeue(out p) == false)
+                            {
+                                break;
+                            }
+                        }
+                        lock (q3)
+                        {
+                            q3.Enqueue(p);
+                            test2_ev2.Set();
+                        }
+                    }
+                    else
+                    {
+                        lock (q2)
+                        {
+                            int num = 0;
+                            for (int i = 0; i < test2_num_each_packets; i++)
+                            {
+                                if (q2.TryDequeue(out p) == false)
+                                {
+                                    break;
+                                }
+                                lock (q3)
+                                {
+                                    num++;
+                                    q3.Enqueue(p);
+                                }
+                            }
+                            if (num >= 1)
+                            {
+                                test2_ev2.Set();
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        void test2_thread3(object param)
+        {
+            test2_start.Wait();
+
+            while (true)
+            {
+                test2_ev2.WaitOne();
+                lock (q3)
+                {
+                    if (q3.Count == num_packets)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        long test1()
+        {
+            Stopwatch w = new Stopwatch();
+            w.Start();
+            while (true)
+            {
+                lock (q1)
+                {
+                    if (q1.Count != 0)
+                    {
+                        packet p = q1.Dequeue();
+                        q2.Enqueue(p);
+                    }
+                }
+
+                lock (q2)
+                {
+                    if (q2.Count != 0)
+                    {
+                        packet p = q2.Dequeue();
+                        q3.Enqueue(p);
+                    }
+                }
+
+                lock (q3)
+                {
+                    if (q3.Count == num_packets)
+                    {
+                        break;
+                    }
+                }
+            }
+            w.Stop();
+            return w.ElapsedMilliseconds;
         }
     }
 }

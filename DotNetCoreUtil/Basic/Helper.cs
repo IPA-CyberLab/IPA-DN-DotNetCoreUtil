@@ -315,10 +315,13 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
             try
             {
-                int ret = await TaskUtil.DoAsyncWithTimeout<int>(() =>
+                int ret = await TaskUtil.DoAsyncWithTimeout<int>((cancel_for_proc) =>
                 {
-                    return stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset));
-                }, (int)timeout, cancel, cancel_tokens);
+                    return stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset), cancel_for_proc);
+                },
+                timeout: (int)timeout,
+                cancel: cancel,
+                cancel_tokens: cancel_tokens);
 
                 if (ret <= 0)
                 {
@@ -341,11 +344,14 @@ namespace IPA.DN.CoreUtil.Helper.Basic
 
             try
             {
-                await TaskUtil.DoAsyncWithTimeout<int>(async () =>
+                await TaskUtil.DoAsyncWithTimeout<int>(async (cancel_for_proc) =>
                 {
-                    await stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset));
+                    await stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset), cancel_for_proc);
                     return 0;
-                }, (int)timeout, cancel, cancel_tokens);
+                },
+                timeout: (int)timeout,
+                cancel: cancel,
+                cancel_tokens: cancel_tokens);
 
             }
             catch
@@ -355,7 +361,32 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             }
         }
 
-        public static void LaissezFaire(this Task task) { }
+        public static void LaissezFaire(this Task task)
+        {
+            if (task != null)
+            {
+                task.ContinueWith(t =>
+                {
+                    if (t.Exception != null)
+                    {
+                        string err = t.Exception.ToString();
+
+                        ("LaissezFaire: Error: " + err).Debug();
+                    }
+                });
+            }
+        }
+
+
+        public static void DisposeSafe(this IDisposable obj)
+        {
+            try
+            {
+                if (obj != null) obj.Dispose();
+            }
+            catch { }
+        }
+
     }
 }
 

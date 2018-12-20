@@ -24,6 +24,49 @@ using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil.Basic
 {
+    public class AsyncLock : IDisposable
+    {
+        public class LockHolder : IDisposable
+        {
+            AsyncLock parent;
+            internal LockHolder(AsyncLock parent)
+            {
+                this.parent = parent;
+            }
+
+            Once dispose_flag;
+            public void Dispose()
+            {
+                if (dispose_flag.IsFirstCall())
+                {
+                    this.parent.Unlock();
+                }
+            }
+        }
+
+        SemaphoreSlim semaphone = new SemaphoreSlim(1, 1);
+        Once dispose_flag;
+
+        public async Task<LockHolder> LockWithAwait()
+        {
+            await LockAsync();
+
+            return new LockHolder(this);
+        }
+
+        public Task LockAsync() => semaphone.WaitAsync();
+        public void Unlock() => semaphone.Release();
+
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                semaphone.DisposeSafe();
+                semaphone = null;
+            }
+        }
+    }
+
     internal class TaskVarObject
     {
         Dictionary<string, object> data = new Dictionary<string, object>();
@@ -738,7 +781,7 @@ namespace IPA.DN.CoreUtil.Basic
         public static CancellationToken CurrentTaskVmGracefulCancel => (CancellationToken)ThreadData.CurrentThreadData["taskvm_current_graceful_cancel"];
 
         // 何らかのタスクをタイムアウトおよびキャンセル付きで実施する
-        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<Task<TResult>> proc, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<CancellationToken, Task<TResult>> main_proc, Action cancel_proc = null, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout < 0) timeout = Timeout.Infinite;
             if (timeout == 0) throw new TimeoutException("timeout == 0");
@@ -746,6 +789,8 @@ namespace IPA.DN.CoreUtil.Basic
             List<Task> wait_tasks = new List<Task>();
             Task timeout_task = null;
             CancellationTokenSource timeout_cts = null;
+
+            CancellationTokenSource cancel_for_proc = new CancellationTokenSource();
 
             if (timeout != Timeout.Infinite)
             {
@@ -774,7 +819,7 @@ namespace IPA.DN.CoreUtil.Basic
                     }
                 }
 
-                Task<TResult> proc_task = proc();
+                Task<TResult> proc_task = main_proc(cancel_for_proc.Token);
 
                 if (proc_task.IsCompleted)
                 {
@@ -799,6 +844,22 @@ namespace IPA.DN.CoreUtil.Basic
 
                 throw new TimeoutException();
             }
+            catch
+            {
+                try
+                {
+                    cancel_for_proc.Cancel();
+                }
+                catch { }
+                try
+                {
+                    if (cancel_proc != null) cancel_proc();
+                }
+                catch
+                {
+                }
+                throw;
+            }
             finally
             {
                 if (timeout_cts != null)
@@ -819,7 +880,6 @@ namespace IPA.DN.CoreUtil.Basic
                     }
                 }
             }
-
         }
     }
 
