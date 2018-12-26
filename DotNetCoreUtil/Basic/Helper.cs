@@ -201,6 +201,9 @@ namespace IPA.DN.CoreUtil.Helper.Basic
         public static async Task CancelAsync(this CancellationTokenSource cts, bool throwOnFirstException = false) => await TaskUtil.CancelAsync(cts, throwOnFirstException);
         public static async Task TryCancelAsync(this CancellationTokenSource cts) => await TaskUtil.TryCancelAsync(cts);
 
+        public static void TryWait(Task t) => TaskUtil.TryWait(t);
+        public static Task TryWaitAsync(this Task t) => TaskUtil.TryWaitAsync(t);
+
         public static T[] ToArrayList<T>(this IEnumerable<T> i) => Util.IEnumerableToArrayList<T>(i);
 
         public static T GetFirstOrNull<T>(this List<T> list) => (list == null ? default(T) : (list.Count == 0 ? default(T) : list[0]));
@@ -217,6 +220,13 @@ namespace IPA.DN.CoreUtil.Helper.Basic
                     iset.Add(s);
                 }
             }
+        }
+
+        public static T ClonePublics<T>(this T o)
+        {
+            byte[] data = Util.ObjectToXml(o);
+
+            return (T)Util.XmlToObject(data, o.GetType());
         }
 
         public static TValue GetOrNew<TKey, TValue>(this IDictionary<TKey, TValue> d, TKey key) where TValue: new()
@@ -410,6 +420,53 @@ namespace IPA.DN.CoreUtil.Helper.Basic
             }
             catch { }
         }
+
+        public static IAsyncResult AsApm<T>(this Task<T> task,
+                                    AsyncCallback callback,
+                                    object state)
+        {
+            if (task == null)
+                throw new ArgumentNullException("task");
+
+            var tcs = new TaskCompletionSource<T>(state);
+            task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    tcs.TrySetException(t.Exception.InnerExceptions);
+                else if (t.IsCanceled)
+                    tcs.TrySetCanceled();
+                else
+                    tcs.TrySetResult(t.Result);
+
+                if (callback != null)
+                    callback(tcs.Task);
+            }, TaskScheduler.Default);
+            return tcs.Task;
+        }
+
+        public static IAsyncResult AsApm(this Task task,
+                                            AsyncCallback callback,
+                                            object state)
+        {
+            if (task == null)
+                throw new ArgumentNullException("task");
+
+            var tcs = new TaskCompletionSource<int>(state);
+            task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    tcs.TrySetException(t.Exception.InnerExceptions);
+                else if (t.IsCanceled)
+                    tcs.TrySetCanceled();
+                else
+                    tcs.TrySetResult(0);
+
+                if (callback != null)
+                    callback(tcs.Task);
+            }, TaskScheduler.Default);
+            return tcs.Task;
+        }
+
 
     }
 }

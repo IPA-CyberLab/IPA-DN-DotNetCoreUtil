@@ -117,7 +117,22 @@ namespace DotNetCoreUtilTestApp
 
         static void Main(string[] args)
         {
-            async_lock_test();
+            Dbg.SetDebugMode();
+
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+            for (int i = 0; ;i++)
+            {
+                using (CancelWatcher w = new CancelWatcher(cts.Token))
+                {
+                    //w.TaskWaitMe.Wait();
+
+                    if ((i % 100) == 0)
+                    {
+                        WriteLine(i);
+                    }
+                }
+            }
 
             return;
 
@@ -130,7 +145,6 @@ namespace DotNetCoreUtilTestApp
 
             "Test Program".Print();
 
-            Dbg.SetDebugMode();
 
             //ThreadPool.SetMinThreads(500, 500);
             //ThreadPool.SetMaxThreads(500, 500);
@@ -385,7 +399,7 @@ namespace DotNetCoreUtilTestApp
                     {
                         foreach (AsyncAutoResetEvent e in events)
                         {
-                            e.WaitOneAsync().Wait();
+                            e.WaitOneAsync(out _).Wait();
                         }
                     }
                 }
@@ -1829,37 +1843,6 @@ namespace DotNetCoreUtilTestApp
             e.Set();
         }
 
-        static async Task<string> async_task1(int arg)
-        {
-            Dbg.WhereThread("a " + arg.ToString());
-
-            //throw new ApplicationException("zzz");
-            await Task.Delay(200);
-
-            Dbg.WhereThread("u");
-
-            await Task.Yield();
-
-            Dbg.WhereThread("v");
-
-            await async_task2();
-            Dbg.WhereThread("b");
-
-            CancellationTokenSource tsc = new CancellationTokenSource();
-
-            Dbg.WhereThread("cancel test start");
-
-            async_task_cancel_fire_test(tsc);
-
-            Dbg.WhereThread("cancel test c");
-
-            await TaskUtil.WhenCanceledOrTimeouted(tsc.Token, 1000);
-
-            Dbg.WhereThread("cancel test end");
-
-            return "aho";
-        }
-
         static async void async_task_cancel_fire_test(CancellationTokenSource tsc)
         {
             Dbg.WhereThread("async_task_cancel_fire_test a");
@@ -2093,7 +2076,7 @@ namespace DotNetCoreUtilTestApp
                 for (int i = 0; i < num_thread_ctx_switch; i++)
                 {
                     ev1[i].Set();
-                    await ev2[i].WaitOneAsync();
+                    await ev2[i].WaitOneAsync(out _);
                 }
                 return 0;
             }
@@ -2103,7 +2086,7 @@ namespace DotNetCoreUtilTestApp
                 await start.WaitAsync();
                 for (int i = 0; i < num_thread_ctx_switch; i++)
                 {
-                    await ev1[i].WaitOneAsync();
+                    await ev1[i].WaitOneAsync(out _);
                     ev2[i].Set();
                 }
                 return 0;
@@ -2141,7 +2124,7 @@ namespace DotNetCoreUtilTestApp
                 for (int i = 0; i < num_thread_ctx_switch; i++)
                 {
                     ev1[i].Set();
-                    await ev2[i].WaitOneAsync();
+                    await ev2[i].WaitOneAsync(out _);
                 }
                 return 0;
             }
@@ -2151,7 +2134,7 @@ namespace DotNetCoreUtilTestApp
                 await start.WaitAsync();
                 for (int i = 0; i < num_thread_ctx_switch; i++)
                 {
-                    await ev1[i].WaitOneAsync();
+                    await ev1[i].WaitOneAsync(out _);
                     ev2[i].Set();
                 }
                 return 0;
@@ -2296,7 +2279,7 @@ namespace DotNetCoreUtilTestApp
 
             while (test4_halt == false)
             {
-                await test4_ev1.WaitOneAsync();
+                await test4_ev1.WaitOneAsync(out _);
 
                 if (test4_halt)
                 {
@@ -2359,7 +2342,7 @@ namespace DotNetCoreUtilTestApp
 
             while (true)
             {
-                await test4_ev2.WaitOneAsync();
+                await test4_ev2.WaitOneAsync(out _);
                 lock (q3)
                 {
                     if (q3.Count == num_packets)
