@@ -115,10 +115,18 @@ namespace DotNetCoreUtilTestApp
         [DllImport("MyLib.dll", CallingConvention = CallingConvention.StdCall)]
         internal static extern long NativeMethod();
 
+        static async Task test1()
+        {
+            await Task.Yield();
+            CancellationTokenSource c = new CancellationTokenSource();
+            Task.Delay(1000, c.Token);
+            c.Cancel();
+        }
+
         static void Main(string[] args)
         {
             Dbg.SetDebugMode();
-
+            IntervalReporter.StartThreadPoolStatReporter();
 
             CancellationTokenSource cts = new CancellationTokenSource();
             for (int i = 0; ;i++)
@@ -126,8 +134,11 @@ namespace DotNetCoreUtilTestApp
                 using (CancelWatcher w = new CancelWatcher(cts.Token))
                 {
                     //w.TaskWaitMe.Wait();
+                    test1();
 
-                    if ((i % 100) == 0)
+                    //Thread.Sleep(100);
+
+                    if ((i % 10000) == 0)
                     {
                         WriteLine(i);
                     }
