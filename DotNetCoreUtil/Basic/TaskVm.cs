@@ -21,6 +21,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 
 using IPA.DN.CoreUtil.Helper.Basic;
+using System.Runtime.CompilerServices;
 
 namespace IPA.DN.CoreUtil.Basic
 {
@@ -498,7 +499,18 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public void Set()
+        volatile bool queued_set = false;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void QueueSet() => queued_set = true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetIfQueued(bool softly = false)
+        {
+            if (queued_set) Set(softly);
+        }
+
+        public void Set(bool softly = false)
         {
             AsyncManualResetEvent ev = null;
             lock (lockobj)
@@ -517,7 +529,7 @@ namespace IPA.DN.CoreUtil.Basic
 
             if (ev != null)
             {
-                ev.Set();
+                ev.Set(softly);
             }
         }
     }
@@ -564,8 +576,14 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        public void Set()
+        public void Set(bool softly = false)
         {
+            if (softly)
+            {
+                Task.Factory.StartNew(() => Set());
+                return;
+            }
+
             lock (lockobj)
             {
                 if (is_set == false)

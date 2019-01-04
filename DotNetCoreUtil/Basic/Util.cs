@@ -175,7 +175,6 @@ namespace IPA.DN.CoreUtil.Basic
         }
     }
 
-    // RefInt クラス
     public class RefInt
     {
         public RefInt() : this(0) { }
@@ -191,7 +190,6 @@ namespace IPA.DN.CoreUtil.Basic
         public int Decrement() => Interlocked.Decrement(ref this.Value);
     }
 
-    // RefBool クラス
     public class RefBool
     {
         public RefBool() : this(false) { }
@@ -205,7 +203,6 @@ namespace IPA.DN.CoreUtil.Basic
         public override string ToString() => this.Value.ToString();
     }
 
-    // Ref クラス
     public class Ref<T>
     {
         public Ref() : this(default(T)) { }

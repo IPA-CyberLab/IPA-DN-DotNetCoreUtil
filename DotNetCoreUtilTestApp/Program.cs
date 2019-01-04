@@ -115,12 +115,34 @@ namespace DotNetCoreUtilTestApp
         [DllImport("MyLib.dll", CallingConvention = CallingConvention.StdCall)]
         internal static extern long NativeMethod();
 
+        static AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
+
+        static TimeSpan ts1;
+        
         static async Task test1()
         {
-            await Task.Yield();
-            CancellationTokenSource c = new CancellationTokenSource();
-            Task.Delay(1000, c.Token);
-            c.Cancel();
+            while (true)
+            {
+                //await Task.Delay(123);
+                Thread.Sleep(100);
+                ts1 = Time.NowTimeSpan;
+                //Dbg.WhereThread();
+                ev.QueueSet();
+
+                ev.SetIfQueued();
+                //Dbg.WhereThread();
+            }
+        }
+
+        static async Task test2()
+        {
+            while (true)
+            {
+                await ev.WaitOneAsync(out _);
+                //await Task.Yield();
+                TimeSpan ts2 = Time.NowTimeSpan;
+                Dbg.WhereThread((ts2 - ts1).ToString());
+            }
         }
 
         static void Main(string[] args)
@@ -128,22 +150,17 @@ namespace DotNetCoreUtilTestApp
             Dbg.SetDebugMode();
             IntervalReporter.StartThreadPoolStatReporter();
 
-            CancellationTokenSource cts = new CancellationTokenSource();
-            for (int i = 0; ;i++)
+            test2().LaissezFaire();
+            test1().Wait();
+            return;
+
+
+            TaskVm<int, int> vm = new TaskVm<int, int>(async x =>
             {
-                using (CancelWatcher w = new CancelWatcher(cts.Token))
-                {
-                    //w.TaskWaitMe.Wait();
-                    test1();
-
-                    //Thread.Sleep(100);
-
-                    if ((i % 10000) == 0)
-                    {
-                        WriteLine(i);
-                    }
-                }
-            }
+                test2().LaissezFaire();
+                await test1();
+                return 0;
+            });
 
             return;
 
