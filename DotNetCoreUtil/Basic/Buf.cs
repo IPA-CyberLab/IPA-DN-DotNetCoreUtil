@@ -102,34 +102,37 @@ namespace IPA.DN.CoreUtil.Basic
         }
         public void Write(byte[] src, int offset, int size)
         {
-            int i, need_size;
-            bool realloc_flag;
-
-            i = this.size;
-            this.size += size;
-            need_size = this.pos + this.size;
-            realloc_flag = false;
-
-            int memsize = p.Length;
-            while (need_size > memsize)
+            checked
             {
-                memsize = Math.Max(memsize, FifoInitMemSize) * 3;
-                realloc_flag = true;
-            }
+                int i, need_size;
+                bool realloc_flag;
 
-            if (realloc_flag)
-            {
-                byte[] new_p = new byte[memsize];
-                Util.CopyByte(new_p, 0, this.p, 0, this.p.Length);
-                this.p = new_p;
-            }
+                i = this.size;
+                this.size += size;
+                need_size = this.pos + this.size;
+                realloc_flag = false;
 
-            if (src != null)
-            {
-                Util.CopyByte(this.p, this.pos + i, src, offset, size);
-            }
+                int memsize = p.Length;
+                while (need_size > memsize)
+                {
+                    memsize = Math.Max(memsize, FifoInitMemSize) * 3;
+                    realloc_flag = true;
+                }
 
-            totalWriteSize += size;
+                if (realloc_flag)
+                {
+                    byte[] new_p = new byte[memsize];
+                    Util.CopyByte(new_p, 0, this.p, 0, this.p.Length);
+                    this.p = new_p;
+                }
+
+                if (src != null)
+                {
+                    Util.CopyByte(this.p, this.pos + i, src, offset, size);
+                }
+
+                totalWriteSize += size;
+            }
         }
 
         public byte[] Read()
@@ -170,45 +173,48 @@ namespace IPA.DN.CoreUtil.Basic
         }
         public int Read(byte[] dst, int offset, int size)
         {
-            int read_size;
-
-            read_size = Math.Min(size, this.size);
-            if (read_size == 0)
+            checked
             {
-                return 0;
+                int read_size;
+
+                read_size = Math.Min(size, this.size);
+                if (read_size == 0)
+                {
+                    return 0;
+                }
+                if (dst != null)
+                {
+                    Util.CopyByte(dst, offset, this.p, this.pos, read_size);
+                }
+                this.pos += read_size;
+                this.size -= read_size;
+
+                if (this.size == 0)
+                {
+                    this.pos = 0;
+                }
+
+                // メモリの詰め直し
+                if (this.pos >= FifoInitMemSize &&
+                    this.p.Length >= this.reallocMemSize &&
+                    (this.p.Length / 2) > this.size)
+                {
+                    byte[] new_p;
+                    int new_size;
+
+                    new_size = Math.Max(this.p.Length / 2, FifoInitMemSize);
+                    new_p = new byte[new_size];
+                    Util.CopyByte(new_p, 0, this.p, this.pos, this.size);
+
+                    this.p = new_p;
+
+                    this.pos = 0;
+                }
+
+                totalReadSize += read_size;
+
+                return read_size;
             }
-            if (dst != null)
-            {
-                Util.CopyByte(dst, offset, this.p, this.pos, size);
-            }
-            this.pos += read_size;
-            this.size -= read_size;
-
-            if (this.size == 0)
-            {
-                this.pos = 0;
-            }
-
-            // メモリの詰め直し
-            if (this.pos >= FifoInitMemSize &&
-                this.p.Length >= this.reallocMemSize &&
-                (this.p.Length / 2) > this.size)
-            {
-                byte[] new_p;
-                int new_size;
-
-                new_size = Math.Max(this.p.Length / 2, FifoInitMemSize);
-                new_p = new byte[new_size];
-                Util.CopyByte(new_p, 0, this.p, this.pos, this.size);
-
-                this.p = new_p;
-
-                this.pos = 0;
-            }
-
-            totalReadSize += read_size;
-
-            return read_size;
         }
     }
 
