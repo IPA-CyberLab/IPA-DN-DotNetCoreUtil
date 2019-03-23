@@ -6,8 +6,8 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SqlTypes;
 using System.Data.SqlClient;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+//using System.ComponentModel.DataAnnotations;
+//using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
@@ -23,12 +23,29 @@ using System.Web;
 using System.IO;
 using System.Reflection;
 using System.Drawing;
+using System.Threading.Tasks;
 using Dapper;
+using Dapper.Contrib;
+using Dapper.Contrib.Extensions;
 
 using IPA.DN.CoreUtil.Helper.Basic;
 
 namespace IPA.DN.CoreUtil.Basic
 {
+    public class EasyTable : TableAttribute
+    {
+        public EasyTable(string tableName) : base(tableName) { }
+    }
+    public class EasyKey : KeyAttribute { }
+    public class EasyManualKey : ExplicitKeyAttribute { }
+    public class EasyReadOnly : WriteAttribute { public EasyReadOnly() : base(false) { } }
+
+    public class DapperColumn : Attribute
+    {
+        public string Name;
+        public DapperColumn(string name) { this.Name = name; }
+    }
+
     public class DbConsoleDebugPrinterProvider : ILoggerProvider
     {
         Ref<bool> enable_console_logger;
@@ -169,12 +186,14 @@ namespace IPA.DN.CoreUtil.Basic
     // データ
     public class Data : IEnumerable
     {
-        public readonly Row[] RowList;
-        public readonly string[] FieldList;
+        public Row[] RowList { get; private set; }
+        public string[] FieldList { get; private set; }
+
+        public Data() { }
 
         public Data(Database db)
         {
-            SqlDataReader r = db.DataReader;
+            DbDataReader r = db.DataReader;
 
             int i;
             int num = r.FieldCount;
@@ -190,6 +209,38 @@ namespace IPA.DN.CoreUtil.Basic
 
             List<Row> row_list = new List<Row>();
             while (db.ReadNext())
+            {
+                DatabaseValue[] values = new DatabaseValue[this.FieldList.Length];
+
+                for (i = 0; i < this.FieldList.Length; i++)
+                {
+                    values[i] = db[this.FieldList[i]];
+                }
+
+                row_list.Add(new Row(values, this.FieldList));
+            }
+
+            this.RowList = row_list.ToArray();
+        }
+
+        public async Task ReadFromDbAsync(Database db)
+        {
+            DbDataReader r = db.DataReader;
+
+            int i;
+            int num = r.FieldCount;
+
+            List<string> fields_list = new List<string>();
+
+            for (i = 0; i < num; i++)
+            {
+                fields_list.Add(r.GetName(i));
+            }
+
+            this.FieldList = fields_list.ToArray();
+
+            List<Row> row_list = new List<Row>();
+            while (await db.ReadNextAsync())
             {
                 DatabaseValue[] values = new DatabaseValue[this.FieldList.Length];
 
@@ -266,9 +317,16 @@ namespace IPA.DN.CoreUtil.Basic
     // データベースアクセス
     public class Database : IDisposable
     {
-        SqlConnection con = null;
-        SqlTransaction tran = null;
-        SqlDataReader reader = null;
+        static Database()
+        {
+            Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+        }
+
+        public DbConnection Connection { get; private set; } = null;
+        public DbTransaction Transaction { get; private set; } = null;
+        public DbDataReader DataReader { get; private set; } = null;
+        public bool IsOpened { get; private set; } = false;
+
         public const int DefaultCommandTimeoutSecs = 60;
         public int CommandTimeoutSecs { get; set; } = DefaultCommandTimeoutSecs;
 
@@ -276,41 +334,40 @@ namespace IPA.DN.CoreUtil.Basic
 
         public DeadlockRetryConfig DeadlockRetryConfig = DefaultDeadlockRetryConfig;
 
-        public SqlConnection Connection
-        {
-            get
-            {
-                return con;
-            }
-        }
-
-        public SqlTransaction Transaction
-        {
-            get
-            {
-                return tran;
-            }
-        }
-
-        public SqlDataReader DataReader
-        {
-            get
-            {
-                return reader;
-            }
-        }
-
         // コンストラクタ
-        public Database(string dbStr)
+        public Database(string sqlServerConnectionString)
         {
-            con = new SqlConnection(dbStr);
-            con.Open();
+            Connection = new SqlConnection(sqlServerConnectionString);
+        }
+
+        public Database(DbConnection dbConnection)
+        {
+            Connection = dbConnection;
+        }
+
+        public void EnsureOpen() => EnsureOpenAsync().Wait();
+
+        AsyncLock OpenCloseLock = new AsyncLock();
+
+        public async Task EnsureOpenAsync()
+        {
+            if (IsOpened) return;
+            using (await OpenCloseLock.LockWithAwait())
+            {
+                if (IsOpened == false)
+                {
+                    await Connection.OpenAsync();
+                    IsOpened = true;
+                }
+            }
         }
 
         // バルク書き込み
-        public void BulkWrite(string tableName, DataTable dt)
+        public void SqlBulkWrite(string tableName, DataTable dt)
         {
-            using (SqlBulkCopy bc = new SqlBulkCopy(this.con, SqlBulkCopyOptions.Default, tran))
+            EnsureOpen();
+
+            using (SqlBulkCopy bc = new SqlBulkCopy((SqlConnection)this.Connection, SqlBulkCopyOptions.Default, (SqlTransaction)Transaction))
             {
                 bc.BulkCopyTimeout = CommandTimeoutSecs;
                 bc.DestinationTableName = tableName;
@@ -318,27 +375,237 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
+        public async Task SqlBulkWriteAsync(string tableName, DataTable dt)
+        {
+            await EnsureOpenAsync();
+
+            using (SqlBulkCopy bc = new SqlBulkCopy((SqlConnection)this.Connection, SqlBulkCopyOptions.Default, (SqlTransaction)Transaction))
+            {
+                bc.BulkCopyTimeout = CommandTimeoutSecs;
+                bc.DestinationTableName = tableName;
+                await bc.WriteToServerAsync(dt);
+            }
+        }
+
         // クエリの実行
         public void Query(string commandStr, params object[] args)
         {
-            closeQuery();
-            SqlCommand cmd = buildCommand(commandStr, args);
+            EnsureOpen();
 
-            reader = cmd.ExecuteReader();
+            closeQuery();
+            DbCommand cmd = buildCommand(commandStr, args);
+
+            DataReader = cmd.ExecuteReader();
         }
+
+        public async Task QueryAsync(string commandStr, params object[] args)
+        {
+            await EnsureOpenAsync();
+
+            closeQuery();
+            DbCommand cmd = buildCommand(commandStr, args);
+
+            DataReader = await cmd.ExecuteReaderAsync();
+        }
+
+        static object DapperTypeMapLock = new object();
+        static HashSet<Type> DapperInstalledTypes = new HashSet<Type>();
+        static void EnsureDapperTypeMapping(Type t)
+        {
+            if (t == null) return;
+            lock (DapperTypeMapLock)
+            {
+                if (DapperInstalledTypes.Contains(t) == false)
+                {
+                    DapperInstalledTypes.Add(t);
+                    Dapper.SqlMapper.SetTypeMap(t,
+                        new CustomPropertyTypeMap(t, (type, columnName) =>
+                        {
+                            var properties = type.GetProperties();
+
+                            // UserName == USER_NAME
+                            var c1 = properties.SingleOrDefault(p => p.Name.IsSamei(columnName)
+                                || p.GetCustomAttributes(true).OfType<DapperColumn>().Any(a => a.Name.IsSamei(columnName)));
+                            if (c1 != null) return c1;
+
+                            int i = columnName.IndexOf("_");
+                            if (i >= 2)
+                            {
+                                // UserName == USERS_USERNAME
+                                string columnName2 = columnName.Substring(i + 1);
+
+                                var c2 = properties.SingleOrDefault(p => p.Name.IsSamei(columnName2)
+                                    || p.GetCustomAttributes(true).OfType<DapperColumn>().Any(a => a.Name.IsSamei(columnName2)));
+                                if (c2 != null) return c2;
+                            }
+
+                            return null;
+                        }));
+                }
+            }
+        }
+
+        async Task<CommandDefinition> SetupDapperAsync(string commandStr, object param, Type type = null)
+        {
+            await EnsureOpenAsync();
+
+            EnsureDapperTypeMapping(type);
+
+            if (param != null)
+                EnsureDapperTypeMapping(param.GetType());
+
+            CommandDefinition cmd = new CommandDefinition(commandStr, param, this.Transaction);
+
+            return cmd;
+        }
+
+        public async Task<T> GetOrInsertIfEmptyAsync<T>(string selectStr, object selectParam, string insertStr, object insertParam, string newCreatedRowSelectWithIdCmd)
+        {
+            IEnumerable<T> ret = await QueryAsync<T>(selectStr, selectParam);
+            T t = ret.SingleOrDefault();
+            if (t == default)
+            {
+                await ExecuteScalarAsync<T>(insertStr, insertParam);
+
+                long newId = await this.GetLastID64Async();
+
+                ret = await QueryAsync<T>(newCreatedRowSelectWithIdCmd, new { id = newId });
+
+                t = ret.Single();
+            }
+
+            return t;
+        }
+
+        public async Task<IEnumerable<T>> QueryAsync<T>(string commandStr, object param = null)
+            => await Connection.QueryAsync<T>(await SetupDapperAsync(commandStr, param, typeof(T)));
+
+        public async Task<int> ExecuteAsync(string commandStr, object param = null)
+            => await Connection.ExecuteAsync(await SetupDapperAsync(commandStr, param, null));
+
+        public async Task<T> ExecuteScalarAsync<T>(string commandStr, object param = null)
+            => (T)(await Connection.ExecuteScalarAsync(await SetupDapperAsync(commandStr, param, null)));
+
+        public IEnumerable<T> Query<T>(string commandStr, object param = null)
+            => QueryAsync<T>(commandStr, param).Result;
+
+        public int Execute(string commandStr, object param = null)
+            => ExecuteAsync(commandStr, param).Result;
+
+        public T ExecuteScalar<T>(string commandStr, object param = null)
+            => ExecuteScalarAsync<T>(commandStr, param).Result;
+
+
+        public async Task<T> EasyGetAsync<T>(dynamic id, bool throwErrorIfNotFound = false) where T : class
+        {
+            await EnsureOpenAsync();
+            EnsureDapperTypeMapping(typeof(T));
+
+            var ret = await SqlMapperExtensions.GetAsync<T>(Connection, id, Transaction);
+
+            if (throwErrorIfNotFound && ret == null)
+                throw new KeyNotFoundException();
+
+            return ret;
+        }
+
+        public async Task<IEnumerable<T>> EasyGetAllAsync<T>(bool throwErrorIfNotFound = false) where T : class
+        {
+            await EnsureOpenAsync();
+            EnsureDapperTypeMapping(typeof(T));
+
+            var ret = await SqlMapperExtensions.GetAllAsync<T>(Connection, Transaction);
+
+            if (throwErrorIfNotFound && ret.Count() == 0)
+                throw new KeyNotFoundException();
+
+            return ret;
+        }
+
+        public async Task<int> EasyInsertAsync<T>(T data) where T : class
+        {
+            await EnsureOpenAsync();
+            EnsureDapperTypeMapping(typeof(T));
+
+            return await SqlMapperExtensions.InsertAsync<T>(Connection, data, Transaction);
+        }
+
+        public async Task<bool> EasyUpdateAsync<T>(T data, bool throwErrorIfNotFound = false) where T : class
+        {
+            await EnsureOpenAsync();
+            EnsureDapperTypeMapping(typeof(T));
+
+            bool ret = await SqlMapperExtensions.UpdateAsync<T>(Connection, data, Transaction);
+
+            if (throwErrorIfNotFound && ret == false)
+                throw new KeyNotFoundException();
+
+            return ret;
+        }
+
+        public async Task<bool> EasyDeleteAsync<T>(T data, bool throwErrorIfNotFound = false) where T : class
+        {
+            await EnsureOpenAsync();
+            EnsureDapperTypeMapping(typeof(T));
+
+            bool ret = await SqlMapperExtensions.DeleteAsync<T>(Connection, data, Transaction);
+
+            if (throwErrorIfNotFound && ret == false)
+                throw new KeyNotFoundException();
+
+            return ret;
+        }
+
+        public IEnumerable<T> EasyGetAll<T>(bool throwErrorIfNotFound = false) where T : class
+            => EasyGetAllAsync<T>(throwErrorIfNotFound).Result;
+
+        public int EasyInsert<T>(T data) where T : class
+            => EasyInsertAsync(data).Result;
+
+        public bool EasyUpdate<T>(T data, bool throwErrorIfNotFound = false) where T : class
+            => EasyUpdateAsync(data, throwErrorIfNotFound).Result;
+
+        public bool EasyDelete<T>(T data, bool throwErrorIfNotFound = false) where T : class
+            => EasyDeleteAsync(data, throwErrorIfNotFound).Result;
+
         public int QueryWithNoReturn(string commandStr, params object[] args)
         {
+            EnsureOpen();
+
             closeQuery();
-            SqlCommand cmd = buildCommand(commandStr, args);
+            DbCommand cmd = buildCommand(commandStr, args);
 
             return cmd.ExecuteNonQuery();
         }
+
+        public async Task<int> QueryWithNoReturnAsync(string commandStr, params object[] args)
+        {
+            await EnsureOpenAsync();
+
+            closeQuery();
+            DbCommand cmd = buildCommand(commandStr, args);
+
+            return await cmd.ExecuteNonQueryAsync();
+        }
+
         public DatabaseValue QueryWithValue(string commandStr, params object[] args)
         {
+            EnsureOpen();
+
             closeQuery();
-            SqlCommand cmd = buildCommand(commandStr, args);
+            DbCommand cmd = buildCommand(commandStr, args);
 
             return new DatabaseValue(cmd.ExecuteScalar());
+        }
+
+        public async Task<DatabaseValue> QueryWithValueAsync(string commandStr, params object[] args)
+        {
+            await EnsureOpenAsync();
+
+            closeQuery();
+            DbCommand cmd = buildCommand(commandStr, args);
+
+            return new DatabaseValue(await cmd.ExecuteScalarAsync());
         }
 
         // 値の取得
@@ -346,7 +613,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             get
             {
-                object o = reader[name];
+                object o = DataReader[name];
 
                 return new DatabaseValue(o);
             }
@@ -357,6 +624,7 @@ namespace IPA.DN.CoreUtil.Basic
         {
             get
             {
+                EnsureOpen();
                 return (int)((decimal)this.QueryWithValue("SELECT @@@@IDENTITY").Object);
             }
         }
@@ -364,9 +632,23 @@ namespace IPA.DN.CoreUtil.Basic
         {
             get
             {
+                EnsureOpen();
                 return (long)((decimal)this.QueryWithValue("SELECT @@@@IDENTITY").Object);
             }
         }
+
+        public async Task<int> GetLastIDAsync()
+        {
+            await EnsureOpenAsync();
+            return (int)((decimal)((await this.QueryWithValueAsync("SELECT @@@@IDENTITY")).Object));
+        }
+
+        public async Task<long> GetLastID64Async()
+        {
+            await EnsureOpenAsync();
+            return (long)((decimal)((await this.QueryWithValueAsync("SELECT @@@@IDENTITY")).Object));
+        }
+
 
         // すべて読み込み
         public Data ReadAllData()
@@ -374,14 +656,35 @@ namespace IPA.DN.CoreUtil.Basic
             return new Data(this);
         }
 
+        public async Task<Data> ReadAllDataAsync()
+        {
+            Data ret = new Data();
+            await ret.ReadFromDbAsync(this);
+            return ret;
+        }
+
         // 次の行の取得
         public bool ReadNext()
         {
-            if (reader == null)
+            if (DataReader == null)
             {
                 return false;
             }
-            if (reader.Read() == false)
+            if (DataReader.Read() == false)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> ReadNextAsync()
+        {
+            if (DataReader == null)
+            {
+                return false;
+            }
+            if ((await DataReader.ReadAsync()) == false)
             {
                 return false;
             }
@@ -392,21 +695,23 @@ namespace IPA.DN.CoreUtil.Basic
         // クエリの終了
         void closeQuery()
         {
-            if (reader != null)
+            if (DataReader != null)
             {
-                reader.Close();
-                reader.Dispose();
-                reader = null;
+                DataReader.Close();
+                DataReader.Dispose();
+                DataReader = null;
             }
         }
 
         // コマンドの構築
-        SqlCommand buildCommand(string commandStr, params object[] args)
+        DbCommand buildCommand(string commandStr, params object[] args)
         {
             StringBuilder b = new StringBuilder();
             int i, len, n;
             len = commandStr.Length;
-            List<SqlParameter> sqlParams = new List<SqlParameter>();
+            List<DbParameter> dbParams = new List<DbParameter>();
+
+            DbCommand cmd = Connection.CreateCommand();
 
             n = 0;
             for (i = 0; i < len; i++)
@@ -425,8 +730,8 @@ namespace IPA.DN.CoreUtil.Basic
                         string argName = "@ARG_" + n;
                         b.Append(argName);
 
-                        SqlParameter p = buildParameter(argName, args[n++]);
-                        sqlParams.Add(p);
+                        DbParameter p = buildParameter(cmd, argName, args[n++]);
+                        dbParams.Add(p);
                     }
                 }
                 else
@@ -435,19 +740,22 @@ namespace IPA.DN.CoreUtil.Basic
                 }
             }
 
-            SqlCommand cmd = new SqlCommand(b.ToString(), con, tran);
-            foreach (SqlParameter p in sqlParams)
+            foreach (DbParameter p in dbParams)
             {
                 cmd.Parameters.Add(p);
             }
 
+            if (Transaction != null)
+                cmd.Transaction = Transaction;
+
+            cmd.CommandText = b.ToString();
             cmd.CommandTimeout = this.CommandTimeoutSecs;
 
             return cmd;
         }
 
         // オブジェクトを SQL パラメータに変換
-        SqlParameter buildParameter(string name, object o)
+        DbParameter buildParameter(DbCommand cmd, string name, object o)
         {
             Type t = null;
 
@@ -461,63 +769,82 @@ namespace IPA.DN.CoreUtil.Basic
 
             if (o == null)
             {
-                SqlParameter p = new SqlParameter(name, DBNull.Value);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.Value = DBNull.Value;
                 return p;
             }
             else if (t == typeof(System.String))
             {
                 string s = (string)o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.NVarChar, s.Length);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.String;
+                p.Size = s.Length;
                 p.Value = s;
                 return p;
             }
             else if (t == typeof(System.Int16) || t == typeof(System.UInt16))
             {
                 short s = (short)o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.SmallInt);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.Int16;
                 p.Value = s;
                 return p;
             }
-            else if (t == typeof(System.Byte) || t == typeof(System.SByte))
+            else if (t == typeof(System.Byte))
             {
                 byte b = (byte)o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.TinyInt);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.Byte;
                 p.Value = b;
                 return p;
             }
             else if (t == typeof(System.Int32) || t == typeof(System.UInt32))
             {
                 int i = (int)o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.Int);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.Int32;
                 p.Value = i;
                 return p;
             }
             else if (t == typeof(System.Int64) || t == typeof(System.UInt64))
             {
                 long i = (long)o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.BigInt);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.Int64;
                 p.Value = i;
                 return p;
             }
             else if (t == typeof(System.Boolean))
             {
                 bool b = (bool)o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.Bit);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.Boolean;
                 p.Value = b;
                 return p;
             }
             else if (t == typeof(System.Byte[]))
             {
                 byte[] b = (byte[])o;
-                SqlParameter p = new SqlParameter(name, SqlDbType.Image, b.Length);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.Binary;
                 p.Value = b;
+                p.Size = b.Length;
                 return p;
             }
             else if (t == typeof(System.DateTime))
             {
                 DateTime d = (DateTime)o;
-                d = d.NormalizeDateTime();
-                SqlParameter p = new SqlParameter(name, SqlDbType.DateTime);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.DateTime;
                 p.Value = d;
                 return p;
             }
@@ -525,7 +852,9 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 DateTimeOffset d = (DateTimeOffset)o;
                 d = d.NormalizeDateTimeOffset();
-                SqlParameter p = new SqlParameter(name, SqlDbType.DateTimeOffset);
+                DbParameter p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.DbType = DbType.DateTimeOffset;
                 p.Value = d;
                 return p;
             }
@@ -538,27 +867,27 @@ namespace IPA.DN.CoreUtil.Basic
         {
             closeQuery();
             Cancel();
-            if (con != null)
+            if (Connection != null)
             {
-                con.Close();
-                con.Dispose();
-                con = null;
+                IsOpened = false;
+                Connection.Close();
+                Connection.Dispose();
+                Connection = null;
             }
         }
 
         public delegate bool TransactionalTask();
+        public delegate void TransactionalReadonlyTask();
+
+        public delegate Task<bool> TransactionalTaskAsync();
+        public delegate Task TransactionalReadOnlyTaskAsync();
 
         // トランザクションの実行 (匿名デリゲートを用いた再試行処理も実施)
-        public void Tran(TransactionalTask task)
-        {
-            Tran(IsolationLevel.Serializable, null, task);
-        }
-        public void Tran(IsolationLevel iso, TransactionalTask task)
-        {
-            Tran(iso, null, task);
-        }
+        public void Tran(TransactionalTask task) => Tran(IsolationLevel.Serializable, null, task);
+        public void Tran(IsolationLevel iso, TransactionalTask task) => Tran(iso, null, task);
         public void Tran(IsolationLevel iso, DeadlockRetryConfig retry_config, TransactionalTask task)
         {
+            EnsureOpen();
             if (retry_config == null)
             {
                 retry_config = this.DeadlockRetryConfig;
@@ -599,12 +928,71 @@ namespace IPA.DN.CoreUtil.Basic
             }
         }
 
-        // トランザクションの開始 (UsingTran オブジェクト作成)
-        public UsingTran UsingTran()
+        public void TranReadSnapshot(TransactionalReadonlyTask task)
         {
-            return UsingTran(IsolationLevel.Unspecified);
+            Tran(IsolationLevel.Snapshot, () =>
+            {
+                task();
+                return false;
+            });
         }
-        public UsingTran UsingTran(IsolationLevel iso)
+
+        public Task TranAsync(TransactionalTaskAsync task) => TranAsync(IsolationLevel.Serializable, null, task);
+        public Task TranAsync(IsolationLevel iso, TransactionalTaskAsync task) => TranAsync(iso, null, task);
+        public async Task TranAsync(IsolationLevel iso, DeadlockRetryConfig retry_config, TransactionalTaskAsync task)
+        {
+            await EnsureOpenAsync();
+            if (retry_config == null)
+            {
+                retry_config = this.DeadlockRetryConfig;
+            }
+
+            int num_retry = 0;
+
+            LABEL_RETRY:
+            try
+            {
+                using (UsingTran u = this.UsingTran(iso))
+                {
+                    if (await task())
+                    {
+                        u.Commit();
+                    }
+                }
+            }
+            catch (SqlException sqlex)
+            {
+                if (sqlex.Number == 1205)
+                {
+                    // デッドロック発生
+                    num_retry++;
+                    if (num_retry <= retry_config.RetryCount)
+                    {
+                        await Task.Delay(Secure.Rand31i() % retry_config.RetryAverageInterval);
+
+                        goto LABEL_RETRY;
+                    }
+
+                    throw;
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        public Task TranReadSnapshotAsync(TransactionalReadOnlyTaskAsync task)
+        {
+            return TranAsync(IsolationLevel.Snapshot, async () =>
+            {
+                await task();
+                return false;
+            });
+        }
+
+        // トランザクションの開始 (UsingTran オブジェクト作成)
+        public UsingTran UsingTran(IsolationLevel iso = IsolationLevel.Unspecified)
         {
             UsingTran t = new UsingTran(this);
 
@@ -614,50 +1002,48 @@ namespace IPA.DN.CoreUtil.Basic
         }
 
         // トランザクションの開始
-        public void Begin()
+        public void Begin(IsolationLevel iso = IsolationLevel.Unspecified)
         {
-            Begin(IsolationLevel.Unspecified);
-        }
-        public void Begin(IsolationLevel iso)
-        {
+            EnsureOpen();
+
             closeQuery();
 
             if (iso == IsolationLevel.Unspecified)
             {
-                tran = con.BeginTransaction();
+                Transaction = Connection.BeginTransaction();
             }
             else
             {
-                tran = con.BeginTransaction(iso);
+                Transaction = Connection.BeginTransaction(iso);
             }
         }
 
         // トランザクションのコミット
         public void Commit()
         {
-            if (tran == null)
+            if (Transaction == null)
             {
                 return;
             }
 
             closeQuery();
-            tran.Commit();
-            tran.Dispose();
-            tran = null;
+            Transaction.Commit();
+            Transaction.Dispose();
+            Transaction = null;
         }
 
         // トランザクションのロールバック
         public void Cancel()
         {
-            if (tran == null)
+            if (Transaction == null)
             {
                 return;
             }
 
             closeQuery();
-            tran.Rollback();
-            tran.Dispose();
-            tran = null;
+            Transaction.Rollback();
+            Transaction.Dispose();
+            Transaction = null;
         }
 
         // データベースのテーブルのクラスで値を上書きする
@@ -671,7 +1057,7 @@ namespace IPA.DN.CoreUtil.Basic
             {
                 throw new ApplicationException("DbOverwriteValues: dst.GetType() != src.GetType()");
             }
-            object ret = Util.CloneObject_UsingXml(dst);
+            object ret = dst.ClonePublics();
             Type t = dst.GetType();
             var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
@@ -769,4 +1155,5 @@ namespace IPA.DN.CoreUtil.Basic
             return obj;
         }
     }
+
 }
